@@ -7,7 +7,8 @@ import path from 'path';
 import mysql from 'mysql2/promise';
 import { drizzle } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
-import { departmentTypes, roles, permissions } from '../src/db/schema';
+import { eq } from 'drizzle-orm';
+import { departmentTypes, roles, permissions, rolePermissions } from '../src/db/schema';
 
 async function main() {
   const migrateUrl = process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL;
@@ -63,7 +64,30 @@ async function main() {
   }
   for (const row of ROLE_SEED) {
     const id = crypto.randomUUID();
+    // "id" satırı yalnızca İLK eklemede kullanılır — onDuplicateKeyUpdate
+    // yalnızca "name"i günceller, mevcut satırın gerçek id'sini DEĞİŞTİRMEZ.
+    // role_permissions bu yüzden aşağıda id'yi TEKRAR SELECT ile okuyor.
     await db.insert(roles).values({ id, code: row.code, name: row.name }).onDuplicateKeyUpdate({ set: { name: row.name } });
+  }
+
+  // PDF madde 40-41 — ACCOUNTING modülü için başlangıç yetki matrisi.
+  // FACTORY_ADMIN buraya BİLİNÇLİ OLARAK dahil değil — lib/dal.ts:
+  // requireDepartmentAccess zaten fabrika yöneticisine her departmanda TAM
+  // yetki veren bir fallback içeriyor, ayrı bir satıra gerek yok.
+  const ACCOUNTING_ROLE_PERMISSIONS: Record<string, string[]> = {
+    ACCOUNTING_MANAGER: ['view', 'create', 'update', 'delete', 'approve', 'cancel', 'export', 'print', 'post', 'close_period', 'reopen_period'],
+    ACCOUNTANT: ['view', 'create', 'update', 'export', 'print', 'post'],
+    AUDITOR: ['view', 'export', 'print']
+  };
+  for (const [roleCode, permCodes] of Object.entries(ACCOUNTING_ROLE_PERMISSIONS)) {
+    const [role] = await db.select({ id: roles.id }).from(roles).where(eq(roles.code, roleCode)).limit(1);
+    if (!role) continue;
+    for (const permissionCode of permCodes) {
+      await db
+        .insert(rolePermissions)
+        .values({ id: crypto.randomUUID(), roleId: role.id, permissionCode, moduleKey: 'ACCOUNTING' })
+        .onDuplicateKeyUpdate({ set: { moduleKey: 'ACCOUNTING' } });
+    }
   }
 
   const appUser = process.env.APP_DB_USER;

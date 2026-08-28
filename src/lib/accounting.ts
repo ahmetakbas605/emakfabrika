@@ -1,5 +1,5 @@
 import 'server-only';
-import { eq, and, gte, lte, sql } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
 import { db, type Tx } from '@/db/client';
 import {
   accountingAccounts,
@@ -95,6 +95,10 @@ export async function reopenPeriod(companyId: string, periodId: string): Promise
     .update(accountingPeriods)
     .set({ status: 'OPEN', closedAt: null, closedByUserId: null })
     .where(and(eq(accountingPeriods.id, periodId), eq(accountingPeriods.companyId, companyId)));
+}
+
+export async function listPeriods(companyId: string) {
+  return db.select().from(accountingPeriods).where(eq(accountingPeriods.companyId, companyId)).orderBy(desc(accountingPeriods.periodStart));
 }
 
 // Bir tarihi kapsayan AÇIK dönem var mı — yoksa/kapalıysa yazma reddedilir
@@ -300,6 +304,23 @@ export async function reverseJournal(companyId: string, journalId: string, byUse
 
     return { journalId: reversalId, journalNo };
   });
+}
+
+// --- Yevmiye Defteri (PDF madde 18) — fiş listesi/detayı ---
+
+export async function listJournals(companyId: string) {
+  return db.select().from(accountingJournals).where(eq(accountingJournals.companyId, companyId)).orderBy(desc(accountingJournals.journalDate), desc(accountingJournals.journalNo));
+}
+
+export async function getJournalWithLines(companyId: string, journalId: string) {
+  const [journal] = await db.select().from(accountingJournals).where(and(eq(accountingJournals.id, journalId), eq(accountingJournals.companyId, companyId))).limit(1);
+  if (!journal) return null;
+  const lines = await db
+    .select({ line: accountingJournalLines, accountCode: accountingAccounts.code, accountName: accountingAccounts.name })
+    .from(accountingJournalLines)
+    .innerJoin(accountingAccounts, eq(accountingAccounts.id, accountingJournalLines.accountId))
+    .where(eq(accountingJournalLines.journalId, journalId));
+  return { journal, lines };
 }
 
 // --- Mizan (PDF madde 18) — Faz 10 (Raporlar)'da genişleyecek, burada
