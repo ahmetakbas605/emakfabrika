@@ -154,8 +154,8 @@ export const PERIOD_STATUSES = ['OPEN', 'CLOSED'] as const;
 export const accountingPeriods = mysqlTable('accounting_periods', {
   id: char('id', { length: 36 }).primaryKey(),
   companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
-  periodStart: date('period_start').notNull(),
-  periodEnd: date('period_end').notNull(),
+  periodStart: date('period_start', { mode: 'string' }).notNull(),
+  periodEnd: date('period_end', { mode: 'string' }).notNull(),
   status: mysqlEnum('status', PERIOD_STATUSES).notNull().default('OPEN'),
   closedAt: timestamp('closed_at'),
   closedByUserId: char('closed_by_user_id', { length: 36 }).references(() => users.id),
@@ -171,7 +171,7 @@ export const accountingJournals = mysqlTable('accounting_journals', {
   companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
   // PDF madde 55 — parametrik numaralandırma (ör. "MF202600000001").
   journalNo: varchar('journal_no', { length: 64 }).notNull(),
-  journalDate: date('journal_date').notNull(),
+  journalDate: date('journal_date', { mode: 'string' }).notNull(),
   // 'MANUAL' | 'SALES_INVOICE' | 'PURCHASE_INVOICE' | 'PAYMENT' | ... —
   // kod içine sabit ENUM olarak gömülmedi, serbest metin + accounting_posting_
   // rules.document_type ile eşleşir (yeni belge türü eklemek migration istemesin diye).
@@ -237,8 +237,8 @@ export const taxRules = mysqlTable('tax_rules', {
   ruleCode: varchar('rule_code', { length: 64 }).notNull(),
   ruleName: varchar('rule_name', { length: 255 }).notNull(),
   description: text('description'),
-  effectiveFrom: date('effective_from').notNull(),
-  effectiveTo: date('effective_to'),
+  effectiveFrom: date('effective_from', { mode: 'string' }).notNull(),
+  effectiveTo: date('effective_to', { mode: 'string' }),
   country: varchar('country', { length: 2 }).notNull().default('TR'),
   companyType: varchar('company_type', { length: 64 }),
   taxpayerType: varchar('taxpayer_type', { length: 64 }),
@@ -262,8 +262,8 @@ export const withholdingRules = mysqlTable('withholding_rules', {
   ruleCode: varchar('rule_code', { length: 64 }).notNull(),
   ruleName: varchar('rule_name', { length: 255 }).notNull(),
   description: text('description'),
-  effectiveFrom: date('effective_from').notNull(),
-  effectiveTo: date('effective_to'),
+  effectiveFrom: date('effective_from', { mode: 'string' }).notNull(),
+  effectiveTo: date('effective_to', { mode: 'string' }),
   sector: varchar('sector', { length: 64 }),
   rate: decimal('rate', { precision: 10, scale: 6 }).notNull(),
   fractionLabel: varchar('fraction_label', { length: 16 }),
@@ -272,6 +272,17 @@ export const withholdingRules = mysqlTable('withholding_rules', {
   version: int('version').notNull().default(1),
   createdAt: timestamp('created_at').notNull().defaultNow()
 }, (table) => [index('idx_withholding_rules_code_effective').on(table.ruleCode, table.effectiveFrom)]);
+
+// PDF madde 55 — parametrik, eşzamanlılık-güvenli fiş numarası sayacı.
+// MySQL'in bilinen "atomik sayaç" deseni: INSERT...ON DUPLICATE KEY UPDATE
+// last_number=LAST_INSERT_ID(last_number+1), ardından SELECT LAST_INSERT_ID()
+// — iki eşzamanlı istek asla aynı numarayı almaz (Postgres'teki
+// pg_advisory_xact_lock'un MySQL karşılığı, bkz. lib/accounting.ts).
+export const journalNumberCounters = mysqlTable('journal_number_counters', {
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  year: int('year').notNull(),
+  lastNumber: int('last_number').notNull().default(0)
+}, (table) => [uniqueIndex('udx_journal_counter_company_year').on(table.companyId, table.year)]);
 
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
