@@ -1,0 +1,29 @@
+name: emakfabrika
+
+# Gerçek üretimde HER fabrika kendi MySQL sunucusunu kendi bünyesinde barındırır
+# (bkz. ARCHITECTURE.md — "kiracı-başına ayrı fiziksel veritabanı" modeli, emakerp'in
+# paylaşımlı-şema+RLS modelinin TERSİ). Bu docker-compose yalnızca GELİŞTİRME/TEST
+# amaçlı TEK bir fabrikayı temsil eder — kendi bünyemizde ("emakfabrika-test" adlı
+# ilk test kiracısı) çalıştırmak için. emakerp/emakelektron/emakbilisim'in Postgres
+# konteynerleriyle AYNI güvenlik deseni: yalnızca 127.0.0.1, asla 0.0.0.0'a açılmaz.
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD .env dosyasında tanımlanmalı}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-emakfabrika}
+      MYSQL_USER: ${MYSQL_USER:-emakfabrika}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD .env dosyasında tanımlanmalı}
+    ports:
+      - "${MYSQL_BIND_ADDRESS:-127.0.0.1}:${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysqldata:
