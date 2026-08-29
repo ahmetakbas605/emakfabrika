@@ -8,7 +8,7 @@ import mysql from 'mysql2/promise';
 import { drizzle } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
 import { eq } from 'drizzle-orm';
-import { departmentTypes, roles, permissions, rolePermissions } from '../src/db/schema';
+import { departmentTypes, roles, permissions, rolePermissions, itAssetTypes } from '../src/db/schema';
 
 async function main() {
   const migrateUrl = process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL;
@@ -77,8 +77,35 @@ async function main() {
     { code: 'IT', name: 'Bilgi Teknolojileri' }
   ];
 
+  // PDF (IT) madde 3 — kod içine sabit gömülmeyen varlık tipi listesi.
+  const IT_ASSET_TYPE_SEED: { code: string; name: string }[] = [
+    { code: 'DESKTOP', name: 'Masaüstü Bilgisayar' },
+    { code: 'LAPTOP', name: 'Laptop' },
+    { code: 'SERVER', name: 'Sunucu' },
+    { code: 'VM', name: 'Sanal Makine' },
+    { code: 'FIREWALL', name: 'Firewall' },
+    { code: 'ROUTER', name: 'Router' },
+    { code: 'SWITCH', name: 'Switch' },
+    { code: 'ACCESS_POINT', name: 'Access Point' },
+    { code: 'PRINTER', name: 'Yazıcı' },
+    { code: 'SCANNER', name: 'Tarayıcı' },
+    { code: 'NAS', name: 'NAS' },
+    { code: 'STORAGE', name: 'Depolama' },
+    { code: 'UPS', name: 'UPS' },
+    { code: 'IP_PHONE', name: 'IP Telefon' },
+    { code: 'CCTV_NVR', name: 'CCTV NVR' },
+    { code: 'CAMERA', name: 'Kamera' },
+    { code: 'IOT', name: 'IoT Cihazı' },
+    { code: 'MOBILE_DEVICE', name: 'Mobil Cihaz' },
+    { code: 'TABLET', name: 'Tablet' },
+    { code: 'NETWORK_APPLIANCE', name: 'Ağ Cihazı' }
+  ];
+
   for (const row of DEPARTMENT_TYPE_SEED) {
     await db.insert(departmentTypes).values(row).onDuplicateKeyUpdate({ set: { name: row.name } });
+  }
+  for (const row of IT_ASSET_TYPE_SEED) {
+    await db.insert(itAssetTypes).values(row).onDuplicateKeyUpdate({ set: { name: row.name } });
   }
   for (const row of PERMISSION_SEED) {
     await db.insert(permissions).values(row).onDuplicateKeyUpdate({ set: { name: row.name } });

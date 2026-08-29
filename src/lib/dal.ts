@@ -116,3 +116,10 @@ export async function requireDepartmentAccess(departmentId: string, permission?:
 
   redirect('/dashboard');
 }
+
+// IT (varlık ataması) ve ileride başka departmanların da ihtiyaç duyacağı
+// basit bir liste — requireDepartmentAccess'in AYNI dosyasında, tekrar
+// tekrar aynı sorguyu yazmamak için.
+export async function listCompanyUsers(companyId: string) {
+  return db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users).where(eq(users.companyId, companyId));
+}

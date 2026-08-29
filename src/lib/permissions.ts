@@ -3,7 +3,12 @@ import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { userDepartmentAccess, rolePermissions, roles, departments } from '@/db/schema';
 
-export const PERMISSION_KEYS = ['view', 'create', 'update', 'delete', 'approve', 'cancel', 'export', 'print', 'post', 'close_period', 'reopen_period'] as const;
+// IT-DATABASE.md §2 — assign/configure/monitor/manage_credentials/
+// manage_assets/manage_network IT modülü için eklendi (madde 95).
+export const PERMISSION_KEYS = [
+  'view', 'create', 'update', 'delete', 'approve', 'cancel', 'export', 'print', 'post', 'close_period', 'reopen_period',
+  'assign', 'configure', 'monitor', 'manage_credentials', 'manage_assets', 'manage_network'
+] as const;
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
 
 export interface DepartmentAccess {

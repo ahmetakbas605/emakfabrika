@@ -534,6 +534,142 @@ export const stockMovements = mysqlTable('stock_movements', {
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
 
+// --- IT departmanı — Faz 4 (Asset Management) + Faz 5 (CMDB).
+// Şema: IT-DATABASE.md §1-4, CMDB.md. ---
+
+export const IT_LOCATION_TYPES = ['BUILDING', 'FLOOR', 'ROOM', 'RACK', 'DESK', 'DATA_CENTER'] as const;
+
+// IT-DATABASE.md §1 — building→floor→room→rack→desk zinciri, branches'in
+// ALTINA eklenen bir hiyerarşi (branches DEĞİŞTİRİLMEDİ).
+export const itLocations = mysqlTable('it_locations', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  branchId: char('branch_id', { length: 36 }).references(() => branches.id),
+  parentLocationId: char('parent_location_id', { length: 36 }),
+  locationType: mysqlEnum('location_type', IT_LOCATION_TYPES).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  rackUnits: int('rack_units'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// PDF madde 3 — kod içine sabit gömülmeyen, seed edilen varlık tipi listesi
+// (department_types ile AYNI desen).
+export const itAssetTypes = mysqlTable('it_asset_types', {
+  code: varchar('code', { length: 32 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull()
+});
+
+export const IT_ASSET_STATUSES = [
+  'IN_STOCK', 'ASSIGNED', 'INSTALLED', 'IN_SERVICE', 'UNDER_MAINTENANCE',
+  'REPAIR', 'LOST', 'STOLEN', 'RETIRED', 'DISPOSED', 'UNKNOWN'
+] as const;
+
+export const itAssets = mysqlTable('it_assets', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  branchId: char('branch_id', { length: 36 }).references(() => branches.id),
+  locationId: char('location_id', { length: 36 }).references(() => itLocations.id),
+  // Hangi departmana zimmetli (Muhasebe/Depo/İK/vb. — IT'nin KENDİSİ değil,
+  // bu varlığı KULLANAN departman).
+  departmentId: char('department_id', { length: 36 }).references(() => departments.id),
+  assetTypeCode: varchar('asset_type_code', { length: 32 }).notNull().references(() => itAssetTypes.code),
+  assetTag: varchar('asset_tag', { length: 64 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  manufacturer: varchar('manufacturer', { length: 255 }).notNull().default(''),
+  model: varchar('model', { length: 255 }).notNull().default(''),
+  serialNumber: varchar('serial_number', { length: 255 }).notNull().default(''),
+  status: mysqlEnum('status', IT_ASSET_STATUSES).notNull().default('IN_STOCK'),
+  ownerUserId: char('owner_user_id', { length: 36 }).references(() => users.id),
+  responsibleTechnicianId: char('responsible_technician_id', { length: 36 }).references(() => users.id),
+  purchaseDate: date('purchase_date', { mode: 'string' }),
+  purchaseCost: decimal('purchase_cost', { precision: 20, scale: 6 }),
+  warrantyStart: date('warranty_start', { mode: 'string' }),
+  warrantyEnd: date('warranty_end', { mode: 'string' }),
+  lastInventoryScanAt: timestamp('last_inventory_scan_at'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+}, (table) => [uniqueIndex('udx_it_asset_company_tag').on(table.companyId, table.assetTag)]);
+
+// IT-DATABASE.md §3 — bilgisayara/sunucuya özgü alanlar AYRI (Firewall'da
+// CPU alanı anlamsız). 1:1, assetId FK.
+export const computerDetails = mysqlTable('computer_details', {
+  assetId: char('asset_id', { length: 36 }).primaryKey().references(() => itAssets.id, { onDelete: 'cascade' }),
+  hostname: varchar('hostname', { length: 255 }).notNull().default(''),
+  os: varchar('os', { length: 255 }).notNull().default(''),
+  osVersion: varchar('os_version', { length: 100 }).notNull().default(''),
+  cpu: varchar('cpu', { length: 255 }).notNull().default(''),
+  ramGb: int('ram_gb'),
+  storageGb: int('storage_gb'),
+  lastUser: varchar('last_user', { length: 255 }).notNull().default(''),
+  antivirusStatus: varchar('antivirus_status', { length: 64 }).notNull().default(''),
+  encryptionEnabled: boolean('encryption_enabled').notNull().default(false)
+});
+
+// PDF madde 8 — kullanıcı-cihaz N:N geçmişi.
+export const ASSIGNMENT_TYPES = ['PERMANENT', 'TEMPORARY', 'SHARED'] as const;
+
+export const itAssetAssignments = mysqlTable('it_asset_assignments', {
+  id: char('id', { length: 36 }).primaryKey(),
+  assetId: char('asset_id', { length: 36 }).notNull().references(() => itAssets.id, { onDelete: 'cascade' }),
+  userId: char('user_id', { length: 36 }).notNull().references(() => users.id),
+  assignedAt: timestamp('assigned_at').notNull().defaultNow(),
+  returnedAt: timestamp('returned_at'),
+  assignmentType: mysqlEnum('assignment_type', ASSIGNMENT_TYPES).notNull().default('PERMANENT'),
+  assignedBy: char('assigned_by', { length: 36 }).notNull().references(() => users.id),
+  reason: text('reason')
+});
+
+export const itAssetStatusHistory = mysqlTable('it_asset_status_history', {
+  id: char('id', { length: 36 }).primaryKey(),
+  assetId: char('asset_id', { length: 36 }).notNull().references(() => itAssets.id, { onDelete: 'cascade' }),
+  fromStatus: varchar('from_status', { length: 32 }).notNull(),
+  toStatus: varchar('to_status', { length: 32 }).notNull(),
+  changedBy: char('changed_by', { length: 36 }).notNull().references(() => users.id),
+  note: text('note'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// Asset lifecycle geçiş tablosunun (checks.ts/tickets ile AYNI desen)
+// numaralandırması İÇİN atomik sayaç — CMDB.md §1'deki "CI_KEY" üretimi
+// (ör. SERVER-001), asset_type_code bazında ayrı sayaç.
+export const ciKeyCounters = mysqlTable('ci_key_counters', {
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  assetTypeCode: varchar('asset_type_code', { length: 32 }).notNull(),
+  lastNumber: int('last_number').notNull().default(0)
+}, (table) => [uniqueIndex('udx_ci_key_counter').on(table.companyId, table.assetTypeCode)]);
+
+// --- CMDB (Faz 5) ---
+
+export const CI_TYPES = ['ASSET', 'SERVICE', 'APPLICATION', 'DATABASE'] as const;
+
+export const configurationItems = mysqlTable('configuration_items', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  ciType: mysqlEnum('ci_type', CI_TYPES).notNull().default('ASSET'),
+  linkedAssetId: char('linked_asset_id', { length: 36 }).references(() => itAssets.id),
+  name: varchar('name', { length: 255 }).notNull(),
+  ciKey: varchar('ci_key', { length: 64 }).notNull(),
+  status: varchar('status', { length: 32 }).notNull().default('ACTIVE'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+}, (table) => [uniqueIndex('udx_ci_company_key').on(table.companyId, table.ciKey)]);
+
+// CMDB.md §2 — İLİŞKİ HER ZAMAN TEK YÖNDE saklanır, çift kayıt YAPILMAZ.
+export const CI_RELATIONSHIP_TYPES = [
+  'DEPENDS_ON', 'RUNS_ON', 'CONNECTED_TO', 'HOSTED_ON', 'LOCATED_IN',
+  'OWNED_BY', 'USED_BY', 'BACKED_UP_BY', 'MONITORED_BY', 'PROTECTED_BY',
+  'LICENSED_BY', 'SUPPORTED_BY', 'CONTRACTED_BY', 'PARENT_OF', 'CHILD_OF'
+] as const;
+
+export const ciRelationships = mysqlTable('ci_relationships', {
+  id: char('id', { length: 36 }).primaryKey(),
+  sourceCiId: char('source_ci_id', { length: 36 }).notNull().references(() => configurationItems.id, { onDelete: 'cascade' }),
+  targetCiId: char('target_ci_id', { length: 36 }).notNull().references(() => configurationItems.id, { onDelete: 'cascade' }),
+  relationshipType: mysqlEnum('relationship_type', CI_RELATIONSHIP_TYPES).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
   idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),
