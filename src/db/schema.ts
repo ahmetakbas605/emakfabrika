@@ -1004,6 +1004,108 @@ export const maintenanceWorkOrders = mysqlTable('maint_work_orders', {
   generatedAt: timestamp('generated_at').notNull().defaultNow()
 }, (table) => [uniqueIndex('udx_maint_wo_plan_date').on(table.maintenancePlanId, table.scheduledDate)]);
 
+// --- License / Warranty / Contract (Faz 10) ---
+
+// IT-ARCHITECTURE.md §4 — Vendor, Muhasebe'ye OPSİYONEL bağlanır (madde 125):
+// bir tedarikçinin hesap planındaki karşılığı varsa işaretlenebilir, ama bu
+// GERÇEK bir cari/fatura zinciri DEĞİL (o, Satış departmanı geldiğinde
+// kurulacak — TODO: SALES_DEPARTMENT_INTEGRATION, FIELD-SERVICE.md §5'teki
+// AYNI sınır).
+export const vendors = mysqlTable('vendors', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  contactName: varchar('contact_name', { length: 255 }).notNull().default(''),
+  contactEmail: varchar('contact_email', { length: 255 }).notNull().default(''),
+  contactPhone: varchar('contact_phone', { length: 32 }).notNull().default(''),
+  accountingAccountId: char('accounting_account_id', { length: 36 }).references(() => accountingAccounts.id),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// "sw_" kısaltması bilinçli — MySQL'in 64-karakter FK sınırı bu projede üç
+// kez yaşandı (fixed_assets, work_order_checklists, maintenance_*), bu kez
+// migration denemeden önce hesaplanıp baştan kısaltıldı.
+export const softwareProducts = mysqlTable('sw_products', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  publisher: varchar('publisher', { length: 255 }).notNull().default(''),
+  vendorId: char('vendor_id', { length: 36 }).references(() => vendors.id)
+});
+
+// "Hangi varlıkta hangi yazılım kurulu" — Software Asset Management'ın
+// temeli, lisans tüketiminden (license_assignments) AYRI bir kavram: bir
+// kurulum lisanssız da olabilir (henüz atanmamış/free tier).
+export const softwareInstallations = mysqlTable('sw_installations', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  productId: char('product_id', { length: 36 }).notNull().references(() => softwareProducts.id),
+  assetId: char('asset_id', { length: 36 }).notNull().references(() => itAssets.id),
+  installedVersion: varchar('installed_version', { length: 64 }).notNull().default(''),
+  installedAt: timestamp('installed_at').notNull().defaultNow()
+});
+
+export const softwareLicenses = mysqlTable('sw_licenses', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  productId: char('product_id', { length: 36 }).notNull().references(() => softwareProducts.id),
+  vendorId: char('vendor_id', { length: 36 }).references(() => vendors.id),
+  licenseKey: varchar('license_key', { length: 255 }).notNull().default(''),
+  seats: int('seats').notNull().default(1),
+  purchaseDate: date('purchase_date', { mode: 'string' }),
+  expiresAt: date('expires_at', { mode: 'string' }),
+  cost: decimal('cost', { precision: 20, scale: 6 }),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// Bir kurulum EN FAZLA bir lisansa bağlanabilir (unique installationId) —
+// koltuk (seat) sayısı aşılırsa lib katmanı reddeder (uygulama-katmanı
+// kontrol, MySQL'de "COUNT(*) <= seats" ifade eden bir constraint pratik
+// değil — aynı gerekçe ticket_assignments'taki tek-LEADER kontrolüyle).
+export const licenseAssignments = mysqlTable('license_assignments', {
+  id: char('id', { length: 36 }).primaryKey(),
+  licenseId: char('license_id', { length: 36 }).notNull().references(() => softwareLicenses.id, { onDelete: 'cascade' }),
+  installationId: char('installation_id', { length: 36 }).notNull().unique().references(() => softwareInstallations.id, { onDelete: 'cascade' }),
+  assignedAt: timestamp('assigned_at').notNull().defaultNow()
+});
+
+// it_assets.warrantyStart/warrantyEnd (Faz 4) İLE KARIŞTIRILMASIN: o alanlar
+// "şu an geçerli garanti" özet görünümü (asset listesinde tek satır), BU
+// tablo garantinin TAM geçmişi/detayı (bir varlığın zaman içinde birden
+// fazla garanti kaydı olabilir — orijinal + uzatılmış gibi) — asset
+// durumu/durum geçmişi ayrımıyla AYNI desen (özet alan + ayrı geçmiş tablosu).
+export const warranties = mysqlTable('warranties', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  assetId: char('asset_id', { length: 36 }).notNull().references(() => itAssets.id),
+  vendorId: char('vendor_id', { length: 36 }).references(() => vendors.id),
+  startDate: date('start_date', { mode: 'string' }).notNull(),
+  endDate: date('end_date', { mode: 'string' }).notNull(),
+  terms: text('terms'),
+  cost: decimal('cost', { precision: 20, scale: 6 }),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const CONTRACT_TYPES = ['SUPPORT', 'MAINTENANCE', 'SERVICE', 'LEASE', 'OTHER'] as const;
+
+export const contracts = mysqlTable('contracts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  vendorId: char('vendor_id', { length: 36 }).references(() => vendors.id),
+  title: varchar('title', { length: 255 }).notNull(),
+  contractType: mysqlEnum('contract_type', CONTRACT_TYPES).notNull().default('OTHER'),
+  startDate: date('start_date', { mode: 'string' }).notNull(),
+  endDate: date('end_date', { mode: 'string' }).notNull(),
+  cost: decimal('cost', { precision: 20, scale: 6 }),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const contractAssets = mysqlTable('contract_assets', {
+  contractId: char('contract_id', { length: 36 }).notNull().references(() => contracts.id, { onDelete: 'cascade' }),
+  assetId: char('asset_id', { length: 36 }).notNull().references(() => itAssets.id, { onDelete: 'cascade' })
+}, (table) => [uniqueIndex('udx_contract_asset').on(table.contractId, table.assetId)]);
+
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
   idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),

@@ -85,6 +85,13 @@
       "when": 1788012371257,
       "tag": "0011_secret_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1788013685371,
+      "tag": "0012_slim_doomsday",
+      "breakpoints": true
     }
   ]
 }
