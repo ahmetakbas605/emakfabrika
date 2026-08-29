@@ -162,6 +162,13 @@
       "when": 1788035087716,
       "tag": "0022_lively_madrox",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1788036424507,
+      "tag": "0023_yummy_thanos",
+      "breakpoints": true
     }
   ]
 }

@@ -2054,3 +2054,61 @@ export const procQuotationLines = mysqlTable('proc_quotation_lines', {
   alternativeDescription: varchar('alternative_description', { length: 255 }).notNull().default(''),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
+
+// --- Satınalma Faz 3 — Teknik/Ticari Değerlendirme + Ağırlıklı Skorlama
+// (madde 69-74). Faz 2'nin karşılaştırma verisini (fiyat) TÜKETİR — fiyat
+// skoru için ayrı bir alan YOK, lib/procurement/evaluation.ts fiyatı
+// proc_quotation_lines'tan ANLIK hesaplar. Tablo adları MySQL 64 karakter
+// FK sınırı için kısaltıldı ("procurement_technical_evaluations" self-ref
+// olmadan bile sınırın çok üzerindeydi).
+
+// madde 70 — örnek ağırlıklar (Price 50/Technical 20/Delivery 10/
+// Warranty 10/Supplier 10) BİLİNÇLİ OLARAK 4 bileşene sadeleştirildi:
+// Warranty ve Supplier Performance için sistemde GERÇEK, yapılandırılmış
+// bir veri kaynağı yok (madde 139-140'ın supplier scorecard'ı bu projede
+// henüz kurulmadı) — var olmayan verilere dayanan ayrı sayısal alanlar
+// icat etmek yerine, ikisi de tek bir "Ticari Değerlendirme" (madde 74)
+// puanına, satınalma uzmanının kendi değerlendirmesiyle giriyor. Şirket
+// kendi ağırlıklarını belirler (madde 70'in kendi ilkesi) — TEK satır,
+// company_id primary key (it_policies İLE AYNI desen).
+export const procScoringWeights = mysqlTable('proc_scoring_weights', {
+  companyId: char('company_id', { length: 36 }).primaryKey().references(() => companies.id, { onDelete: 'cascade' }),
+  priceWeight: decimal('price_weight', { precision: 5, scale: 2 }).notNull().default('50'),
+  technicalWeight: decimal('technical_weight', { precision: 5, scale: 2 }).notNull().default('20'),
+  deliveryWeight: decimal('delivery_weight', { precision: 5, scale: 2 }).notNull().default('10'),
+  commercialWeight: decimal('commercial_weight', { precision: 5, scale: 2 }).notNull().default('20'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+});
+
+export const PROC_TECH_COMPLIANCE_STATUSES = ['COMPLIANT', 'PARTIALLY_COMPLIANT', 'NON_COMPLIANT', 'ALTERNATIVE_ACCEPTED', 'REJECTED'] as const;
+
+// madde 71-73 — talebi oluşturan BİRİM yapar (bugün: herhangi bir oturum
+// açmış kullanıcı, ayrı bir "teknik değerlendirici" rolü henüz yok).
+// quotationLineId ÜZERİNDE benzersiz — bir teklif SATIRI tek bir
+// değerlendirmeye sahip (yeniden değerlendirme = ÜZERİNE yazar, ayrı bir
+// versiyon geçmişi YOK — teklifin kendisi zaten versiyonlanıyor, madde
+// 117; bir değerlendirme her zaman BELİRLİ bir teklif VERSİYONUNA aittir,
+// tedarikçi yeni versiyon gönderirse o versiyonun satırları YENİDEN
+// değerlendirilmeyi bekler, boş kalır).
+export const procTechEvals = mysqlTable('proc_tech_evals', {
+  id: char('id', { length: 36 }).primaryKey(),
+  quotationLineId: char('quotation_line_id', { length: 36 }).notNull().references(() => procQuotationLines.id, { onDelete: 'cascade' }),
+  complianceStatus: mysqlEnum('compliance_status', PROC_TECH_COMPLIANCE_STATUSES).notNull(),
+  // madde 73 — NON_COMPLIANT/REJECTED ise zorunlu (uygulama katmanında
+  // doğrulanır, DB seviyesinde CHECK yok — projenin genel disiplini).
+  reason: text('reason'),
+  evaluatedByUserId: char('evaluated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  evaluatedAt: timestamp('evaluated_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_proc_tech_eval_line').on(table.quotationLineId)]);
+
+// madde 74 — fiyat/indirim/ödeme/teslimat/tedarikçi geçmişi hepsi TEK bir
+// niteliksel puana (0-100) giriyor, teklifin TAMAMI için (satır başına
+// değil — ödeme koşulu/tedarikçi geçmişi zaten satıra özgü değil).
+export const procCommEvals = mysqlTable('proc_comm_evals', {
+  id: char('id', { length: 36 }).primaryKey(),
+  quotationId: char('quotation_id', { length: 36 }).notNull().references(() => procQuotations.id, { onDelete: 'cascade' }),
+  score: decimal('score', { precision: 5, scale: 2 }).notNull(),
+  notes: text('notes'),
+  evaluatedByUserId: char('evaluated_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  evaluatedAt: timestamp('evaluated_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_proc_comm_eval_quotation').on(table.quotationId)]);

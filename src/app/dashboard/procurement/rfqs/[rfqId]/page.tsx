@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { requireSession } from '@/lib/dal';
 import { getRfq, getRfqComparison } from '@/lib/procurement/rfq';
 import { QuotationForm, SendRfqButton, CloseRfqButton } from '@/components/procurement/quotation-form';
@@ -25,6 +26,7 @@ export default async function RfqDetailPage({ params }: { params: Promise<{ rfqI
       <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
         {rfq.status === 'DRAFT' ? <SendRfqButton rfqId={rfqId} /> : null}
         {rfq.status === 'SENT' ? <CloseRfqButton rfqId={rfqId} /> : null}
+        <Link href={`/dashboard/procurement/rfqs/${rfqId}/evaluate`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Değerlendirme</Link>
       </div>
 
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Kalemler</h2>

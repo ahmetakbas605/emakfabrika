@@ -34,6 +34,7 @@ export default async function DashboardPage() {
             <Link href="/dashboard/master-data/parties" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Master Data (Cari/Ürün/Birim/Döviz)</Link>
             <Link href="/dashboard/org" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Organizasyon</Link>
             <Link href="/dashboard/workflow/rules" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Onay Kuralları</Link>
+            <Link href="/dashboard/procurement/scoring-weights" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Skorlama Ağırlıkları</Link>
           </>
         ) : null}
       </div>
