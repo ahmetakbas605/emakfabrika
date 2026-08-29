@@ -48,6 +48,7 @@ export interface CreateTicketInput {
   description?: string;
   category?: string;
   priority?: (typeof serviceDeskTickets.$inferInsert)['priority'];
+  ticketType?: (typeof serviceDeskTickets.$inferInsert)['ticketType'];
   requestedByUserId: string;
   relatedAssetId?: string;
   relatedCiId?: string;
@@ -66,7 +67,7 @@ export async function createTicket(companyId: string, departmentId: string, inpu
     const slaDueAt = policy ? resolveSlaDeadline(now, policy) : null;
 
     await tx.insert(serviceDeskTickets).values({
-      id, companyId, departmentId, ticketNo, title: input.title, description: input.description ?? '',
+      id, companyId, departmentId, ticketNo, ticketType: input.ticketType ?? 'STANDARD', title: input.title, description: input.description ?? '',
       category: input.category ?? '', priority, status: 'NEW', requestedByUserId: input.requestedByUserId,
       relatedAssetId: input.relatedAssetId, relatedCiId: input.relatedCiId,
       slaPolicyId: policy?.id, slaDueAt

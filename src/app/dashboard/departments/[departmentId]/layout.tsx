@@ -33,6 +33,7 @@ function navFor(departmentId: string, departmentTypeCode: string): { href: strin
         { href: `${base}/it/assets`, label: 'Varlıklar' },
         { href: `${base}/it/cmdb`, label: 'CMDB' },
         { href: `${base}/it/tickets`, label: 'Ticketlar' },
+        { href: `${base}/it/field-service`, label: 'Saha İşleri' },
         { href: `${base}/it/incidents`, label: 'Incidentlar' },
         { href: `${base}/it/problems`, label: 'Problemler' },
         { href: `${base}/it/changes`, label: 'Değişiklikler' }

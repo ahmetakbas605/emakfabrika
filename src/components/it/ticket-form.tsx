@@ -49,6 +49,9 @@ export function TicketForm({ departmentId, assets }: { departmentId: string; ass
           </select>
         </div>
       </div>
+      <label style={{ fontSize: 12, color: '#666', display: 'flex', gap: 4, alignItems: 'center' }}>
+        <input type="checkbox" name="ticketType" value="FIELD_SERVICE" /> Saha işi (teknisyen fiziksel olarak gidecek)
+      </label>
       {assets.length > 0 ? (
         <div>
           <label style={{ display: 'block', fontSize: 12, color: '#666' }}>İlgili Varlık (opsiyonel)</label>

@@ -700,11 +700,17 @@ export const TICKET_STATUSES = [
   'WORKING', 'WAITING', 'TESTING', 'RESOLVED', 'USER_APPROVAL_PENDING', 'CLOSED'
 ] as const;
 
+// FIELD-SERVICE.md §1 — bir ticket FIELD_SERVICE olduğunda 1:1 bir work_orders
+// satırı açılır; durum makinesinin KENDİSİ (TICKET_TRANSITIONS) tekrarlanmaz,
+// work_orders yalnızca saha-özel YAN veriyi (konum, checklist, parça) taşır.
+export const TICKET_TYPES = ['STANDARD', 'FIELD_SERVICE'] as const;
+
 export const serviceDeskTickets = mysqlTable('service_desk_tickets', {
   id: char('id', { length: 36 }).primaryKey(),
   companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
   departmentId: char('department_id', { length: 36 }).notNull().references(() => departments.id),
   ticketNo: varchar('ticket_no', { length: 32 }).notNull(),
+  ticketType: mysqlEnum('ticket_type', TICKET_TYPES).notNull().default('STANDARD'),
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
   category: varchar('category', { length: 64 }).notNull().default(''),
@@ -759,11 +765,17 @@ export const ticketComments = mysqlTable('ticket_comments', {
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
 
+// FIELD-SERVICE.md §5 — billable/non_billable ayrımı için AYRI bir tablo
+// AÇILMADI, mevcut ticket_work_logs'a tek sütun eklendi (aynı bilgiyi iki
+// yerde tutmama ilkesi, SERVICE-DESK.md §7'nin timeline kararıyla aynı ruh).
+// Faturalama zincirinin kendisi Satış departmanı gelene kadar YOK
+// (TODO: SALES_DEPARTMENT_INTEGRATION) — bu yalnızca bir bayrak.
 export const ticketWorkLogs = mysqlTable('ticket_work_logs', {
   id: char('id', { length: 36 }).primaryKey(),
   ticketId: char('ticket_id', { length: 36 }).notNull().references(() => serviceDeskTickets.id, { onDelete: 'cascade' }),
   userId: char('user_id', { length: 36 }).notNull().references(() => users.id),
   minutesSpent: int('minutes_spent').notNull(),
+  billable: boolean('billable').notNull().default(false),
   note: text('note'),
   loggedAt: timestamp('logged_at').notNull().defaultNow()
 });
@@ -838,6 +850,98 @@ export const changeApprovals = mysqlTable('change_approvals', {
   decision: mysqlEnum('decision', CHANGE_APPROVAL_DECISIONS).notNull(),
   note: text('note'),
   createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// --- Field Service (Faz 8, FIELD-SERVICE.md) ---
+
+// §2 — "konum takibini varsayılan sürekli yapma" (PDF madde 88, 132, KVKK).
+// Her şirket için TEK satır, KAPALI varsayılan.
+export const itPolicies = mysqlTable('it_policies', {
+  companyId: char('company_id', { length: 36 }).primaryKey().references(() => companies.id, { onDelete: 'cascade' }),
+  continuousLocationTrackingEnabled: boolean('continuous_location_tracking_enabled').notNull().default(false)
+});
+
+export const workOrders = mysqlTable('work_orders', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  ticketId: char('ticket_id', { length: 36 }).notNull().unique().references(() => serviceDeskTickets.id, { onDelete: 'cascade' }),
+  arrivedAt: timestamp('arrived_at'),
+  arrivalLatitude: decimal('arrival_latitude', { precision: 10, scale: 7 }),
+  arrivalLongitude: decimal('arrival_longitude', { precision: 10, scale: 7 }),
+  customerName: varchar('customer_name', { length: 255 }),
+  signatureNote: text('signature_note'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// §2 — source ayrımı: ARRIVAL_BUTTON her zaman izinli (tek nokta), CONTINUOUS
+// yalnızca it_policies.continuousLocationTrackingEnabled AÇIKSA kaydedilir.
+export const LOCATION_SOURCES = ['ARRIVAL_BUTTON', 'CONTINUOUS'] as const;
+
+export const technicianLocations = mysqlTable('technician_locations', {
+  id: char('id', { length: 36 }).primaryKey(),
+  userId: char('user_id', { length: 36 }).notNull().references(() => users.id),
+  workOrderId: char('work_order_id', { length: 36 }).references(() => workOrders.id, { onDelete: 'cascade' }),
+  latitude: decimal('latitude', { precision: 10, scale: 7 }).notNull(),
+  longitude: decimal('longitude', { precision: 10, scale: 7 }).notNull(),
+  source: mysqlEnum('source', LOCATION_SOURCES).notNull(),
+  recordedAt: timestamp('recorded_at').notNull().defaultNow()
+});
+
+// §3 — şablon SONRADAN değişse bile geçmiş work order'ların checklist'i
+// DEĞİŞMEZ: work_order_checklist_items, template_item'lardan bir KEZ
+// kopyalanır (Muhasebe'nin mevzuat-effective-dating ilkesiyle AYNI mantık).
+export const checklistTemplates = mysqlTable('checklist_templates', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 64 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull()
+}, (table) => [uniqueIndex('udx_checklist_template_company_code').on(table.companyId, table.code)]);
+
+export const checklistTemplateItems = mysqlTable('checklist_template_items', {
+  id: char('id', { length: 36 }).primaryKey(),
+  templateId: char('template_id', { length: 36 }).notNull().references(() => checklistTemplates.id, { onDelete: 'cascade' }),
+  label: varchar('label', { length: 255 }).notNull(),
+  orderIndex: int('order_index').notNull().default(0)
+});
+
+// MySQL'in 64-karakter identifier sınırı (fixed_assets'te daha önce yaşanan
+// GERÇEK aynı hata — bkz. proje notları): "work_order_checklists" tablo adı
+// "work_order_checklist_items"in FK adıyla birleşince sınırı aşıyordu, "wo_"
+// kısaltmasıyla tablo adları kısaltıldı.
+export const workOrderChecklists = mysqlTable('wo_checklists', {
+  id: char('id', { length: 36 }).primaryKey(),
+  workOrderId: char('work_order_id', { length: 36 }).notNull().unique().references(() => workOrders.id, { onDelete: 'cascade' }),
+  templateId: char('template_id', { length: 36 }).references(() => checklistTemplates.id)
+});
+
+export const workOrderChecklistItems = mysqlTable('wo_checklist_items', {
+  id: char('id', { length: 36 }).primaryKey(),
+  checklistId: char('checklist_id', { length: 36 }).notNull().references(() => workOrderChecklists.id, { onDelete: 'cascade' }),
+  label: varchar('label', { length: 255 }).notNull(),
+  orderIndex: int('order_index').notNull().default(0),
+  checked: boolean('checked').notNull().default(false),
+  note: text('note'),
+  checkedAt: timestamp('checked_at'),
+  checkedBy: char('checked_by', { length: 36 }).references(() => users.id)
+});
+
+// §4 — IT-ARCHITECTURE.md §9 Risk 1'in çözümü: ayrı bir "spare_parts" basit
+// sayacı YOK, Depo departmanının GERÇEK stock_items/stock_movements'ı
+// kullanılıyor (lib/warehouse.ts:recordStockMovement, OUT hareketi,
+// sourceType='WORK_ORDER_PART'). unitCost, tüketim ANINDAKİ ortalama
+// maliyetin SNAPSHOT'ı — sonradan stok maliyeti değişse bile bu satır
+// değişmez (fixed_assets/muhasebe'deki "geçmiş kayıt sabit kalır" ilkesiyle
+// AYNI).
+export const workOrderParts = mysqlTable('work_order_parts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  workOrderId: char('work_order_id', { length: 36 }).notNull().references(() => workOrders.id, { onDelete: 'cascade' }),
+  stockItemId: char('stock_item_id', { length: 36 }).notNull().references(() => stockItems.id),
+  stockMovementId: char('stock_movement_id', { length: 36 }).notNull().references(() => stockMovements.id),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitCost: decimal('unit_cost', { precision: 20, scale: 6 }).notNull(),
+  billable: boolean('billable').notNull().default(false),
+  consumedAt: timestamp('consumed_at').notNull().defaultNow(),
+  consumedByUserId: char('consumed_by_user_id', { length: 36 }).notNull().references(() => users.id)
 });
 
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).

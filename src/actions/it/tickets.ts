@@ -14,6 +14,7 @@ const CreateTicketSchema = z.object({
   description: z.string().trim().optional(),
   category: z.string().trim().optional(),
   priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'CRITICAL']).optional(),
+  ticketType: z.enum(['STANDARD', 'FIELD_SERVICE']).optional(),
   relatedAssetId: z.string().trim().optional()
 });
 
@@ -24,6 +25,7 @@ export async function createTicketAction(departmentId: string, _prevState: FormS
     description: optionalField(formData, 'description'),
     category: optionalField(formData, 'category'),
     priority: optionalField(formData, 'priority'),
+    ticketType: optionalField(formData, 'ticketType'),
     relatedAssetId: optionalField(formData, 'relatedAssetId')
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
