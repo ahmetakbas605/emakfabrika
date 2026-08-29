@@ -284,6 +284,73 @@ export const journalNumberCounters = mysqlTable('journal_number_counters', {
   lastNumber: int('last_number').notNull().default(0)
 }, (table) => [uniqueIndex('udx_journal_counter_company_year').on(table.companyId, table.year)]);
 
+// --- Kasa (PDF madde 26) ---
+
+export const CASH_TRANSACTION_TYPES = ['IN', 'OUT'] as const;
+
+// Her kasa kartı, hesap planındaki BİR "100 Kasa" tipi hesaba eşlenir —
+// nakit hareketi kaydedilince otomatik muhasebe fişi bu hesabı kullanır
+// (ACCOUNTING-ENGINE.md'nin "her ERP olayı muhasebeye event üretir"
+// ilkesinin basit, tek-yönlü hâli — henüz gerçek bir event bus YOK,
+// doğrudan çağrı; ikinci bir dinleyici gerektiğinde eklenecek).
+export const cashAccounts = mysqlTable('cash_accounts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  accountingAccountId: char('accounting_account_id', { length: 36 }).notNull().references(() => accountingAccounts.id),
+  currency: varchar('currency', { length: 3 }).notNull().default('TRY'),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const cashTransactions = mysqlTable('cash_transactions', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  cashAccountId: char('cash_account_id', { length: 36 }).notNull().references(() => cashAccounts.id),
+  transactionType: mysqlEnum('transaction_type', CASH_TRANSACTION_TYPES).notNull(),
+  amount: decimal('amount', { precision: 20, scale: 6 }).notNull(),
+  // Karşı hesap kodu — ör. tahsilatta "120 Alıcılar", giderde "770 Genel
+  // Yönetim Giderleri". Serbest hesap kodu (dropdown UI'de hesap planından
+  // seçilir) — PDF'in "kasa, banka, tahsilat, ödeme, virman" ayrımını tek
+  // bir esnek alanla karşılıyor, her tür için ayrı tablo AÇILMADI.
+  counterAccountCode: varchar('counter_account_code', { length: 32 }).notNull(),
+  description: text('description'),
+  transactionDate: date('transaction_date', { mode: 'string' }).notNull(),
+  journalId: char('journal_id', { length: 36 }).references(() => accountingJournals.id),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// --- Banka (PDF madde 27) ---
+
+export const BANK_TRANSACTION_METHODS = ['HAVALE', 'EFT', 'FAST', 'KREDI_KARTI', 'POS', 'KOMISYON', 'DIGER'] as const;
+
+export const bankAccounts = mysqlTable('bank_accounts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  iban: varchar('iban', { length: 34 }).notNull().default(''),
+  accountingAccountId: char('accounting_account_id', { length: 36 }).notNull().references(() => accountingAccounts.id),
+  currency: varchar('currency', { length: 3 }).notNull().default('TRY'),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const bankTransactions = mysqlTable('bank_transactions', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  bankAccountId: char('bank_account_id', { length: 36 }).notNull().references(() => bankAccounts.id),
+  transactionType: mysqlEnum('transaction_type', CASH_TRANSACTION_TYPES).notNull(),
+  method: mysqlEnum('method', BANK_TRANSACTION_METHODS).notNull().default('HAVALE'),
+  amount: decimal('amount', { precision: 20, scale: 6 }).notNull(),
+  counterAccountCode: varchar('counter_account_code', { length: 32 }).notNull(),
+  description: text('description'),
+  transactionDate: date('transaction_date', { mode: 'string' }).notNull(),
+  journalId: char('journal_id', { length: 36 }).references(() => accountingJournals.id),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
   idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),
