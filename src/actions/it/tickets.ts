@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import * as z from 'zod';
 import { requireDepartmentAccess } from '@/lib/dal';
 import { createTicket, transitionTicket, reopenTicket, assignTicket, addComment, logWork, createSlaPolicy } from '@/lib/it/tickets';
+import { revertAssetAfterMaintenanceIfApplicable } from '@/lib/it/maintenance';
 import { ItError } from '@/lib/it/errors';
 import { optionalField } from '@/lib/form';
 
@@ -48,6 +49,14 @@ export async function transitionTicketAction(departmentId: string, _prevState: F
 
   try {
     await transitionTicket(session.companyId, parsed.data.ticketId, parsed.data.toStatus, session.id, parsed.data.note);
+    // MAINTENANCE.md §4 — bakım işi bağlı bir ticket CLOSED olduğunda,
+    // bağlı varlık (varsa) UNDER_MAINTENANCE'tan IN_SERVICE'e otomatik döner.
+    // Action katmanında çağrılıyor (lib/it/tickets.ts <-> lib/it/maintenance.ts
+    // arasında dairesel import oluşturmamak için, maintenance.ts zaten
+    // tickets.ts:createTicketInTx'i kullanıyor).
+    if (parsed.data.toStatus === 'CLOSED') {
+      await revertAssetAfterMaintenanceIfApplicable(session.companyId, parsed.data.ticketId, session.id);
+    }
   } catch (err) {
     return { error: err instanceof ItError ? err.message : 'Durum değiştirilemedi.' };
   }

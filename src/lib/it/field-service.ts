@@ -1,6 +1,7 @@
 import 'server-only';
 import { eq, and, desc, asc, isNull } from 'drizzle-orm';
 import { db } from '@/db/client';
+import type { Tx } from '@/db/client';
 import {
   serviceDeskTickets, workOrders, technicianLocations, itPolicies,
   checklistTemplates, checklistTemplateItems, workOrderChecklists, workOrderChecklistItems,
@@ -129,22 +130,30 @@ export async function listChecklistTemplateItems(templateId: string) {
 
 // §3 — şablon SATIRLARI bir KEZ kopyalanır, template SONRADAN değişse bile
 // bu work order'ın checklist'i sabit kalır.
-export async function attachChecklistToWorkOrder(workOrderId: string, templateId: string | null): Promise<string> {
-  const [existing] = await db.select({ id: workOrderChecklists.id }).from(workOrderChecklists).where(eq(workOrderChecklists.workOrderId, workOrderId)).limit(1);
+// lib/accounting.ts:postJournal/postJournalInTx İLE AYNI desen — maintenance
+// gibi kendi transaction'ı İÇİNDE checklist iliştirmesi gereken çağıranlar
+// (lib/it/maintenance.ts:generateOneWorkOrder) InTx sürümünü kullanmalı,
+// aksi halde iç içe db.transaction çağrısı AYRI bir bağlantı açar ve henüz
+// commit edilmemiş bir work_orders satırına FK ile referans vermeye
+// çalışırken başarısız olur/kilitlenir.
+export async function attachChecklistToWorkOrderInTx(tx: Tx, workOrderId: string, templateId: string | null): Promise<string> {
+  const [existing] = await tx.select({ id: workOrderChecklists.id }).from(workOrderChecklists).where(eq(workOrderChecklists.workOrderId, workOrderId)).limit(1);
   if (existing) throw new ItError('Bu work order için zaten bir checklist var.');
 
-  return db.transaction(async (tx) => {
-    const checklistId = newId();
-    await tx.insert(workOrderChecklists).values({ id: checklistId, workOrderId, templateId });
+  const checklistId = newId();
+  await tx.insert(workOrderChecklists).values({ id: checklistId, workOrderId, templateId });
 
-    if (templateId) {
-      const templateItems = await tx.select().from(checklistTemplateItems).where(eq(checklistTemplateItems.templateId, templateId)).orderBy(asc(checklistTemplateItems.orderIndex));
-      if (templateItems.length > 0) {
-        await tx.insert(workOrderChecklistItems).values(templateItems.map((t) => ({ id: newId(), checklistId, label: t.label, orderIndex: t.orderIndex })));
-      }
+  if (templateId) {
+    const templateItems = await tx.select().from(checklistTemplateItems).where(eq(checklistTemplateItems.templateId, templateId)).orderBy(asc(checklistTemplateItems.orderIndex));
+    if (templateItems.length > 0) {
+      await tx.insert(workOrderChecklistItems).values(templateItems.map((t) => ({ id: newId(), checklistId, label: t.label, orderIndex: t.orderIndex })));
     }
-    return checklistId;
-  });
+  }
+  return checklistId;
+}
+
+export async function attachChecklistToWorkOrder(workOrderId: string, templateId: string | null): Promise<string> {
+  return db.transaction((tx) => attachChecklistToWorkOrderInTx(tx, workOrderId, templateId));
 }
 
 export async function addChecklistItem(checklistId: string, label: string, orderIndex: number): Promise<void> {

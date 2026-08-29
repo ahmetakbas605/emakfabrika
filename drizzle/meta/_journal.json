@@ -71,6 +71,13 @@
       "when": 1788007366254,
       "tag": "0009_breezy_squirrel_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1788011102777,
+      "tag": "0010_brainy_silver_fox",
+      "breakpoints": true
     }
   ]
 }

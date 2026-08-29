@@ -944,6 +944,48 @@ export const workOrderParts = mysqlTable('work_order_parts', {
   consumedByUserId: char('consumed_by_user_id', { length: 36 }).notNull().references(() => users.id)
 });
 
+// --- Maintenance (Faz 9, MAINTENANCE.md — madde 61-67) ---
+
+export const MAINTENANCE_TYPES = ['PREVENTIVE', 'CORRECTIVE', 'PREDICTIVE', 'INSPECTION', 'CALIBRATION'] as const;
+export const MAINTENANCE_FREQUENCIES = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'ANNUAL'] as const;
+
+// §1 — assigned_team_id ve sla_policy_id PDF'de var ama bugün "takım"
+// (team) diye bir varlık şemada YOK (icat edilmedi, PDF'in "gereksiz
+// abstraction yapma" ilkesiyle tutarlı) — yalnızca tek bir teknisyene
+// atanabiliyor. SLA zaten ticket'ın kendi priority'sinden otomatik
+// (lib/it/tickets.ts:createTicket), ayrıca burada tekrarlanmıyor.
+// MySQL'in 64-karakter identifier sınırı — bu proje boyunca üçüncü kez
+// karşılaşılan aynı gerçek hata (fixed_assets, work_order_checklists,
+// şimdi burada) — baştan "maint_" kısaltmasıyla tablo adları kısaltıldı,
+// migration denemeden önce FK adı uzunluğu hesaplanarak doğrulandı.
+export const maintenancePlans = mysqlTable('maint_plans', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  assetId: char('asset_id', { length: 36 }).references(() => itAssets.id),
+  title: varchar('title', { length: 255 }).notNull(),
+  maintenanceType: mysqlEnum('maintenance_type', MAINTENANCE_TYPES).notNull(),
+  frequency: mysqlEnum('frequency', MAINTENANCE_FREQUENCIES).notNull(),
+  intervalValue: int('interval_value').notNull().default(1),
+  startDate: date('start_date', { mode: 'string' }).notNull(),
+  nextDueDate: date('next_due_date', { mode: 'string' }).notNull(),
+  assignedTechnicianId: char('assigned_technician_id', { length: 36 }).references(() => users.id),
+  checklistTemplateId: char('checklist_template_id', { length: 36 }).references(() => checklistTemplates.id),
+  estimatedDurationMinutes: int('estimated_duration_minutes'),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// §2 — UNIQUE(plan, tarih) bilinçli: üretim görevi İKİ KEZ çalıştırılsa bile
+// aynı gün için ikinci bir work order AÇILMAZ (fixed_assets'teki "ay başına
+// bir amortisman" korumasıyla AYNI desen).
+export const maintenanceWorkOrders = mysqlTable('maint_work_orders', {
+  id: char('id', { length: 36 }).primaryKey(),
+  maintenancePlanId: char('maintenance_plan_id', { length: 36 }).notNull().references(() => maintenancePlans.id, { onDelete: 'cascade' }),
+  workOrderId: char('work_order_id', { length: 36 }).notNull().unique().references(() => workOrders.id, { onDelete: 'cascade' }),
+  scheduledDate: date('scheduled_date', { mode: 'string' }).notNull(),
+  generatedAt: timestamp('generated_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_maint_wo_plan_date').on(table.maintenancePlanId, table.scheduledDate)]);
+
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
   idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),

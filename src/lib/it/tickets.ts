@@ -54,26 +54,34 @@ export interface CreateTicketInput {
   relatedCiId?: string;
 }
 
-export async function createTicket(companyId: string, departmentId: string, input: CreateTicketInput): Promise<string> {
+// lib/accounting.ts:postJournal/postJournalInTx İLE AYNI desen — maintenance
+// gibi kendi transaction'ı İÇİNDE bir ticket açması gereken çağıranlar
+// (lib/it/maintenance.ts:generateOneWorkOrder) bu iç fonksiyonu kullanır,
+// AKSİ HALDE db.transaction içinden AYRI bir db.transaction çağrısı gerçek
+// bir iç içe geçme OLMAZ (yeni/ayrı bir bağlantı açar) ve dış transaction
+// geri alındığında ticket geri alınmaz — atomiklik kırılır.
+export async function createTicketInTx(tx: Tx, companyId: string, departmentId: string, input: CreateTicketInput): Promise<string> {
   const id = newId();
   const now = new Date();
   const year = now.getFullYear();
   const priority = input.priority ?? 'NORMAL';
 
-  return db.transaction(async (tx) => {
-    const ticketNo = await nextTicketNo(tx, companyId, year);
+  const ticketNo = await nextTicketNo(tx, companyId, year);
 
-    const [policy] = await tx.select().from(slaPolicies).where(and(eq(slaPolicies.companyId, companyId), eq(slaPolicies.priority, priority), eq(slaPolicies.active, true))).limit(1);
-    const slaDueAt = policy ? resolveSlaDeadline(now, policy) : null;
+  const [policy] = await tx.select().from(slaPolicies).where(and(eq(slaPolicies.companyId, companyId), eq(slaPolicies.priority, priority), eq(slaPolicies.active, true))).limit(1);
+  const slaDueAt = policy ? resolveSlaDeadline(now, policy) : null;
 
-    await tx.insert(serviceDeskTickets).values({
-      id, companyId, departmentId, ticketNo, ticketType: input.ticketType ?? 'STANDARD', title: input.title, description: input.description ?? '',
-      category: input.category ?? '', priority, status: 'NEW', requestedByUserId: input.requestedByUserId,
-      relatedAssetId: input.relatedAssetId, relatedCiId: input.relatedCiId,
-      slaPolicyId: policy?.id, slaDueAt
-    });
-    return id;
+  await tx.insert(serviceDeskTickets).values({
+    id, companyId, departmentId, ticketNo, ticketType: input.ticketType ?? 'STANDARD', title: input.title, description: input.description ?? '',
+    category: input.category ?? '', priority, status: 'NEW', requestedByUserId: input.requestedByUserId,
+    relatedAssetId: input.relatedAssetId, relatedCiId: input.relatedCiId,
+    slaPolicyId: policy?.id, slaDueAt
   });
+  return id;
+}
+
+export async function createTicket(companyId: string, departmentId: string, input: CreateTicketInput): Promise<string> {
+  return db.transaction((tx) => createTicketInTx(tx, companyId, departmentId, input));
 }
 
 export async function listTickets(companyId: string, filter?: { status?: string; priority?: string }) {
