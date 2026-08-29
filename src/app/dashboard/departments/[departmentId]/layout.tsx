@@ -30,6 +30,7 @@ function navFor(departmentId: string, departmentTypeCode: string): { href: strin
       ];
     case 'IT':
       return [
+        { href: `${base}/it/dashboard`, label: 'Dashboard' },
         { href: `${base}/it/assets`, label: 'Varlıklar' },
         { href: `${base}/it/cmdb`, label: 'CMDB' },
         { href: `${base}/it/tickets`, label: 'Ticketlar' },
