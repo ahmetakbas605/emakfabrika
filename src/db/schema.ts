@@ -1976,7 +1976,9 @@ export const procRequestLines = mysqlTable('proc_request_lines', {
 // "Batch" varlığı yok, bu konsolidasyonun kendisi zaten proc_rfq_lines.
 // srcRequestLineId ilişkisiyle kayıpsız ifade ediliyor.
 
-export const PROC_RFQ_STATUSES = ['DRAFT', 'SENT', 'CLOSED', 'CANCELLED'] as const;
+// AWARDED (Faz 4 eklendi) — bir Award onaylandığında RFQ'nun ulaştığı
+// nihai durum, CLOSED'dan sonraki adım.
+export const PROC_RFQ_STATUSES = ['DRAFT', 'SENT', 'CLOSED', 'AWARDED', 'CANCELLED'] as const;
 
 export const procRfqs = mysqlTable('proc_rfqs', {
   id: char('id', { length: 36 }).primaryKey(),
@@ -2112,3 +2114,44 @@ export const procCommEvals = mysqlTable('proc_comm_evals', {
   evaluatedByUserId: char('evaluated_by_user_id', { length: 36 }).notNull().references(() => users.id),
   evaluatedAt: timestamp('evaluated_at').notNull().defaultNow()
 }, (table) => [uniqueIndex('udx_proc_comm_eval_quotation').on(table.quotationId)]);
+
+// --- Satınalma Faz 4 — Award (madde 75-82). Faz 3'ün değerlendirmesini
+// TÜKETİR — hangi satır hangi tedarikçiye/hangi teklif satırına gidiyor,
+// burada bir KARAR olarak kayda geçer. Bölünmüş/kısmi ödül (madde 75-77 —
+// "bir kalem birden fazla tedarikçiye bölünebilir") ayrı bir "Split" kavramı
+// GEREKTİRMİYOR: proc_award_lines zaten aynı rfqLineId için BİRDEN FAZLA
+// satır içerebilir, her biri kendi tedarikçisi+miktarıyla — tıpkı
+// proc_rfq_lines.srcRequestLineId'nin "bir RFQ birden fazla talepten satır
+// toplayabilir" ilkesini ayrı bir Batch varlığı olmadan ifade etmesi gibi.
+// Ödül KARARININ KENDİSİ bir harcama taahhüdü olduğu için (Requisition'ın
+// onay gerektirdiği AYNI gerekçeyle) genel workflow motorundan geçer —
+// documentType='PROCUREMENT_AWARD'.
+export const PROC_AWARD_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'REVISION_REQUIRED', 'CANCELLED'] as const;
+
+export const procAwards = mysqlTable('proc_awards', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  rfqId: char('rfq_id', { length: 36 }).notNull().references(() => procRfqs.id),
+  awardNo: varchar('award_no', { length: 32 }).notNull(),
+  status: mysqlEnum('status', PROC_AWARD_STATUSES).notNull().default('DRAFT'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  submittedAt: timestamp('submitted_at'),
+  completedAt: timestamp('completed_at')
+}, (table) => [uniqueIndex('udx_proc_award_company_no').on(table.companyId, table.awardNo)]);
+
+// unitPrice/discountPercent/taxPercent BİLİNÇLİ OLARAK teklif satırından
+// KOPYALANIR, canlı referans değil (madde 116-117 immutable ilkesi — bir
+// tedarikçi ödülden SONRA yeni bir teklif versiyonu gönderirse, zaten
+// karara bağlanmış ödül fiyatı GEÇMİŞTE kalan bir kayıt olarak sabit kalmalı).
+export const procAwardLines = mysqlTable('proc_award_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  awardId: char('award_id', { length: 36 }).notNull().references(() => procAwards.id, { onDelete: 'cascade' }),
+  rfqLineId: char('rfq_line_id', { length: 36 }).notNull().references(() => procRfqLines.id),
+  supplierPartyId: char('supplier_party_id', { length: 36 }).notNull().references(() => parties.id),
+  quotationLineId: char('quotation_line_id', { length: 36 }).notNull().references(() => procQuotationLines.id),
+  awardedQty: decimal('awarded_qty', { precision: 20, scale: 6 }).notNull(),
+  awardedUnitPrice: decimal('awarded_unit_price', { precision: 20, scale: 6 }).notNull(),
+  awardedTotal: decimal('awarded_total', { precision: 20, scale: 6 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});

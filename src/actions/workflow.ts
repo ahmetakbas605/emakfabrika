@@ -6,6 +6,7 @@ import { requireFactoryAdmin, requireSession } from '@/lib/dal';
 import { createWorkflowRule, actOnStep, getStepDocumentType, type ApprovalDecision } from '@/lib/workflow/engine';
 import type { WorkflowChainStep } from '@/lib/workflow/types';
 import { actOnRequisitionStep } from '@/lib/procurement/requisition';
+import { actOnAwardStep } from '@/lib/procurement/award';
 import { CoreError } from '@/lib/core/errors';
 import { ProcurementError } from '@/lib/procurement/errors';
 import { optionalField } from '@/lib/form';
@@ -102,6 +103,8 @@ export async function actOnStepAction(_prevState: FormState, formData: FormData)
     const documentType = await getStepDocumentType(parsed.data.stepId);
     if (documentType === 'PROCUREMENT_REQUISITION') {
       await actOnRequisitionStep(session.companyId, actionInput);
+    } else if (documentType === 'PROCUREMENT_AWARD') {
+      await actOnAwardStep(session.companyId, actionInput);
     } else {
       await actOnStep(session.companyId, actionInput);
     }

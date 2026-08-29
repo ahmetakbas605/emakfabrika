@@ -1,17 +1,19 @@
 import Link from 'next/link';
 import { requireSession } from '@/lib/dal';
 import { getRfq, getRfqComparison } from '@/lib/procurement/rfq';
+import { getAwardByRfq } from '@/lib/procurement/award';
 import { QuotationForm, SendRfqButton, CloseRfqButton } from '@/components/procurement/quotation-form';
 
-const RFQ_STATUS_LABEL: Record<string, string> = { DRAFT: 'Taslak', SENT: 'Gönderildi', CLOSED: 'Kapandı', CANCELLED: 'İptal' };
+const RFQ_STATUS_LABEL: Record<string, string> = { DRAFT: 'Taslak', SENT: 'Gönderildi', CLOSED: 'Kapandı', AWARDED: 'Ödüllendirildi', CANCELLED: 'İptal' };
 const SUPPLIER_STATUS_LABEL: Record<string, string> = { INVITED: 'Davet Edildi', RESPONDED: 'Teklif Verdi', DECLINED: 'Reddetti' };
 
 export default async function RfqDetailPage({ params }: { params: Promise<{ rfqId: string }> }) {
   const { rfqId } = await params;
   const session = await requireSession();
-  const [{ rfq, lines, suppliers }, comparison] = await Promise.all([
+  const [{ rfq, lines, suppliers }, comparison, award] = await Promise.all([
     getRfq(session.companyId, rfqId),
-    getRfqComparison(session.companyId, rfqId)
+    getRfqComparison(session.companyId, rfqId),
+    getAwardByRfq(session.companyId, rfqId)
   ]);
 
   return (
@@ -27,6 +29,11 @@ export default async function RfqDetailPage({ params }: { params: Promise<{ rfqI
         {rfq.status === 'DRAFT' ? <SendRfqButton rfqId={rfqId} /> : null}
         {rfq.status === 'SENT' ? <CloseRfqButton rfqId={rfqId} /> : null}
         <Link href={`/dashboard/procurement/rfqs/${rfqId}/evaluate`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Değerlendirme</Link>
+        {award ? (
+          <Link href={`/dashboard/procurement/awards/${award.id}`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Ödülü Görüntüle</Link>
+        ) : rfq.status === 'CLOSED' ? (
+          <Link href={`/dashboard/procurement/rfqs/${rfqId}/award`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Ödül Oluştur</Link>
+        ) : null}
       </div>
 
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Kalemler</h2>
