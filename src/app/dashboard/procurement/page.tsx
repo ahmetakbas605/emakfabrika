@@ -28,7 +28,10 @@ export default async function ProcurementPage() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1 style={{ fontSize: 20, marginBottom: 4 }}>Satınalma Talepleri</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <h1 style={{ fontSize: 20, margin: 0 }}>Satınalma Talepleri</h1>
+        <Link href="/dashboard/procurement/rfqs" style={{ fontSize: 13 }}>RFQ'lar (Teklif Talepleri) →</Link>
+      </div>
       <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Talep → Stok/Bütçe Kontrolü → Onay (madde 12-28). Onay motoru genel — bkz. Onay Kutusu.</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>

@@ -1968,3 +1968,89 @@ export const procRequestLines = mysqlTable('proc_request_lines', {
   reservationId: char('reservation_id', { length: 36 }).references(() => invReservations.id),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
+
+// --- Satınalma Faz 2 — Procurement Queue + RFQ (madde 47-65). Queue AYRI
+// bir tablo DEĞİL — APPROVED proc_requests'in, henüz hiçbir RFQ satırından
+// referans almayan satırlarının SORGUSU (lib/procurement/rfq.ts). Bir RFQ,
+// BİRDEN FAZLA farklı talepten satır toplayabilir (madde 49-50) — ayrı bir
+// "Batch" varlığı yok, bu konsolidasyonun kendisi zaten proc_rfq_lines.
+// srcRequestLineId ilişkisiyle kayıpsız ifade ediliyor.
+
+export const PROC_RFQ_STATUSES = ['DRAFT', 'SENT', 'CLOSED', 'CANCELLED'] as const;
+
+export const procRfqs = mysqlTable('proc_rfqs', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  rfqNo: varchar('rfq_no', { length: 32 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  status: mysqlEnum('status', PROC_RFQ_STATUSES).notNull().default('DRAFT'),
+  quotationDeadline: timestamp('quotation_deadline'),
+  deliveryLocation: varchar('delivery_location', { length: 255 }).notNull().default(''),
+  paymentTerms: varchar('payment_terms', { length: 255 }).notNull().default(''),
+  warrantyRequirement: varchar('warranty_requirement', { length: 255 }).notNull().default(''),
+  notes: text('notes'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  sentAt: timestamp('sent_at'),
+  closedAt: timestamp('closed_at')
+}, (table) => [uniqueIndex('udx_proc_rfq_company_no').on(table.companyId, table.rfqNo)]);
+
+export const procRfqLines = mysqlTable('proc_rfq_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  rfqId: char('rfq_id', { length: 36 }).notNull().references(() => procRfqs.id, { onDelete: 'cascade' }),
+  // OPSİYONEL — dolu ise bu RFQ satırı hangi onaylanmış talep satırından
+  // geldiğini izler (Procurement Queue bu FK'nin BOŞ olduğu APPROVED
+  // talep satırlarını listeler). Boş bırakılabilir: bir RFQ, hiçbir
+  // talebe bağlı olmayan doğrudan bir ihtiyaç için de açılabilir.
+  srcRequestLineId: char('src_request_line_id', { length: 36 }).references(() => procRequestLines.id),
+  productId: char('product_id', { length: 36 }).references(() => products.id),
+  description: varchar('description', { length: 255 }).notNull(),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitId: char('unit_id', { length: 36 }).notNull().references(() => units.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const PROC_RFQ_SUPPLIER_STATUSES = ['INVITED', 'RESPONDED', 'DECLINED'] as const;
+
+export const procRfqSuppliers = mysqlTable('proc_rfq_suppliers', {
+  id: char('id', { length: 36 }).primaryKey(),
+  rfqId: char('rfq_id', { length: 36 }).notNull().references(() => procRfqs.id, { onDelete: 'cascade' }),
+  supplierPartyId: char('supplier_party_id', { length: 36 }).notNull().references(() => parties.id),
+  status: mysqlEnum('status', PROC_RFQ_SUPPLIER_STATUSES).notNull().default('INVITED'),
+  invitedAt: timestamp('invited_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_proc_rfq_supplier').on(table.rfqId, table.supplierPartyId)]);
+
+// madde 117 — Quotation Revision (V1/V2/V3). Var olan bir teklifi
+// GÜNCELLEMEK yerine her gönderim YENİ bir satır + artan version — teklif
+// alındıktan sonra orijinal fiyatın SİLİNMEMESİ ilkesi (madde 116-117,
+// approval_instances'ta zaten uygulanan AYNI immutable desen).
+export const procQuotations = mysqlTable('proc_quotations', {
+  id: char('id', { length: 36 }).primaryKey(),
+  rfqId: char('rfq_id', { length: 36 }).notNull().references(() => procRfqs.id, { onDelete: 'cascade' }),
+  supplierPartyId: char('supplier_party_id', { length: 36 }).notNull().references(() => parties.id),
+  version: int('version').notNull(),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  validUntil: date('valid_until', { mode: 'string' }),
+  paymentTerms: varchar('payment_terms', { length: 255 }).notNull().default(''),
+  deliveryDays: int('delivery_days'),
+  notes: text('notes'),
+  // Tedarikçi portalı YOK (madde 59, ileride) — bugün teklif, e-posta/telefon
+  // ile alınıp BİR satınalma kullanıcısı tarafından girilir.
+  submittedByUserId: char('submitted_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  submittedAt: timestamp('submitted_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_proc_quotation_version').on(table.rfqId, table.supplierPartyId, table.version)]);
+
+export const procQuotationLines = mysqlTable('proc_quotation_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  quotationId: char('quotation_id', { length: 36 }).notNull().references(() => procQuotations.id, { onDelete: 'cascade' }),
+  rfqLineId: char('rfq_line_id', { length: 36 }).notNull().references(() => procRfqLines.id),
+  unitPrice: decimal('unit_price', { precision: 20, scale: 6 }).notNull(),
+  discountPercent: decimal('discount_percent', { precision: 5, scale: 2 }),
+  taxPercent: decimal('tax_percent', { precision: 5, scale: 2 }),
+  deliveryDays: int('delivery_days'),
+  // madde 61 — "istenen ürün yok, alternatif ürün sunuyorum".
+  isAlternative: boolean('is_alternative').notNull().default(false),
+  alternativeDescription: varchar('alternative_description', { length: 255 }).notNull().default(''),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
