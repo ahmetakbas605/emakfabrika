@@ -32,3 +32,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# next dev tarafından otomatik yazılan agent dosyaları (bkz. AGENTS.md içeriği)
+/AGENTS.md
+/CLAUDE.md
+.dev-server.log
