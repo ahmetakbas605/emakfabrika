@@ -1889,3 +1889,82 @@ export const budgetCommitments = mysqlTable('budget_commitments', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   releasedAt: timestamp('released_at')
 });
+
+// --- Satınalma (Procurement) Faz 1 — Purchase Requisition (madde 12-28).
+// Faz 0'ın platform temelini TÜKETİR, hiçbiri için YENİ tablo AÇILMADI:
+// numaralama (doc_number_seqs, sequenceKey='PR'), workflow (approval_
+// instances, documentType='PROCUREMENT_REQUISITION'), ek dosya (document_
+// attachments, entityType='PROCUREMENT_REQUEST_LINE'), bütçe taahhüdü
+// (budget_commitments), stok rezervasyonu (inv_reservations — Faz 2A'da
+// "henüz gerçek tüketicisi yok" notuyla kurulmuştu, İLK GERÇEK TÜKETİCİSİ
+// burası). Tablo adları MySQL 64 karakter FK sınırı için kısaltıldı
+// ("procurement_request_lines" self-FK'siz bile sınıra çok yakındı).
+
+export const PROCUREMENT_REQUEST_TYPES = ['NORMAL', 'URGENT', 'EMERGENCY', 'PROJECT', 'PRODUCTION', 'MAINTENANCE', 'IT', 'OFFICE', 'RAW_MATERIAL', 'SERVICE', 'CAPEX', 'OPEX', 'STOCK_REPLENISHMENT'] as const;
+export const PROCUREMENT_PRIORITIES = ['LOW', 'NORMAL', 'HIGH', 'CRITICAL'] as const;
+// madde 133 kanban'ının SADELEŞTİRİLMİŞ hâli — STOCK_CHECK ayrı bir durum
+// DEĞİL, submit anında otomatik hesaplanıyor (bkz. lib/procurement/
+// requisition.ts:submitRequisition yorumu).
+export const PROCUREMENT_REQUEST_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'REVISION_REQUIRED', 'CANCELLED'] as const;
+export const PROCUREMENT_CAPEX_OPEX = ['CAPEX', 'OPEX'] as const;
+
+export const procRequests = mysqlTable('proc_requests', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  departmentId: char('department_id', { length: 36 }).references(() => departments.id),
+  requestNo: varchar('request_no', { length: 32 }).notNull(),
+  requestType: mysqlEnum('request_type', PROCUREMENT_REQUEST_TYPES).notNull().default('NORMAL'),
+  priority: mysqlEnum('priority', PROCUREMENT_PRIORITIES).notNull().default('NORMAL'),
+  status: mysqlEnum('status', PROCUREMENT_REQUEST_STATUSES).notNull().default('DRAFT'),
+  requestedByUserId: char('requested_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  costCenterId: char('cost_center_id', { length: 36 }).references(() => costCenters.id),
+  // İkisi de OPSİYONEL — bütçe takibi madde 34'te "kontrol edilebilir"
+  // (zorunlu değil), stock_items.accountingAccountId İLE AYNI opsiyonel-
+  // entegrasyon deseni.
+  budgetItemId: char('budget_item_id', { length: 36 }).references(() => budgetItems.id),
+  budgetCommitmentId: char('budget_commitment_id', { length: 36 }).references(() => budgetCommitments.id),
+  capexOpex: mysqlEnum('capex_opex', PROCUREMENT_CAPEX_OPEX),
+  requestedDeliveryDate: date('requested_delivery_date', { mode: 'string' }),
+  justification: text('justification'),
+  estimatedTotal: decimal('estimated_total', { precision: 20, scale: 6 }),
+  currencyCode: char('currency_code', { length: 3 }).references(() => currencies.code),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  submittedAt: timestamp('submitted_at'),
+  completedAt: timestamp('completed_at')
+}, (table) => [uniqueIndex('udx_proc_request_company_no').on(table.companyId, table.requestNo)]);
+
+// madde 20 — PENDING: henüz kontrol edilmedi (submit'ten önce). Diğerleri
+// submit ANINDA otomatik hesaplanır (bkz. requisition.ts), depo sorumlusu
+// gerekirse elle düzeltebilir (updateLineStockStatus).
+export const PROC_LINE_STOCK_STATUSES = ['PENDING', 'STOCK_AVAILABLE', 'STOCK_PARTIAL', 'STOCK_UNAVAILABLE', 'NEW_PURCHASE_REQUIRED'] as const;
+
+export const procRequestLines = mysqlTable('proc_request_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  requestId: char('request_id', { length: 36 }).notNull().references(() => procRequests.id, { onDelete: 'cascade' }),
+  lineNo: int('line_no').notNull(),
+  // madde 18 — mümkünse Master Data'daki tek Ürün'e bağlan; productId/
+  // stockItemId İKİSİ de opsiyonel (Depo'da henüz kartı olmayan, ilk kez
+  // alınacak bir ürün için description serbest metinle yeterli).
+  productId: char('product_id', { length: 36 }).references(() => products.id),
+  stockItemId: char('stock_item_id', { length: 36 }).references(() => stockItems.id),
+  description: varchar('description', { length: 255 }).notNull(),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitId: char('unit_id', { length: 36 }).notNull().references(() => units.id),
+  preferredBrand: varchar('preferred_brand', { length: 255 }).notNull().default(''),
+  alternativeBrand: varchar('alternative_brand', { length: 255 }).notNull().default(''),
+  model: varchar('model', { length: 255 }).notNull().default(''),
+  // madde 23-24 — description/mandatory_features/minimum_specifications/
+  // preferred_specifications/standards/compatibility/warranty_requirement/
+  // delivery_requirement/certification_requirement. JSON — workflow_rules.
+  // conditions İLE AYNI desen (serbest, sorgu alanı değil, salt gösterim).
+  technicalSpec: json('technical_spec'),
+  estimatedUnitPrice: decimal('estimated_unit_price', { precision: 20, scale: 6 }),
+  estimatedTotal: decimal('estimated_total', { precision: 20, scale: 6 }),
+  warehouseId: char('warehouse_id', { length: 36 }).references(() => warehouses.id),
+  deliveryLocation: varchar('delivery_location', { length: 255 }).notNull().default(''),
+  stockStatus: mysqlEnum('stock_status', PROC_LINE_STOCK_STATUSES).notNull().default('PENDING'),
+  reservedQty: decimal('reserved_qty', { precision: 20, scale: 6 }),
+  purchaseQty: decimal('purchase_qty', { precision: 20, scale: 6 }),
+  reservationId: char('reservation_id', { length: 36 }).references(() => invReservations.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});

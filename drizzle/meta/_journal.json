@@ -148,6 +148,13 @@
       "when": 1788030973290,
       "tag": "0020_strange_guardsmen",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "5",
+      "when": 1788033062476,
+      "tag": "0021_narrow_the_executioner",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import 'server-only';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, desc } from 'drizzle-orm';
 import { db, type Tx } from '@/db/client';
 import { workflowRules, approvalInstances, approvalSteps, approvalStepApprovers, approvalActions, users, positions, approvalDelegations } from '@/db/schema';
 import { newId } from '@/lib/id';
@@ -221,11 +221,41 @@ export async function actOnStep(companyId: string, input: ActOnStepInput): Promi
   return db.transaction((tx) => actOnStepInTx(tx, companyId, input));
 }
 
+// Onay Kutusu (madde 218-219) TEK bir merkezi ekran — HER domain'in
+// (bugün yalnızca procurement, ileride Satış/İK/...) onayları BURADAN
+// karara bağlanır. actions/workflow.ts:actOnStepAction bu yüzden hangi
+// domain'e ait olduğunu ÖNCE bilmeli — o domain'in KENDİ yan etkilerini
+// (procurement için: reddedilince bütçe/rezervasyon serbest bırakma)
+// tetikleyebilsin diye. Domain sayısı arttıkça bu if-else bir registry'ye
+// dönüşecek (bugün tek domain için gereksiz bir soyutlama olurdu).
+export async function getStepDocumentType(stepId: string): Promise<string | null> {
+  const [step] = await db.select({ instanceId: approvalSteps.instanceId }).from(approvalSteps).where(eq(approvalSteps.id, stepId)).limit(1);
+  if (!step) return null;
+  const [instance] = await db.select({ documentType: approvalInstances.documentType }).from(approvalInstances).where(eq(approvalInstances.id, step.instanceId)).limit(1);
+  return instance?.documentType ?? null;
+}
+
 // --- Sorgular (UI için) ---
 
+// GERÇEK bir hata burada yakalandı (Satınalma Faz 1'in resubmit testiyle):
+// bir belge REVISION_REQUIRED'dan sonra yeniden gönderilirse, AYNI
+// documentId için İKİNCİ bir approval_instances satırı oluşur (startApproval
+// InTx her submit'te YENİ bir instance açar, eskisini SİLMEZ/GÜNCELLEMEZ —
+// madde 116-117 immutable ilkesi). ORDER BY olmadan `.limit(1)` MySQL'in
+// keyfi (genelde ekleme sırasına yakın ama GARANTİ değil) satır sırasına
+// güveniyordu — ESKİ (REJECTED) instance'ı döndürüp YENİ aktif onayı
+// gizleyebilirdi. createdAt DESC ile HER ZAMAN en son başlatılan instance
+// döner.
 export async function getApprovalInstance(companyId: string, documentType: string, documentId: string) {
-  const [instance] = await db.select().from(approvalInstances).where(and(eq(approvalInstances.companyId, companyId), eq(approvalInstances.documentType, documentType), eq(approvalInstances.documentId, documentId))).limit(1);
-  if (!instance) return null;
+  const instances = await db.select().from(approvalInstances).where(and(eq(approvalInstances.companyId, companyId), eq(approvalInstances.documentType, documentType), eq(approvalInstances.documentId, documentId))).orderBy(desc(approvalInstances.createdAt));
+  if (instances.length === 0) return null;
+  // createdAt DESC tek başına YETERSİZ — MySQL TIMESTAMP varsayılan olarak
+  // SANİYE hassasiyetinde, aynı saniye içinde oluşan iki instance (hızlı
+  // bir resubmit senaryosunda GERÇEKTEN yaşandı) güvenilir sıralanamaz.
+  // Bir belgenin aynı anda en fazla BİR aktif (IN_PROGRESS) instance'ı
+  // olabilir (submitProcRequest zaten DRAFT/REVISION_REQUIRED dışını
+  // reddediyor) — bu yüzden status net, zamana bağlı olmayan bir ayrım.
+  const instance = instances.find((i) => i.status === 'IN_PROGRESS') ?? instances[0];
 
   const steps = await db.select().from(approvalSteps).where(eq(approvalSteps.instanceId, instance.id));
   const stepIds = steps.map((s) => s.id);

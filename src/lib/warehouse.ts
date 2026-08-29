@@ -377,22 +377,40 @@ export interface ReserveStockInput {
 }
 
 export async function reserveStock(companyId: string, input: ReserveStockInput): Promise<string> {
-  const [balance] = await db.select({ qty: invBalances.qty }).from(invBalances).where(and(eq(invBalances.warehouseId, input.warehouseId), eq(invBalances.stockItemId, input.stockItemId))).limit(1);
+  return db.transaction((tx) => reserveStockInTx(tx, companyId, input));
+}
+
+// Satınalma Faz 1 — submitProcRequest'in TEK transaction içinde birden
+// fazla satır için rezervasyon oluşturması gerekiyor (bütçe taahhüdü +
+// workflow başlatma İLE BİRLİKTE, atomik). recordStockMovementInTx İLE
+// AYNI desen. Bu aynı zamanda ÖNCEDEN VAR OLAN bir yarış durumu riskini de
+// düzeltiyor: eskiden reserveStock kendi transaction'ını AÇMIYORDU (select+
+// select+insert ayrı işlemlerdi) — iki eşzamanlı rezervasyon isteği aynı
+// "kullanılabilir" değerini okuyup ikisi de geçebilirdi. Artık her çağrı
+// (tek başına veya submitProcRequest'in içinden) TEK bir transaction'da.
+// Satınalma Faz 1'in stok kontrolü (madde 19-22) İLE bu fonksiyonun
+// KENDİSİ aynı hesabı paylaşıyor — tek yerden, iki farklı tutarsız
+// hesaplama riski olmasın diye dışa aktarıldı.
+export async function getAvailableQuantityInTx(tx: Tx, warehouseId: string, stockItemId: string): Promise<ReturnType<typeof money>> {
+  const [balance] = await tx.select({ qty: invBalances.qty }).from(invBalances).where(and(eq(invBalances.warehouseId, warehouseId), eq(invBalances.stockItemId, stockItemId))).limit(1);
   const onHand = balance ? money(balance.qty) : money(0);
 
-  const reservedRows = await db
+  const reservedRows = await tx
     .select({ quantity: invReservations.quantity })
     .from(invReservations)
-    .where(and(eq(invReservations.warehouseId, input.warehouseId), eq(invReservations.stockItemId, input.stockItemId), eq(invReservations.status, 'ACTIVE')));
+    .where(and(eq(invReservations.warehouseId, warehouseId), eq(invReservations.stockItemId, stockItemId), eq(invReservations.status, 'ACTIVE')));
   const alreadyReserved = reservedRows.reduce((acc, r) => acc.plus(money(r.quantity)), money(0));
-  const available = onHand.minus(alreadyReserved);
+  return onHand.minus(alreadyReserved);
+}
 
+export async function reserveStockInTx(tx: Tx, companyId: string, input: ReserveStockInput): Promise<string> {
+  const available = await getAvailableQuantityInTx(tx, input.warehouseId, input.stockItemId);
   const qty = money(input.quantity);
   if (qty.lessThanOrEqualTo(0)) throw new AccountingError('Miktar sıfırdan büyük olmalı.');
   if (qty.greaterThan(available)) throw new AccountingError(`Yetersiz kullanılabilir stok — mevcut: ${available.toFixed(2)}, istenen: ${qty.toFixed(2)}.`);
 
   const id = newId();
-  await db.insert(invReservations).values({
+  await tx.insert(invReservations).values({
     id,
     companyId,
     warehouseId: input.warehouseId,
@@ -406,10 +424,14 @@ export async function reserveStock(companyId: string, input: ReserveStockInput):
 }
 
 export async function releaseReservation(companyId: string, reservationId: string): Promise<void> {
-  const [row] = await db.select().from(invReservations).where(and(eq(invReservations.id, reservationId), eq(invReservations.companyId, companyId))).limit(1);
+  return db.transaction((tx) => releaseReservationInTx(tx, companyId, reservationId));
+}
+
+export async function releaseReservationInTx(tx: Tx, companyId: string, reservationId: string): Promise<void> {
+  const [row] = await tx.select().from(invReservations).where(and(eq(invReservations.id, reservationId), eq(invReservations.companyId, companyId))).limit(1);
   if (!row) throw new AccountingError('Rezervasyon bulunamadı.');
   if (row.status !== 'ACTIVE') throw new AccountingError('Yalnızca aktif bir rezervasyon serbest bırakılabilir.');
-  await db.update(invReservations).set({ status: 'RELEASED', releasedAt: new Date() }).where(eq(invReservations.id, reservationId));
+  await tx.update(invReservations).set({ status: 'RELEASED', releasedAt: new Date() }).where(eq(invReservations.id, reservationId));
 }
 
 export async function listReservations(companyId: string, warehouseId?: string) {

@@ -3,9 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import * as z from 'zod';
 import { requireFactoryAdmin, requireSession } from '@/lib/dal';
-import { createWorkflowRule, actOnStep, type ApprovalDecision } from '@/lib/workflow/engine';
+import { createWorkflowRule, actOnStep, getStepDocumentType, type ApprovalDecision } from '@/lib/workflow/engine';
 import type { WorkflowChainStep } from '@/lib/workflow/types';
+import { actOnRequisitionStep } from '@/lib/procurement/requisition';
 import { CoreError } from '@/lib/core/errors';
+import { ProcurementError } from '@/lib/procurement/errors';
 import { optionalField } from '@/lib/form';
 
 export type FormState = { error?: string; success?: string } | undefined;
@@ -88,17 +90,25 @@ export async function actOnStepAction(_prevState: FormState, formData: FormData)
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
 
+  const actionInput = {
+    stepId: parsed.data.stepId,
+    actingUserId: session.id,
+    decision: parsed.data.decision as ApprovalDecision,
+    comment: parsed.data.comment,
+    delegateToUserId: parsed.data.delegateToUserId
+  };
+
   try {
-    await actOnStep(session.companyId, {
-      stepId: parsed.data.stepId,
-      actingUserId: session.id,
-      decision: parsed.data.decision as ApprovalDecision,
-      comment: parsed.data.comment,
-      delegateToUserId: parsed.data.delegateToUserId
-    });
+    const documentType = await getStepDocumentType(parsed.data.stepId);
+    if (documentType === 'PROCUREMENT_REQUISITION') {
+      await actOnRequisitionStep(session.companyId, actionInput);
+    } else {
+      await actOnStep(session.companyId, actionInput);
+    }
   } catch (err) {
-    return { error: err instanceof CoreError ? err.message : 'İşlem gerçekleştirilemedi.' };
+    return { error: err instanceof CoreError || err instanceof ProcurementError ? err.message : 'İşlem gerçekleştirilemedi.' };
   }
   revalidatePath('/dashboard/approvals');
+  revalidatePath('/dashboard/procurement');
   return { success: 'Karar kaydedildi.' };
 }

@@ -25,6 +25,18 @@ export async function listBudgets(companyId: string) {
   return db.select().from(budgets).where(eq(budgets.companyId, companyId));
 }
 
+// Satınalma Faz 1 — talep formunun "hangi bütçe kalemine bağlansın"
+// seçimi için. Hesap adıyla birlikte, kullanıcı kod değil ANLAMLI bir
+// etiket görsün diye (madde 34'ün "bütçe kontrolü" ekranı).
+export async function listBudgetItems(companyId: string) {
+  return db
+    .select({ id: budgetItems.id, budgetName: budgets.name, accountCode: accountingAccounts.code, accountName: accountingAccounts.name, plannedAmount: budgetItems.plannedAmount, month: budgetItems.month })
+    .from(budgetItems)
+    .innerJoin(budgets, eq(budgets.id, budgetItems.budgetId))
+    .innerJoin(accountingAccounts, eq(accountingAccounts.id, budgetItems.accountId))
+    .where(eq(budgets.companyId, companyId));
+}
+
 export interface AddBudgetItemInput {
   budgetId: string;
   accountId: string;
@@ -149,9 +161,23 @@ async function requireOwnedCommitment(companyId: string, commitmentId: string) {
 }
 
 export async function releaseBudgetCommitment(companyId: string, commitmentId: string): Promise<void> {
-  const row = await requireOwnedCommitment(companyId, commitmentId);
+  return db.transaction((tx) => releaseBudgetCommitmentInTx(tx, companyId, commitmentId));
+}
+
+// Satınalma Faz 1 — bir talep reddedildiğinde/değişiklik istendiğinde,
+// taahhüdün serbest bırakılması onay motorunun kendi transaction'ı İÇİNDE
+// olmalı (recordStockMovementInTx/reserveStockInTx İLE AYNI desen).
+export async function releaseBudgetCommitmentInTx(tx: Tx, companyId: string, commitmentId: string): Promise<void> {
+  const [row] = await tx
+    .select({ id: budgetCommitments.id, status: budgetCommitments.status, companyId: budgets.companyId })
+    .from(budgetCommitments)
+    .innerJoin(budgetItems, eq(budgetItems.id, budgetCommitments.budgetItemId))
+    .innerJoin(budgets, eq(budgets.id, budgetItems.budgetId))
+    .where(eq(budgetCommitments.id, commitmentId))
+    .limit(1);
+  if (!row || row.companyId !== companyId) throw new AccountingError('Bütçe taahhüdü bulunamadı.');
   if (row.status !== 'RESERVED') throw new AccountingError('Yalnızca ayrılmış (RESERVED) bir taahhüt serbest bırakılabilir.');
-  await db.update(budgetCommitments).set({ status: 'RELEASED', releasedAt: new Date() }).where(eq(budgetCommitments.id, commitmentId));
+  await tx.update(budgetCommitments).set({ status: 'RELEASED', releasedAt: new Date() }).where(eq(budgetCommitments.id, commitmentId));
 }
 
 export async function markBudgetCommitmentConsumed(companyId: string, commitmentId: string): Promise<void> {
@@ -172,12 +198,21 @@ export interface BudgetItemAvailability {
 }
 
 export async function getBudgetItemAvailability(companyId: string, budgetItemId: string): Promise<BudgetItemAvailability> {
-  const [item] = await db.select({ id: budgetItems.id, plannedAmount: budgetItems.plannedAmount, budgetId: budgetItems.budgetId }).from(budgetItems).where(eq(budgetItems.id, budgetItemId)).limit(1);
+  return db.transaction((tx) => getBudgetItemAvailabilityInTx(tx, companyId, budgetItemId));
+}
+
+// Satınalma Faz 1 — submitProcRequest'in "kontrol et + taahhüt oluştur"
+// adımlarının AYNI transaction'da, tutarlı bir okuma üzerinden yapılması
+// için (aksi halde iki eşzamanlı submit aynı "müsait" değerini görüp
+// ikisi de EXCEEDED kontrolünü geçebilirdi — reserveStockInTx'teki AYNI
+// yarış durumu düzeltmesi, burada bütçe için).
+export async function getBudgetItemAvailabilityInTx(tx: Tx, companyId: string, budgetItemId: string): Promise<BudgetItemAvailability> {
+  const [item] = await tx.select({ id: budgetItems.id, plannedAmount: budgetItems.plannedAmount, budgetId: budgetItems.budgetId }).from(budgetItems).where(eq(budgetItems.id, budgetItemId)).limit(1);
   if (!item) throw new AccountingError('Bütçe kalemi bulunamadı.');
-  const [budget] = await db.select({ companyId: budgets.companyId }).from(budgets).where(eq(budgets.id, item.budgetId)).limit(1);
+  const [budget] = await tx.select({ companyId: budgets.companyId }).from(budgets).where(eq(budgets.id, item.budgetId)).limit(1);
   if (!budget || budget.companyId !== companyId) throw new AccountingError('Bütçe kalemi bulunamadı.');
 
-  const commitments = await db
+  const commitments = await tx
     .select({ amount: budgetCommitments.amount })
     .from(budgetCommitments)
     .where(and(eq(budgetCommitments.budgetItemId, budgetItemId), inArray(budgetCommitments.status, ['RESERVED', 'CONSUMED'])));
