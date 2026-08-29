@@ -17,7 +17,9 @@ export default async function DepartmentLayout({ children, params }: { children:
           { href: `/dashboard/departments/${departmentId}/kasa`, label: 'Kasa' },
           { href: `/dashboard/departments/${departmentId}/banka`, label: 'Banka' },
           { href: `/dashboard/departments/${departmentId}/periods`, label: 'Dönemler' },
-          { href: `/dashboard/departments/${departmentId}/reports/trial-balance`, label: 'Mizan' }
+          { href: `/dashboard/departments/${departmentId}/reports/trial-balance`, label: 'Mizan' },
+          { href: `/dashboard/departments/${departmentId}/reports/balance-sheet`, label: 'Bilanço' },
+          { href: `/dashboard/departments/${departmentId}/reports/income-statement`, label: 'Gelir Tablosu' }
         ]
       : [];
 

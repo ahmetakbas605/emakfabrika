@@ -329,6 +329,7 @@ export async function getJournalWithLines(companyId: string, journalId: string) 
 export interface TrialBalanceRow {
   accountCode: string;
   accountName: string;
+  accountType: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
   totalDebit: string;
   totalCredit: string;
   balance: string;
@@ -339,6 +340,7 @@ export async function getTrialBalance(companyId: string): Promise<TrialBalanceRo
     .select({
       accountCode: accountingAccounts.code,
       accountName: accountingAccounts.name,
+      accountType: accountingAccounts.accountType,
       normalBalance: accountingAccounts.normalBalance,
       totalDebit: sql<string>`COALESCE(SUM(${accountingJournalLines.baseCurrencyDebit}), 0)`,
       totalCredit: sql<string>`COALESCE(SUM(${accountingJournalLines.baseCurrencyCredit}), 0)`
@@ -347,12 +349,65 @@ export async function getTrialBalance(companyId: string): Promise<TrialBalanceRo
     .leftJoin(accountingJournalLines, eq(accountingJournalLines.accountId, accountingAccounts.id))
     .leftJoin(accountingJournals, and(eq(accountingJournals.id, accountingJournalLines.journalId), eq(accountingJournals.status, 'POSTED')))
     .where(eq(accountingAccounts.companyId, companyId))
-    .groupBy(accountingAccounts.id, accountingAccounts.code, accountingAccounts.name, accountingAccounts.normalBalance);
+    .groupBy(accountingAccounts.id, accountingAccounts.code, accountingAccounts.name, accountingAccounts.accountType, accountingAccounts.normalBalance);
 
   return rows.map((r) => {
     const debit = money(r.totalDebit);
     const credit = money(r.totalCredit);
     const balance = r.normalBalance === 'DEBIT' ? debit.minus(credit) : credit.minus(debit);
-    return { accountCode: r.accountCode, accountName: r.accountName, totalDebit: debit.toFixed(2), totalCredit: credit.toFixed(2), balance: balance.toFixed(2) };
+    return { accountCode: r.accountCode, accountName: r.accountName, accountType: r.accountType, totalDebit: debit.toFixed(2), totalCredit: credit.toFixed(2), balance: balance.toFixed(2) };
   });
+}
+
+// --- Bilanço / Gelir Tablosu (PDF madde 18) — mizandan türetilir, ayrı bir
+// hesaplama motoru YOK (kaynağın kendi kuralı: "raporlar transaction
+// tablolarını gereksiz yere taramamalı" — bu zaten TEK bir mizan sorgusunun
+// üzerine kurulu, madde 87 ile tutarlı). ---
+
+export interface FinancialStatements {
+  assets: TrialBalanceRow[];
+  liabilities: TrialBalanceRow[];
+  equity: TrialBalanceRow[];
+  revenue: TrialBalanceRow[];
+  expense: TrialBalanceRow[];
+  totalAssets: string;
+  totalLiabilitiesAndEquity: string;
+  totalRevenue: string;
+  totalExpense: string;
+  netIncome: string;
+}
+
+export async function getFinancialStatements(companyId: string): Promise<FinancialStatements> {
+  const rows = await getTrialBalance(companyId);
+  const nonZero = rows.filter((r) => !money(r.balance).isZero());
+  const byType = (type: TrialBalanceRow['accountType']) => nonZero.filter((r) => r.accountType === type);
+
+  const assets = byType('ASSET');
+  const liabilities = byType('LIABILITY');
+  const equity = byType('EQUITY');
+  const revenue = byType('REVENUE');
+  const expense = byType('EXPENSE');
+
+  const totalAssets = sum(assets.map((r) => r.balance));
+  const totalRevenue = sum(revenue.map((r) => r.balance));
+  const totalExpense = sum(expense.map((r) => r.balance));
+  const netIncome = totalRevenue.minus(totalExpense);
+  // Dönem net kâr/zararı, bilançoda özkaynaklara eklenen bir kalem olarak
+  // gösterilir (Kurumlar Vergisi öncesi, VUK'un "Dönem Net Kârı" satırı ile
+  // AYNI mantık — vergi karşılığı burada HESAPLANMIYOR, TODO: LEGAL_REVIEW_REQUIRED,
+  // bkz. MEVZUAT-MAP.md).
+  const totalLiabilitiesAndEquity = sum(liabilities.map((r) => r.balance)).plus(sum(equity.map((r) => r.balance))).plus(netIncome);
+
+  return {
+    assets,
+    liabilities,
+    equity,
+    revenue,
+    expense,
+    totalAssets: totalAssets.toFixed(2),
+    totalLiabilitiesAndEquity: totalLiabilitiesAndEquity.toFixed(2),
+    totalRevenue: totalRevenue.toFixed(2),
+    totalExpense: totalExpense.toFixed(2),
+    netIncome: netIncome.toFixed(2)
+  };
 }
