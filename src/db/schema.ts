@@ -691,6 +691,10 @@ export const slaPolicies = mysqlTable('sla_policies', {
   priority: mysqlEnum('priority', TICKET_PRIORITIES).notNull(),
   responseMinutes: int('response_minutes').notNull(),
   resolutionHours: int('resolution_hours').notNull(),
+  // SERVICE-DESK.md §8 — role code dizisi (ör. ["SERVICE_DESK_AGENT","IT_MANAGER"]),
+  // sırayla eskalasyon seviyelerini temsil eder. NULL/boş = bu politika için
+  // eskalasyon yapılandırılmamış.
+  escalationChain: json('escalation_chain').$type<string[]>(),
   active: boolean('active').notNull().default(true)
 }, (table) => [uniqueIndex('udx_sla_policy_company_priority').on(table.companyId, table.priority)]);
 
@@ -778,6 +782,20 @@ export const ticketWorkLogs = mysqlTable('ticket_work_logs', {
   billable: boolean('billable').notNull().default(false),
   note: text('note'),
   loggedAt: timestamp('logged_at').notNull().defaultNow()
+});
+
+// SERVICE-DESK.md §8 — kalıcı eskalasyon denetim kaydı. Gerçek bildirim
+// altyapısı (it_notifications) henüz kurulmadı (IT-ARCHITECTURE.md §3'ün
+// kendi TODO: AUDIT_TABLE_REUSE_VS_NEW notu) — bu yüzden "eskalasyon"un
+// bugünkü gerçek karşılığı: kalıcı bir kayıt + arayüzde görünürlük, e-posta/
+// push bildirimi DEĞİL. lib/scheduler.ts'in periyodik görevi tarafından
+// üretilir.
+export const ticketEscalations = mysqlTable('ticket_escalations', {
+  id: char('id', { length: 36 }).primaryKey(),
+  ticketId: char('ticket_id', { length: 36 }).notNull().references(() => serviceDeskTickets.id, { onDelete: 'cascade' }),
+  level: int('level').notNull(),
+  escalatedToRoleCode: varchar('escalated_to_role_code', { length: 64 }).notNull(),
+  escalatedAt: timestamp('escalated_at').notNull().defaultNow()
 });
 
 // --- Incident / Problem (SERVICE-DESK.md §5) ---

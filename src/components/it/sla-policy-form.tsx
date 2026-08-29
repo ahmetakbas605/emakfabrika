@@ -30,6 +30,10 @@ export function SlaPolicyForm({ departmentId }: { departmentId: string }) {
         <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Çözüm (saat)</label>
         <input name="resolutionHours" type="number" min={1} required style={{ padding: 6, width: 90 }} />
       </div>
+      <div>
+        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Eskalasyon Zinciri (opsiyonel, rol kodları virgülle)</label>
+        <input name="escalationChainText" placeholder="SERVICE_DESK_AGENT,IT_MANAGER" style={{ padding: 6, minWidth: 240 }} />
+      </div>
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'SLA Politikası Ekle'}</button>
       {state?.error ? <p style={{ color: '#b00', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
       {state?.success ? <p style={{ color: '#080', fontSize: 13, width: '100%' }}>{state.success}</p> : null}

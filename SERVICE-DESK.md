@@ -97,14 +97,21 @@ zaman sırasına göre sıralanmasıyla (uygulama katmanında, SQL UNION ile)
 üretilir — PDF madde 87'nin "gereksiz tarama/duplikasyon yapma" ilkesiyle
 tutarlı, aynı bilgiyi iki yerde tutmuyoruz.
 
-## 8. Escalation (madde 119)
+## 8. Escalation (madde 119) — ÇÖZÜLDÜ
 
-`sla_rules` üzerinde `escalation_chain` (JSON: `["TECHNICIAN","TEAM_LEADER",
-"IT_MANAGER","COMPANY_ADMIN"]`) — zamanlanmış bir görev (Faz 3'te henüz
-kurulmayan bir "scheduler" altyapısı gerektiriyor, PDF madde 190 — Muhasebe'de
-hiç ihtiyaç olmamıştı çünkü Muhasebe'de zaman-tetiklemeli hiçbir iş yok, bu
-IT'nin GERÇEKTEN yeni bir altyapı ihtiyacı: `TODO: SCHEDULER_INFRASTRUCTURE`,
-Faz 3'ün bir parçası — node-cron benzeri in-process bir zamanlayıcı mı, yoksa
-Windows Task Scheduler/cron ile dışarıdan tetiklenen bir HTTP endpoint mi,
-karar gerekiyor, fabrikanın kendi sunucusunda 7/24 çalışan bir Node
-sürecinin garantisi var mı yok mu buna bağlı).
+`TODO: SCHEDULER_INFRASTRUCTURE` kullanıcı kararıyla netleşti: fabrikanın
+kendi sunucusunda 7/24 çalışan bir Node sürecinin garantisi VAR — bu yüzden
+Windows Task Scheduler/cron ile dışarıdan tetiklenen bir HTTP endpoint
+YERİNE, sürecin kendi içinde bir in-process zamanlayıcı kuruldu
+(`src/instrumentation.ts:register()` → `lib/scheduler.ts:startScheduler()`,
+varsayılan 5 dakikada bir, `SCHEDULER_INTERVAL_MS` ile ayarlanabilir).
+
+`sla_policies.escalation_chain` (JSON, rol kodu dizisi — ör.
+`["SERVICE_DESK_AGENT","IT_MANAGER"]`) — `lib/it/escalation.ts:
+checkAndEscalateOverdueTickets` periyodik olarak SLA'sı dolmuş ve henüz
+zincirin sonuna ulaşmamış ticket'lar için `ticket_escalations`'a bir sonraki
+seviyeyi yazar. Gerçek bildirim altyapısı (e-posta/push) henüz YOK —
+"eskalasyon"un bugünkü karşılığı kalıcı bir denetim kaydı + arayüzde
+görünürlük (ticket listesinde "Seviye N" rozeti, ticket detayında bant).
+Bu, MAINTENANCE.md §2'nin otomatik work order üretimiyle AYNI zamanlayıcı
+altyapısını paylaşır — MONITORING.md §4 geldiğinde de aynı desene eklenecek.

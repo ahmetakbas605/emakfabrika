@@ -9,8 +9,10 @@ Faz 13 kapsamı — IT-ARCHITECTURE.md §8'de tanıtılan mimari prensibin
 MONITORING SERVER (emakfabrika'nın kendi süreci veya ayrı bir işlem — TODO:
   COLLECTOR_PROCESS_MODEL)
   ↓
-COLLECTOR (zamanlanmış görev — TODO: SCHEDULER_INFRASTRUCTURE, SERVICE-DESK.md
-  §8'de de aynı ihtiyaç var, TEK bir scheduler altyapısı ikisini de besleyecek)
+COLLECTOR (zamanlanmış görev — TODO: SCHEDULER_INFRASTRUCTURE ÇÖZÜLDÜ,
+  bkz. SERVICE-DESK.md §8: lib/scheduler.ts'in in-process döngüsü. Faz 13
+  kodlandığında COLLECTOR de aynı runSchedulerTasksOnce döngüsüne bir görev
+  olarak eklenecek, ayrı bir altyapı kurulmayacak)
   ↓
 SNMP / ICMP / AGENT / API (NetworkDiscoveryAdapter — NETWORK.md §6)
   ↓

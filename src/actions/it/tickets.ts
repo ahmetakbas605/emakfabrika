@@ -5,6 +5,7 @@ import * as z from 'zod';
 import { requireDepartmentAccess } from '@/lib/dal';
 import { createTicket, transitionTicket, reopenTicket, assignTicket, addComment, logWork, createSlaPolicy } from '@/lib/it/tickets';
 import { revertAssetAfterMaintenanceIfApplicable } from '@/lib/it/maintenance';
+import { validateEscalationChain } from '@/lib/it/escalation';
 import { ItError } from '@/lib/it/errors';
 import { optionalField } from '@/lib/form';
 
@@ -136,16 +137,26 @@ const SlaPolicySchema = z.object({
   name: z.string().trim().min(1, 'Ad gerekli.'),
   priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'CRITICAL']),
   responseMinutes: z.string().trim().min(1),
-  resolutionHours: z.string().trim().min(1)
+  resolutionHours: z.string().trim().min(1),
+  escalationChainText: z.string().trim().optional()
 });
 
 export async function createSlaPolicyAction(departmentId: string, _prevState: FormState, formData: FormData): Promise<FormState> {
   const { session } = await requireDepartmentAccess(departmentId, 'configure');
-  const parsed = SlaPolicySchema.safeParse({ name: formData.get('name'), priority: formData.get('priority'), responseMinutes: formData.get('responseMinutes'), resolutionHours: formData.get('resolutionHours') });
+  const parsed = SlaPolicySchema.safeParse({
+    name: formData.get('name'), priority: formData.get('priority'), responseMinutes: formData.get('responseMinutes'),
+    resolutionHours: formData.get('resolutionHours'), escalationChainText: optionalField(formData, 'escalationChainText')
+  });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
 
+  const escalationChain = parsed.data.escalationChainText ? parsed.data.escalationChainText.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
+  if (escalationChain) {
+    const validationError = await validateEscalationChain(escalationChain);
+    if (validationError) return { error: validationError };
+  }
+
   try {
-    await createSlaPolicy(session.companyId, { name: parsed.data.name, priority: parsed.data.priority, responseMinutes: Number(parsed.data.responseMinutes), resolutionHours: Number(parsed.data.resolutionHours) });
+    await createSlaPolicy(session.companyId, { name: parsed.data.name, priority: parsed.data.priority, responseMinutes: Number(parsed.data.responseMinutes), resolutionHours: Number(parsed.data.resolutionHours), escalationChain });
   } catch (err) {
     return { error: err instanceof ItError ? err.message : 'SLA politikası oluşturulamadı — bu öncelik için zaten bir politika olabilir.' };
   }

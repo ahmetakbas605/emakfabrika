@@ -40,9 +40,10 @@ export async function createMaintenancePlanAction(departmentId: string, _prevSta
   return { success: 'Bakım planı oluşturuldu.' };
 }
 
-// MAINTENANCE.md §2 — gerçek bir scheduler bağlanana kadar (TODO:
-// SCHEDULER_INFRASTRUCTURE) bu ELLE tetiklenir; mantığın kendisi idempotent
-// (UNIQUE kısıtı), cron bağlandığında değişmeden kullanılır.
+// MAINTENANCE.md §2 — bu ELLE tetikleme, lib/scheduler.ts'in periyodik
+// döngüsüyle AYNI fonksiyonu (runDueMaintenanceGeneration) çağırır; anlık
+// test/acil durum için kullanışlı, otomatik döngüyü BEKLEMEDEN çalıştırır.
+// Mantık zaten idempotent (UNIQUE kısıtı) — ikisi çakışsa bile sorun olmaz.
 export async function runDueMaintenanceGenerationAction(departmentId: string, _prevState: FormState): Promise<FormState> {
   const { session } = await requireDepartmentAccess(departmentId, 'configure');
   const result = await runDueMaintenanceGeneration(session.companyId, departmentId, session.id);

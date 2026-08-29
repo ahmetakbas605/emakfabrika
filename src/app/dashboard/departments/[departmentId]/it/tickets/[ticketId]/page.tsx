@@ -1,5 +1,6 @@
 import { requireDepartmentAccess, listCompanyUsers } from '@/lib/dal';
 import { getTicket, getTicketTimeline, listTicketAssignments, TICKET_TRANSITIONS } from '@/lib/it/tickets';
+import { listTicketEscalations } from '@/lib/it/escalation';
 import { TicketTransitionForm } from '@/components/it/ticket-transition-form';
 import { TicketAssignForm } from '@/components/it/ticket-assign-form';
 import { TicketCommentForm } from '@/components/it/ticket-comment-form';
@@ -16,11 +17,12 @@ const STATUS_LABELS: Record<string, string> = {
 export default async function TicketDetailPage({ params }: { params: Promise<{ departmentId: string; ticketId: string }> }) {
   const { departmentId, ticketId } = await params;
   const { session, access } = await requireDepartmentAccess(departmentId);
-  const [ticket, timeline, assignments, companyUsers] = await Promise.all([
+  const [ticket, timeline, assignments, companyUsers, escalations] = await Promise.all([
     getTicket(session.companyId, ticketId),
     getTicketTimeline(ticketId),
     listTicketAssignments(ticketId),
-    listCompanyUsers(session.companyId)
+    listCompanyUsers(session.companyId),
+    listTicketEscalations(ticketId)
   ]);
 
   const nextStatuses = TICKET_TRANSITIONS[ticket.status] ?? [];
@@ -33,6 +35,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ d
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 20, flexWrap: 'wrap' }}>
         <span style={{ fontWeight: 700, padding: '4px 10px', border: '1px solid #ccc', borderRadius: 4 }}>{STATUS_LABELS[ticket.status] ?? ticket.status}</span>
         {ticket.slaDueAt ? <span style={{ color: '#666', fontSize: 13 }}>SLA: {new Date(ticket.slaDueAt).toLocaleString('tr-TR')}</span> : null}
+        {escalations.length > 0 ? <span style={{ color: '#b00', fontSize: 13, fontWeight: 600 }}>Eskale edildi — Seviye {escalations[0].level} ({escalations[0].roleName ?? escalations[0].escalatedToRoleCode})</span> : null}
       </div>
 
       {ticket.description ? <p style={{ marginBottom: 20, whiteSpace: 'pre-wrap' }}>{ticket.description}</p> : null}

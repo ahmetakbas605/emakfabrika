@@ -223,6 +223,7 @@ export interface CreateSlaPolicyInput {
   priority: (typeof slaPolicies.$inferInsert)['priority'];
   responseMinutes: number;
   resolutionHours: number;
+  escalationChain?: string[];
 }
 
 export async function createSlaPolicy(companyId: string, input: CreateSlaPolicyInput): Promise<string> {

@@ -99,11 +99,13 @@ export interface GenerationResult {
 
 // MAINTENANCE.md §2 — bugün için VADESİ GELMİŞ (next_due_date <= today) tüm
 // planlar için work order üretir, next_due_date'i bir sonraki periyoda
-// ilerletir. Bir scheduler'a bağlanmadı (TODO: SCHEDULER_INFRASTRUCTURE,
-// SERVICE-DESK.md §8'in aynı gerekçesi) — bugün yalnızca ELLE (bir buton
-// veya bu fonksiyonu çağıran bir API ucu üzerinden) tetiklenir. Mantığın
-// KENDİSİ zaten idempotent (UNIQUE kısıtı), gerçek bir cron BAĞLANDIĞINDA
-// bu fonksiyonun KENDİSİ değişmeden kullanılabilir.
+// ilerletir. TODO: SCHEDULER_INFRASTRUCTURE ÇÖZÜLDÜ — lib/scheduler.ts'in
+// periyodik döngüsü bu fonksiyonu her şirket için otomatik çağırır
+// (src/instrumentation.ts:register() ile sunucu başlarken kurulur). Bu
+// fonksiyonun kendisi hâlâ companyId/departmentId/triggeredByUserId alan,
+// zamanlayıcıdan bağımsız, saf bir fonksiyon — hem otomatik döngü hem de
+// maintenance sayfasındaki elle "Bugün İçin Bakım İşlerini Oluştur" butonu
+// AYNI kod yolunu kullanır, davranış farkı yok.
 export async function runDueMaintenanceGeneration(companyId: string, departmentId: string, triggeredByUserId: string): Promise<GenerationResult> {
   const today = new Date().toISOString().slice(0, 10);
   const duePlans = await db.select().from(maintenancePlans).where(and(eq(maintenancePlans.companyId, companyId), eq(maintenancePlans.active, true), lte(maintenancePlans.nextDueDate, today)));
