@@ -394,6 +394,86 @@ export const checkEvents = mysqlTable('check_events', {
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
 
+// --- Masraf Merkezi (PDF madde 34) ---
+
+// accountingJournalLines.costCenterId zaten Faz 4'te vardı (JournalLineInput
+// üzerinden doldurulur) — bu tablo o ID'nin neye referans verdiğini tanımlar.
+export const costCenters = mysqlTable('cost_centers', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_cost_center_company_code').on(table.companyId, table.code)]);
+
+// --- Bütçe (PDF madde 35) ---
+
+export const BUDGET_STATUSES = ['DRAFT', 'ACTIVE', 'CLOSED'] as const;
+
+export const budgets = mysqlTable('budgets', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  periodStart: date('period_start', { mode: 'string' }).notNull(),
+  periodEnd: date('period_end', { mode: 'string' }).notNull(),
+  status: mysqlEnum('status', BUDGET_STATUSES).notNull().default('DRAFT'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// month NULL = dönemin TAMAMI için tek toplam (yıllık bütçe); 1-12 = aylık
+// kırılım (PDF madde 35: "yıllık bütçe, aylık bütçe" ikisi de destekleniyor,
+// aynı tabloda granülerlik farkı olarak).
+export const budgetItems = mysqlTable('budget_items', {
+  id: char('id', { length: 36 }).primaryKey(),
+  budgetId: char('budget_id', { length: 36 }).notNull().references(() => budgets.id, { onDelete: 'cascade' }),
+  accountId: char('account_id', { length: 36 }).notNull().references(() => accountingAccounts.id),
+  costCenterId: char('cost_center_id', { length: 36 }).references(() => costCenters.id),
+  month: int('month'),
+  plannedAmount: decimal('planned_amount', { precision: 20, scale: 6 }).notNull()
+});
+
+// --- Demirbaş (PDF madde 32) ---
+
+export const DEPRECIATION_METHODS = ['STRAIGHT_LINE'] as const;
+export const FIXED_ASSET_STATUSES = ['ACTIVE', 'DISPOSED'] as const;
+
+// Parametrik amortisman yöntemi (PDF: "amortisman yöntemleri parametrik
+// olmalı") — bugün yalnızca STRAIGHT_LINE (doğrusal) uygulanıyor, enum
+// gelecekte AZALAN_BAKİYELER vb. ile genişleyebilir; hesaplama fonksiyonu
+// (lib/fixed-assets.ts) yöntem bazında dallanacak şekilde yazıldı.
+export const fixedAssets = mysqlTable('fixed_assets', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  // 253 Tesis Makine Cihaz / 255 Demirbaşlar gibi bir aktif hesap.
+  accountingAccountId: char('accounting_account_id', { length: 36 }).notNull().references(() => accountingAccounts.id),
+  // 257 Birikmiş Amortismanlar (kontra-aktif). Kolon adı kısaltıldı — gerçek
+  // bulgu: drizzle'ın otomatik FK kısıt adı MySQL'in 64 karakter sınırını
+  // aşıyordu ("fixed_assets_accumulated_depreciation_account_id_..._fk").
+  accumDeprAccountId: char('accum_depr_account_id', { length: 36 }).notNull().references(() => accountingAccounts.id),
+  // 740/770 Amortisman Gideri.
+  deprExpAccountId: char('depr_exp_account_id', { length: 36 }).notNull().references(() => accountingAccounts.id),
+  purchaseDate: date('purchase_date', { mode: 'string' }).notNull(),
+  purchaseCost: decimal('purchase_cost', { precision: 20, scale: 6 }).notNull(),
+  usefulLifeYears: int('useful_life_years').notNull(),
+  depreciationMethod: mysqlEnum('depreciation_method', DEPRECIATION_METHODS).notNull().default('STRAIGHT_LINE'),
+  status: mysqlEnum('status', FIXED_ASSET_STATUSES).notNull().default('ACTIVE'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// Aynı ay için aynı demirbaşa iki kez amortisman işlenmesin diye benzersiz.
+export const depreciationRuns = mysqlTable('depreciation_runs', {
+  id: char('id', { length: 36 }).primaryKey(),
+  fixedAssetId: char('fixed_asset_id', { length: 36 }).notNull().references(() => fixedAssets.id, { onDelete: 'cascade' }),
+  periodDate: date('period_date', { mode: 'string' }).notNull(),
+  amount: decimal('amount', { precision: 20, scale: 6 }).notNull(),
+  journalId: char('journal_id', { length: 36 }).notNull().references(() => accountingJournals.id),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_depreciation_asset_period').on(table.fixedAssetId, table.periodDate)]);
+
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
   idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),

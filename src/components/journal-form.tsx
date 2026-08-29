@@ -9,15 +9,24 @@ interface Row {
   accountCode: string;
   debit: string;
   credit: string;
+  costCenterId: string;
 }
 
-const EMPTY_ROW: Row = { accountCode: '', debit: '', credit: '' };
+const EMPTY_ROW: Row = { accountCode: '', debit: '', credit: '', costCenterId: '' };
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function JournalForm({ departmentId, accounts }: { departmentId: string; accounts: { code: string; name: string }[] }) {
+export function JournalForm({
+  departmentId,
+  accounts,
+  costCenters = []
+}: {
+  departmentId: string;
+  accounts: { code: string; name: string }[];
+  costCenters?: { id: string; code: string; name: string }[];
+}) {
   const router = useRouter();
   const action = postJournalAction.bind(null, departmentId);
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
@@ -39,7 +48,12 @@ export function JournalForm({ departmentId, accounts }: { departmentId: string; 
 
   const lines: JournalLineInput[] = rows
     .filter((r) => r.accountCode.trim() && (parseFloat(r.debit) > 0 || parseFloat(r.credit) > 0))
-    .map((r) => ({ accountCode: r.accountCode.trim(), debit: parseFloat(r.debit.replace(',', '.')) || 0, credit: parseFloat(r.credit.replace(',', '.')) || 0 }));
+    .map((r) => ({
+      accountCode: r.accountCode.trim(),
+      debit: parseFloat(r.debit.replace(',', '.')) || 0,
+      credit: parseFloat(r.credit.replace(',', '.')) || 0,
+      costCenterId: r.costCenterId || undefined
+    }));
 
   if (state?.success && !pending) {
     // Server action başarıyla kaydettikten sonra listeye dön.
@@ -72,6 +86,12 @@ export function JournalForm({ departmentId, accounts }: { departmentId: string; 
           <input list="account-codes" value={row.accountCode} onChange={(e) => updateRow(i, { accountCode: e.target.value })} placeholder="Hesap kodu" style={{ padding: 6, width: 140 }} />
           <input value={row.debit} onChange={(e) => updateRow(i, { debit: e.target.value, credit: '' })} placeholder="Borç" type="number" step="any" min={0} style={{ padding: 6, width: 130 }} />
           <input value={row.credit} onChange={(e) => updateRow(i, { credit: e.target.value, debit: '' })} placeholder="Alacak" type="number" step="any" min={0} style={{ padding: 6, width: 130 }} />
+          {costCenters.length > 0 ? (
+            <select value={row.costCenterId} onChange={(e) => updateRow(i, { costCenterId: e.target.value })} style={{ padding: 6, maxWidth: 140 }}>
+              <option value="">Masraf merkezi yok</option>
+              {costCenters.map((c) => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
+            </select>
+          ) : null}
           <button type="button" onClick={() => removeRow(i)} style={{ padding: '4px 8px', cursor: 'pointer' }}>Sil</button>
         </div>
       ))}
