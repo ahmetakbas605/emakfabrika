@@ -1,0 +1,2 @@
+ALTER TABLE `it_assets` ADD `host_asset_id` char(36);--> statement-breakpoint
+ALTER TABLE `it_assets` ADD CONSTRAINT `it_assets_host_asset_id_it_assets_id_fk` FOREIGN KEY (`host_asset_id`) REFERENCES `it_assets`(`id`) ON DELETE no action ON UPDATE no action;

@@ -42,6 +42,7 @@ function navFor(departmentId: string, departmentTypeCode: string): { href: strin
         { href: `${base}/it/backup`, label: 'Yedekleme' },
         { href: `${base}/it/compliance`, label: 'Uyumluluk' },
         { href: `${base}/it/credentials`, label: 'Kimlik Kasası' },
+        { href: `${base}/it/servers`, label: 'Sunucu/VM' },
         { href: `${base}/it/incidents`, label: 'Incidentlar' },
         { href: `${base}/it/problems`, label: 'Problemler' },
         { href: `${base}/it/changes`, label: 'Değişiklikler' }

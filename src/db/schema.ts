@@ -579,6 +579,13 @@ export const itAssets = mysqlTable('it_assets', {
   model: varchar('model', { length: 255 }).notNull().default(''),
   serialNumber: varchar('serial_number', { length: 255 }).notNull().default(''),
   status: mysqlEnum('status', IT_ASSET_STATUSES).notNull().default('IN_STOCK'),
+  // Faz 14 (Server/VM) — bir VM'in barındığı fiziksel sunucu, AYNI
+  // it_assets tablosuna self-referans (VM de bir asset, host da bir
+  // asset — PDF'in bu fazına ait ayrı bir doküman/madde metni bu projede
+  // hiç yakalanmadı, dürüst bir boşluk; bu alan CMDB'nin RUNS_ON ilişki
+  // tipiyle TUTARLI, asset-katmanında hafif bir karşılığı — network_
+  // diagrams'taki AnyMySqlColumn self-ref tekniğiyle AYNI).
+  hostAssetId: char('host_asset_id', { length: 36 }).references((): AnyMySqlColumn => itAssets.id),
   ownerUserId: char('owner_user_id', { length: 36 }).references(() => users.id),
   responsibleTechnicianId: char('responsible_technician_id', { length: 36 }).references(() => users.id),
   purchaseDate: date('purchase_date', { mode: 'string' }),

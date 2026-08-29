@@ -120,6 +120,13 @@
       "when": 1788016915676,
       "tag": "0016_wandering_power_man",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1788017773236,
+      "tag": "0017_harsh_tinkerer",
+      "breakpoints": true
     }
   ]
 }

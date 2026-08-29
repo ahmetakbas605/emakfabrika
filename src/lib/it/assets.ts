@@ -6,7 +6,10 @@ import { newId } from '@/lib/id';
 import { ItError } from '@/lib/it/errors';
 
 // IT-DATABASE.md §3 — IT Asset Management (Faz 4).
-const COMPUTER_TYPE_CODES = new Set(['DESKTOP', 'LAPTOP', 'SERVER']);
+// Faz 14 (Server/VM) — VM da computer_details'in cpu/ramGb/storageGb
+// alanlarından FAYDALANIR (bir VM'in de vCPU/RAM/disk'i var), ayrı bir
+// tablo GEREKMEDİ.
+const COMPUTER_TYPE_CODES = new Set(['DESKTOP', 'LAPTOP', 'SERVER', 'VM']);
 
 export interface CreateAssetInput {
   assetTag: string;
@@ -21,6 +24,7 @@ export interface CreateAssetInput {
   purchaseCost?: number | string;
   warrantyStart?: string;
   warrantyEnd?: string;
+  hostAssetId?: string;
 }
 
 export async function createAsset(companyId: string, input: CreateAssetInput, createdByUserId: string): Promise<string> {
@@ -40,6 +44,7 @@ export async function createAsset(companyId: string, input: CreateAssetInput, cr
     purchaseCost: input.purchaseCost !== undefined ? String(input.purchaseCost) : undefined,
     warrantyStart: input.warrantyStart,
     warrantyEnd: input.warrantyEnd,
+    hostAssetId: input.hostAssetId,
     createdByUserId
   });
 
