@@ -474,6 +474,66 @@ export const depreciationRuns = mysqlTable('depreciation_runs', {
   createdAt: timestamp('created_at').notNull().defaultNow()
 }, (table) => [uniqueIndex('udx_depreciation_asset_period').on(table.fixedAssetId, table.periodDate)]);
 
+// --- Depo (yeni departman — kullanıcının isteği: IT'nin yedek parça
+// tüketimi için minimal ama GERÇEK bir Depo departmanı, ileride kendi PDF'i
+// geldiğinde genişletilecek; bkz. FIELD-SERVICE.md §4'teki TODO'nun burada
+// çözülmesi) ---
+
+export const STOCK_MOVEMENT_TYPES = ['IN', 'OUT'] as const;
+
+export const warehouses = mysqlTable('warehouses', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  branchId: char('branch_id', { length: 36 }).references(() => branches.id),
+  name: varchar('name', { length: 255 }).notNull(),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// currentQty/avgCost burada TUTULUR (denormalize) — her sorguda tüm
+// hareketleri toplamak yerine (Muhasebe'nin mizan deseninin TERSİ: burada
+// stok kartı sayısı az, hareket sayısı çok olabilir, güncel bakiyeyi HER
+// hareketle birlikte güncellemek daha ucuz). Ağırlıklı ortalama maliyet
+// yöntemi (PDF'in orijinal ERP promptunun "FIFO/ağırlıklı ortalama/hareketli
+// ortalama" seçeneklerinden EN BASİTİ — ileride genişletilebilir, bugün tek
+// yöntem, TODO: COSTING_METHOD_CHOICE kalıcı karar değil).
+export const stockItems = mysqlTable('stock_items', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  sku: varchar('sku', { length: 64 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  unit: varchar('unit', { length: 16 }).notNull().default('ADET'),
+  currentQty: decimal('current_qty', { precision: 20, scale: 6 }).notNull().default('0'),
+  avgCost: decimal('avg_cost', { precision: 20, scale: 6 }).notNull().default('0'),
+  // Dolu ise, her hareket otomatik muhasebe fişi üretir (Kasa/Banka ile AYNI
+  // opsiyonel-entegrasyon deseni) — boşsa Depo yalnızca miktar takibi yapar.
+  accountingAccountId: char('accounting_account_id', { length: 36 }).references(() => accountingAccounts.id),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_stock_item_company_sku').on(table.companyId, table.sku)]);
+
+export const stockMovements = mysqlTable('stock_movements', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  warehouseId: char('warehouse_id', { length: 36 }).notNull().references(() => warehouses.id),
+  stockItemId: char('stock_item_id', { length: 36 }).notNull().references(() => stockItems.id),
+  movementType: mysqlEnum('movement_type', STOCK_MOVEMENT_TYPES).notNull(),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  // IN'de kullanıcı girer (alış maliyeti); OUT'ta o ANKİ ağırlıklı ortalama
+  // maliyetten OTOMATİK hesaplanır (kullanıcı girmez) — lib/warehouse.ts.
+  unitCost: decimal('unit_cost', { precision: 20, scale: 6 }),
+  counterAccountCode: varchar('counter_account_code', { length: 32 }),
+  journalId: char('journal_id', { length: 36 }).references(() => accountingJournals.id),
+  // Bu hareketin nereden geldiğini işaret eden polimorfik referans — ör.
+  // IT'nin work_order_parts'ı (Faz 8) bu alanı dolduracak.
+  sourceType: varchar('source_type', { length: 64 }),
+  sourceId: char('source_id', { length: 36 }),
+  description: text('description'),
+  transactionDate: date('transaction_date', { mode: 'string' }).notNull(),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
   idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),

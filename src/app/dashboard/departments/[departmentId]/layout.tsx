@@ -2,37 +2,53 @@ import Link from 'next/link';
 import { requireDepartmentAccess } from '@/lib/dal';
 
 // PDF madde 8, 70: "Muhasebe kullanıcısı için sistem son derece kolay/hızlı/
-// bilgi yoğun olmalı, gereksiz animasyon YOK." Departman türüne göre menü
-// bugün yalnızca ACCOUNTING için var — başka bir departman türü PDF'i
-// geldiğinde bu layout'a yeni bir menü seti eklenecek (bkz. ARCHITECTURE.md §6).
+// bilgi yoğun olmalı, gereksiz animasyon YOK." Departman türüne göre menü —
+// yeni bir departman türü eklendiğinde NAV_BY_DEPARTMENT_TYPE'a bir satır
+// eklenir, geri kalan layout değişmez.
+function navFor(departmentId: string, departmentTypeCode: string): { href: string; label: string }[] {
+  const base = `/dashboard/departments/${departmentId}`;
+  switch (departmentTypeCode) {
+    case 'ACCOUNTING':
+      return [
+        { href: `${base}/accounts`, label: 'Hesap Planı' },
+        { href: `${base}/journals`, label: 'Muhasebe Fişleri' },
+        { href: `${base}/kasa`, label: 'Kasa' },
+        { href: `${base}/banka`, label: 'Banka' },
+        { href: `${base}/checks`, label: 'Çek/Senet' },
+        { href: `${base}/cost-centers`, label: 'Masraf Merkezi' },
+        { href: `${base}/budgets`, label: 'Bütçe' },
+        { href: `${base}/fixed-assets`, label: 'Demirbaş' },
+        { href: `${base}/periods`, label: 'Dönemler' },
+        { href: `${base}/reports/trial-balance`, label: 'Mizan' },
+        { href: `${base}/reports/balance-sheet`, label: 'Bilanço' },
+        { href: `${base}/reports/income-statement`, label: 'Gelir Tablosu' }
+      ];
+    case 'WAREHOUSE':
+      return [
+        { href: `${base}/warehouses`, label: 'Depolar' },
+        { href: `${base}/stock-items`, label: 'Stok Kartları' }
+      ];
+    case 'IT':
+      return [
+        { href: `${base}/it/assets`, label: 'Varlıklar' },
+        { href: `${base}/it/cmdb`, label: 'CMDB' }
+      ];
+    default:
+      return [];
+  }
+}
+
 export default async function DepartmentLayout({ children, params }: { children: React.ReactNode; params: Promise<{ departmentId: string }> }) {
   const { departmentId } = await params;
   const { access } = await requireDepartmentAccess(departmentId);
-
-  const nav =
-    access.departmentTypeCode === 'ACCOUNTING'
-      ? [
-          { href: `/dashboard/departments/${departmentId}/accounts`, label: 'Hesap Planı' },
-          { href: `/dashboard/departments/${departmentId}/journals`, label: 'Muhasebe Fişleri' },
-          { href: `/dashboard/departments/${departmentId}/kasa`, label: 'Kasa' },
-          { href: `/dashboard/departments/${departmentId}/banka`, label: 'Banka' },
-          { href: `/dashboard/departments/${departmentId}/checks`, label: 'Çek/Senet' },
-          { href: `/dashboard/departments/${departmentId}/cost-centers`, label: 'Masraf Merkezi' },
-          { href: `/dashboard/departments/${departmentId}/budgets`, label: 'Bütçe' },
-          { href: `/dashboard/departments/${departmentId}/fixed-assets`, label: 'Demirbaş' },
-          { href: `/dashboard/departments/${departmentId}/periods`, label: 'Dönemler' },
-          { href: `/dashboard/departments/${departmentId}/reports/trial-balance`, label: 'Mizan' },
-          { href: `/dashboard/departments/${departmentId}/reports/balance-sheet`, label: 'Bilanço' },
-          { href: `/dashboard/departments/${departmentId}/reports/income-statement`, label: 'Gelir Tablosu' }
-        ]
-      : [];
+  const nav = navFor(departmentId, access.departmentTypeCode);
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif' }}>
       <header style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '0.75rem 2rem', borderBottom: '1px solid #ddd' }}>
         <Link href="/dashboard" style={{ fontWeight: 700, textDecoration: 'none', color: '#111' }}>emakfabrika</Link>
         <span style={{ color: '#666' }}>{access.departmentName} — {access.roleName}</span>
-        <nav style={{ display: 'flex', gap: 14, marginLeft: 'auto' }}>
+        <nav style={{ display: 'flex', gap: 14, marginLeft: 'auto', flexWrap: 'wrap' }}>
           {nav.map((item) => (
             <Link key={item.href} href={item.href} style={{ textDecoration: 'none', color: '#333', fontSize: 14 }}>{item.label}</Link>
           ))}

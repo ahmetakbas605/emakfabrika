@@ -37,7 +37,19 @@ async function main() {
     { code: 'WAREHOUSE_USER', name: 'Depo Personeli' },
     { code: 'HR_MANAGER', name: 'İK Müdürü' },
     { code: 'AUDITOR', name: 'Denetçi' },
-    { code: 'EMPLOYEE', name: 'Çalışan' }
+    { code: 'EMPLOYEE', name: 'Çalışan' },
+    // IT-ARCHITECTURE.md §6 — IT_ADMIN kasıtlı olarak YOK (isFactoryAdmin
+    // bayrağı zaten fabrika-geneli tam yetkiyi karşılıyor, madde 67 "gereksiz
+    // abstraction oluşturma" ile tutarlı).
+    { code: 'IT_MANAGER', name: 'BT Müdürü' },
+    { code: 'SERVICE_DESK_AGENT', name: 'Servis Masası Temsilcisi' },
+    { code: 'NETWORK_ENGINEER', name: 'Ağ Mühendisi' },
+    { code: 'SYSTEM_ENGINEER', name: 'Sistem Mühendisi' },
+    { code: 'SECURITY_ENGINEER', name: 'Güvenlik Mühendisi' },
+    { code: 'FIELD_TECHNICIAN', name: 'Saha Teknisyeni' },
+    { code: 'HELP_DESK', name: 'Yardım Masası' },
+    { code: 'ASSET_MANAGER', name: 'Varlık Yöneticisi' },
+    { code: 'END_USER', name: 'Son Kullanıcı' }
   ];
   const PERMISSION_SEED: { code: string; name: string }[] = [
     { code: 'view', name: 'Görüntüle' },
@@ -50,10 +62,19 @@ async function main() {
     { code: 'print', name: 'Yazdır' },
     { code: 'post', name: 'Muhasebeleştir' },
     { code: 'close_period', name: 'Dönem Kapat' },
-    { code: 'reopen_period', name: 'Dönem Aç' }
+    { code: 'reopen_period', name: 'Dönem Aç' },
+    // IT-DATABASE.md §2 — IT modülü için ek izinler.
+    { code: 'assign', name: 'Ata' },
+    { code: 'configure', name: 'Yapılandır' },
+    { code: 'monitor', name: 'İzle' },
+    { code: 'manage_credentials', name: 'Kimlik Bilgisi Yönet' },
+    { code: 'manage_assets', name: 'Varlık Yönet' },
+    { code: 'manage_network', name: 'Ağ Yönet' }
   ];
   const DEPARTMENT_TYPE_SEED: { code: string; name: string }[] = [
-    { code: 'ACCOUNTING', name: 'Muhasebe' }
+    { code: 'ACCOUNTING', name: 'Muhasebe' },
+    { code: 'WAREHOUSE', name: 'Depo' },
+    { code: 'IT', name: 'Bilgi Teknolojileri' }
   ];
 
   for (const row of DEPARTMENT_TYPE_SEED) {
@@ -79,16 +100,42 @@ async function main() {
     ACCOUNTANT: ['view', 'create', 'update', 'export', 'print', 'post'],
     AUDITOR: ['view', 'export', 'print']
   };
-  for (const [roleCode, permCodes] of Object.entries(ACCOUNTING_ROLE_PERMISSIONS)) {
-    const [role] = await db.select({ id: roles.id }).from(roles).where(eq(roles.code, roleCode)).limit(1);
-    if (!role) continue;
-    for (const permissionCode of permCodes) {
-      await db
-        .insert(rolePermissions)
-        .values({ id: crypto.randomUUID(), roleId: role.id, permissionCode, moduleKey: 'ACCOUNTING' })
-        .onDuplicateKeyUpdate({ set: { moduleKey: 'ACCOUNTING' } });
+  const WAREHOUSE_ROLE_PERMISSIONS: Record<string, string[]> = {
+    WAREHOUSE_MANAGER: ['view', 'create', 'update', 'delete', 'export', 'print', 'post'],
+    WAREHOUSE_USER: ['view', 'create', 'post'],
+    AUDITOR: ['view', 'export', 'print']
+  };
+  // IT-ARCHITECTURE.md §6'daki yetki dağılımı — IT_MANAGER tam yetki,
+  // SERVICE_DESK_AGENT ticket-odaklı, NETWORK_ENGINEER network+ipam
+  // odaklı, FIELD_TECHNICIAN kendi işlerinde update (çoğunlukla mobil
+  // üzerinden), ASSET_MANAGER envanter odaklı.
+  const IT_ROLE_PERMISSIONS: Record<string, string[]> = {
+    IT_MANAGER: ['view', 'create', 'update', 'delete', 'assign', 'approve', 'cancel', 'export', 'print', 'configure', 'monitor', 'manage_credentials', 'manage_assets', 'manage_network'],
+    SERVICE_DESK_AGENT: ['view', 'create', 'update', 'assign', 'export', 'print'],
+    NETWORK_ENGINEER: ['view', 'create', 'update', 'configure', 'monitor', 'manage_network', 'manage_credentials'],
+    SYSTEM_ENGINEER: ['view', 'create', 'update', 'configure', 'monitor', 'manage_assets'],
+    SECURITY_ENGINEER: ['view', 'update', 'configure', 'monitor', 'manage_credentials'],
+    FIELD_TECHNICIAN: ['view', 'update', 'print'],
+    HELP_DESK: ['view', 'create', 'update'],
+    ASSET_MANAGER: ['view', 'create', 'update', 'delete', 'assign', 'export', 'print', 'manage_assets'],
+    AUDITOR: ['view', 'export', 'print']
+  };
+
+  async function seedRolePermissions(moduleKey: string, matrix: Record<string, string[]>) {
+    for (const [roleCode, permCodes] of Object.entries(matrix)) {
+      const [role] = await db.select({ id: roles.id }).from(roles).where(eq(roles.code, roleCode)).limit(1);
+      if (!role) continue;
+      for (const permissionCode of permCodes) {
+        await db
+          .insert(rolePermissions)
+          .values({ id: crypto.randomUUID(), roleId: role.id, permissionCode, moduleKey })
+          .onDuplicateKeyUpdate({ set: { moduleKey } });
+      }
     }
   }
+  await seedRolePermissions('ACCOUNTING', ACCOUNTING_ROLE_PERMISSIONS);
+  await seedRolePermissions('WAREHOUSE', WAREHOUSE_ROLE_PERMISSIONS);
+  await seedRolePermissions('IT', IT_ROLE_PERMISSIONS);
 
   const appUser = process.env.APP_DB_USER;
   const dbName = process.env.APP_DB_NAME || 'emakfabrika';

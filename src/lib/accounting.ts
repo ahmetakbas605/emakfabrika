@@ -165,9 +165,22 @@ export interface PostedJournal {
 // doğrulanır, eşit değilse transaction hiç commit olmaz — "dengesiz fiş
 // DB'ye kaydedilmemelidir" kuralı DB constraint'i DEĞİL, uygulama garantisi.
 export async function postJournal(input: PostJournalInput): Promise<PostedJournal> {
+  return db.transaction((tx) => postJournalInTx(tx, input));
+}
+
+// Gerçek bulgu (Demirbaş/Amortisman'da yaşandı — bkz. lib/fixed-assets.ts):
+// postJournal KENDİ transaction'ını açtığı için, "önce fiş kes, sonra
+// BAŞKA bir tabloyu güncelle" deseni iki AYRI transaction'a bölünüyordu —
+// ikinci adım başarısız olursa yetim bir fiş kalabilirdi. Depo modülü
+// (lib/warehouse.ts) AYNI riski taşıyordu (stok miktarı + fiş TEK
+// transaction'da olmalı) — bu yüzden çekirdek mantık dışa, tx PARAMETRE
+// olarak alan bu fonksiyona taşındı; postJournal yalnızca ince bir sarmalayıcı.
+// Çağıran modüller KENDİ db.transaction'ları İÇİNDE postJournalInTx'i
+// çağırarak GERÇEK atomiklik elde edebilir.
+export async function postJournalInTx(tx: Tx, input: PostJournalInput): Promise<PostedJournal> {
   if (input.lines.length === 0) throw new AccountingError('Fişte en az bir kalem olmalı.');
 
-  return db.transaction(async (tx) => {
+  {
     await requireOpenPeriod(tx, input.companyId, input.journalDate);
 
     const resolvedLines = await Promise.all(
@@ -235,7 +248,7 @@ export async function postJournal(input: PostJournalInput): Promise<PostedJourna
     });
 
     return { journalId, journalNo };
-  });
+  }
 }
 
 // --- Ters kayıt / düzeltme (PDF madde 17, 77 — financial immutability) ---

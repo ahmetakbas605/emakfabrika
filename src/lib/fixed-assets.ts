@@ -4,7 +4,7 @@ import { db } from '@/db/client';
 import { fixedAssets, depreciationRuns, accountingAccounts } from '@/db/schema';
 import { newId } from '@/lib/id';
 import { money, toDb } from '@/lib/money';
-import { postJournal, AccountingError } from '@/lib/accounting';
+import { postJournalInTx, AccountingError } from '@/lib/accounting';
 
 // PDF madde 32 — Demirbaş/amortisman. Yalnızca STRAIGHT_LINE (doğrusal)
 // uygulanıyor bugün — parametrik enum (DEPRECIATION_METHODS) ileride başka
@@ -113,9 +113,14 @@ export async function runDepreciation(companyId: string, fixedAssetId: string, p
   const monthly = straightLineMonthlyAmount(asset.purchaseCost, asset.usefulLifeYears);
   const amount = monthly.greaterThan(remaining) ? remaining : monthly; // son ay: kalan tutar kadar kes
 
-  let journal;
-  try {
-    journal = await postJournal({
+  // GERÇEK bulgu, şimdi düzeltildi: fiş kesme + depreciation_runs satırı
+  // artık TEK transaction'da (postJournalInTx, lib/accounting.ts) — daha
+  // önce iki AYRI adımdı, ikinci adım (INSERT) başarısız olursa fiş yetim
+  // kalabilirdi. Yukarıdaki ön-kontrol (satır 106-107) hâlâ normal
+  // kullanıcı akışı için erken/anlaşılır bir hata veriyor; bu transaction
+  // ise GERÇEK bir yarış durumuna karşı ikinci, kesin güvenlik ağı.
+  const journal = await db.transaction(async (tx) => {
+    const posted = await postJournalInTx(tx, {
       companyId,
       journalDate: periodDate,
       documentType: 'DEPRECIATION',
@@ -123,19 +128,9 @@ export async function runDepreciation(companyId: string, fixedAssetId: string, p
       createdByUserId,
       lines: [{ accountCode: expAccount[0].code, debit: amount }, { accountCode: accumAccount[0].code, credit: amount }]
     });
-  } catch (err) {
-    throw err instanceof AccountingError ? err : new AccountingError('Amortisman fişi oluşturulamadı.');
-  }
-
-  try {
-    await db.insert(depreciationRuns).values({ id: newId(), fixedAssetId, periodDate, amount: toDb(amount), journalId: journal.journalId, createdByUserId });
-  } catch {
-    // udx_depreciation_asset_period ihlali — bu ay için zaten işlenmiş.
-    // Fiş zaten POSTED oldu (postJournal geri alınamaz — reverseJournal
-    // gerekir), bu yüzden bu senaryo runDepreciation ÇAĞRILMADAN ÖNCE
-    // UI/action katmanında (aynı ay için tekrar tıklanmasın diye) engellenmeli.
-    throw new AccountingError('Bu ay için amortisman zaten işlenmiş.');
-  }
+    await tx.insert(depreciationRuns).values({ id: newId(), fixedAssetId, periodDate, amount: toDb(amount), journalId: posted.journalId, createdByUserId });
+    return posted;
+  });
 
   return { amount: toDb(amount), journalId: journal.journalId };
 }
