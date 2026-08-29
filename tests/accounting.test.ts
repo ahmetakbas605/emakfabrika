@@ -257,7 +257,11 @@ async function main() {
   }
 
   console.log(`\n=== SONUÇ: ${pass} geçti, ${fail} başarısız ===`);
-  if (fail > 0) process.exit(1);
+  // db/client.ts'in mysql2 pool'u açık kaldığı sürece Node event loop'u canlı
+  // tutuyor (gerçek bulgu: başarılı bir koşu bile process.exit olmadan
+  // dakikalarca "asılı" görünüyordu) — testin kendisi başarılı BİTTİKTEN
+  // sonra süreci açıkça sonlandırıyoruz.
+  process.exit(fail > 0 ? 1 : 0);
 }
 
 main().catch((err) => {
