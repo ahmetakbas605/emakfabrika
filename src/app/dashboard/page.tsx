@@ -26,11 +26,16 @@ export default async function DashboardPage() {
         </form>
       </div>
 
-      {session.isFactoryAdmin ? (
-        <div style={{ marginBottom: '1.5rem' }}>
-          <Link href="/dashboard/master-data/parties" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Master Data (Cari/Ürün/Birim/Döviz)</Link>
-        </div>
-      ) : null}
+      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <Link href="/dashboard/approvals" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Onay Kutusu</Link>
+        {session.isFactoryAdmin ? (
+          <>
+            <Link href="/dashboard/master-data/parties" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Master Data (Cari/Ürün/Birim/Döviz)</Link>
+            <Link href="/dashboard/org" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Organizasyon</Link>
+            <Link href="/dashboard/workflow/rules" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Onay Kuralları</Link>
+          </>
+        ) : null}
+      </div>
 
       <h2 style={{ fontSize: 16 }}>Departmanlarım</h2>
       {items.length === 0 ? (

@@ -141,6 +141,13 @@
       "when": 1788023820496,
       "tag": "0019_next_oracle",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1788030973290,
+      "tag": "0020_strange_guardsmen",
+      "breakpoints": true
     }
   ]
 }

@@ -37,3 +37,7 @@ next-env.d.ts
 /AGENTS.md
 /CLAUDE.md
 .dev-server.log
+
+# Satınalma Genişletme Faz 0 — lib/documents/storage.ts'in yazdığı yerel
+# dosya deposu (madde 25-28), her fabrika sunucusunda kendi başına kalır.
+/uploads

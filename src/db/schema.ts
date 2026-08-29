@@ -96,6 +96,13 @@ export const users = mysqlTable('users', {
   // <userId>.<token>), ayrı bir "sessions" tablosu YOK (SECURITY-ARCHITECTURE.md §1).
   mobileSessionToken: varchar('mobile_session_token', { length: 128 }),
   mobileSessionExpiresAt: timestamp('mobile_session_expires_at'),
+  // Satınalma Genişletme Faz 0 — dinamik organizasyon hiyerarşisi (madde
+  // 4-6). Her ikisi de OPSİYONEL — dolu değilse mevcut kullanıcı davranışı
+  // değişmez, yalnızca workflow motorunun MANAGER_CHAIN/POSITION onay
+  // adımları bu alanları kullanır. positions tablosu dosyanın sonunda
+  // tanımlı (AnyMySqlColumn lazy-ref — network_diagrams'taki AYNI teknik).
+  positionId: char('position_id', { length: 36 }).references((): AnyMySqlColumn => positions.id),
+  managerUserId: char('manager_user_id', { length: 36 }).references((): AnyMySqlColumn => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
 });
@@ -1733,6 +1740,151 @@ export const invReservations = mysqlTable('inv_reservations', {
   sourceType: varchar('source_type', { length: 64 }),
   sourceId: char('source_id', { length: 36 }),
   status: mysqlEnum('status', INV_RESERVATION_STATUSES).notNull().default('ACTIVE'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  releasedAt: timestamp('released_at')
+});
+
+// --- Satınalma Genişletme Faz 0 — Platform Temeli. SATINALMA-MİMARİSİ
+// raporunun kararı: bu tablolar procurement'a ÖZEL değil (madde 174'ün
+// "mevcut yoksa TEK bir genel motor kur" ilkesi) — pozisyon/hiyerarşi ve
+// workflow/approval motoru, ileride Satış/İK/Sözleşme onayı gibi HER
+// akışın kullanacağı genel platform parçaları. documentType/entityType
+// alanları bu yüzden serbest metin (örn. 'PROCUREMENT_REQUISITION') —
+// procurement domain'i Faz 1'de bu tabloları TÜKETECEK, burada
+// TANIMLAMAYACAK. ---
+
+// madde 4-6 — dinamik organizasyon. Sabit bir seviye listesi (Ustabaşı/
+// Şef/Müdür gibi) YOK, her şirket kendi unvanlarını approvalLevel ile
+// birlikte tanımlar.
+export const positions = mysqlTable('positions', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 32 }).notNull(),
+  title: varchar('title', { length: 100 }).notNull(),
+  approvalLevel: int('approval_level').notNull().default(0),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_position_company_code').on(table.companyId, table.code)]);
+
+export const WORKFLOW_APPROVER_TYPES = ['POSITION', 'SPECIFIC_USER', 'MANAGER_CHAIN'] as const;
+export const WORKFLOW_STEP_MODES = ['SEQUENTIAL', 'PARALLEL'] as const;
+
+// madde 31-33, 184, 188 — kural motoru. conditions/approvalChain JSON:
+// hard-code onay eşiği YOK, her şirket kendi kurallarını tanımlar.
+// lib/workflow/types.ts'teki WorkflowConditions/WorkflowChainStep
+// arayüzleriyle eşleşir (yalnızca uygulama katmanında tip güvenliği —
+// DB seviyesinde serbest JSON).
+export const workflowRules = mysqlTable('workflow_rules', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  documentType: varchar('document_type', { length: 64 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  conditions: json('conditions'),
+  approvalChain: json('approval_chain').notNull(),
+  priority: int('priority').notNull().default(0),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [index('idx_workflow_rule_company_doctype').on(table.companyId, table.documentType)]);
+
+export const APPROVAL_INSTANCE_STATUSES = ['IN_PROGRESS', 'APPROVED', 'REJECTED', 'CANCELLED'] as const;
+
+// documentType+documentId polimorfik referans — approval_instances
+// HERHANGİ bir belgeye (talep, sözleşme, gider raporu, ...) bağlanabilir.
+export const approvalInstances = mysqlTable('approval_instances', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  documentType: varchar('document_type', { length: 64 }).notNull(),
+  documentId: char('document_id', { length: 36 }).notNull(),
+  matchedRuleId: char('matched_rule_id', { length: 36 }).references(() => workflowRules.id),
+  status: mysqlEnum('status', APPROVAL_INSTANCE_STATUSES).notNull().default('IN_PROGRESS'),
+  submittedByUserId: char('submitted_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at')
+}, (table) => [index('idx_approval_instance_document').on(table.documentType, table.documentId)]);
+
+export const APPROVAL_STEP_STATUSES = ['PENDING', 'IN_PROGRESS', 'APPROVED', 'REJECTED'] as const;
+
+// Adımlar kuraldan ANLIK türetilir (instance oluşturulduğunda kopyalanır)
+// — kural sonradan değişse/silinse bile bu talebin onay geçmişi sabit kalır.
+export const approvalSteps = mysqlTable('approval_steps', {
+  id: char('id', { length: 36 }).primaryKey(),
+  instanceId: char('instance_id', { length: 36 }).notNull().references(() => approvalInstances.id, { onDelete: 'cascade' }),
+  stepOrder: int('step_order').notNull(),
+  mode: mysqlEnum('mode', WORKFLOW_STEP_MODES).notNull().default('SEQUENTIAL'),
+  // Doluysa: bu kadar APPROVE yeterli (madde 189 quorum). Boşsa: atanan
+  // TÜM onaylayanların onayı gerekir.
+  quorum: int('quorum'),
+  status: mysqlEnum('status', APPROVAL_STEP_STATUSES).notNull().default('PENDING'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// Bir adıma atanan (kuraldan ÇÖZÜMLENMİŞ, somut) onaylayan kullanıcı(lar).
+export const approvalStepApprovers = mysqlTable('approval_step_approvers', {
+  id: char('id', { length: 36 }).primaryKey(),
+  stepId: char('step_id', { length: 36 }).notNull().references(() => approvalSteps.id, { onDelete: 'cascade' }),
+  userId: char('user_id', { length: 36 }).notNull().references(() => users.id)
+}, (table) => [uniqueIndex('udx_approval_step_approver').on(table.stepId, table.userId)]);
+
+export const APPROVAL_DECISIONS = ['APPROVE', 'REJECT', 'REQUEST_CHANGES', 'DELEGATE'] as const;
+
+// madde 46 — tam onay geçmişi. Immutable (madde 116-117 ilkesiyle AYNI —
+// kayıt asla güncellenmez/silinmez).
+export const approvalActions = mysqlTable('approval_actions', {
+  id: char('id', { length: 36 }).primaryKey(),
+  stepId: char('step_id', { length: 36 }).notNull().references(() => approvalSteps.id, { onDelete: 'cascade' }),
+  actedByUserId: char('acted_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  decision: mysqlEnum('decision', APPROVAL_DECISIONS).notNull(),
+  comment: text('comment'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// madde 8-9 — vekalet. Zaman aralığı bazlı (izin süresi), approval_actions'daki
+// tekil-adım DELEGATE aksiyonundan FARKLI (o, tek bir bekleyen onayı elle
+// devretmek için; bu, bir kullanıcının TÜM gelecek onaylarını bir tarih
+// aralığında otomatik devretmek için).
+export const approvalDelegations = mysqlTable('approval_delegations', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  delegatorUserId: char('delegator_user_id', { length: 36 }).notNull().references(() => users.id),
+  delegateUserId: char('delegate_user_id', { length: 36 }).notNull().references(() => users.id),
+  startsAt: timestamp('starts_at').notNull(),
+  endsAt: timestamp('ends_at').notNull(),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// madde 25-28 — polimorfik ek dosya. entityType serbest ('PROCUREMENT_
+// REQUEST_LINE' gibi) — herhangi bir modül kullanabilir. Fiziksel dosya
+// yerel diskte (bu fabrikanın kendi sunucusu — tek-sunucu on-prem model,
+// S3/cloud abstraction'ı bilinçli olarak YOK), bkz. lib/documents/storage.ts.
+export const documentAttachments = mysqlTable('document_attachments', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  entityType: varchar('entity_type', { length: 64 }).notNull(),
+  entityId: char('entity_id', { length: 36 }).notNull(),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  mimeType: varchar('mime_type', { length: 127 }).notNull(),
+  sizeBytes: int('size_bytes').notNull(),
+  storageKey: varchar('storage_key', { length: 512 }).notNull(),
+  uploadedByUserId: char('uploaded_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [index('idx_attachment_entity').on(table.entityType, table.entityId)]);
+
+export const BUDGET_COMMITMENT_STATUSES = ['RESERVED', 'CONSUMED', 'RELEASED'] as const;
+
+// madde 34-36 — gerçek zamanlı bütçe taahhüdü. budget_items.plannedAmount
+// (lib/budgets.ts) DEĞİŞMEDİ — bu, PLAN'ın üstüne AYRI bir tüketim
+// katmanı: RESERVED (talep onaylandı) → CONSUMED (fatura kesildi, Faz
+// 2B/2C'de) veya RELEASED (talep iptal). AVAILABLE = plannedAmount −
+// SUM(RESERVED+CONSUMED), lib katmanında hesaplanır.
+export const budgetCommitments = mysqlTable('budget_commitments', {
+  id: char('id', { length: 36 }).primaryKey(),
+  budgetItemId: char('budget_item_id', { length: 36 }).notNull().references(() => budgetItems.id),
+  sourceType: varchar('source_type', { length: 64 }).notNull(),
+  sourceId: char('source_id', { length: 36 }).notNull(),
+  amount: decimal('amount', { precision: 20, scale: 6 }).notNull(),
+  status: mysqlEnum('status', BUDGET_COMMITMENT_STATUSES).notNull().default('RESERVED'),
   createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   releasedAt: timestamp('released_at')

@@ -1,0 +1,62 @@
+import { requireFactoryAdmin } from '@/lib/dal';
+import { listPositions, listCompanyOrgUsers } from '@/lib/org';
+import { PositionForm } from '@/components/org/position-form';
+import { OrgAssignmentForm } from '@/components/org/org-assignment-form';
+
+export default async function OrgPage() {
+  const session = await requireFactoryAdmin();
+  const [positions, orgUsers] = await Promise.all([listPositions(session.companyId), listCompanyOrgUsers(session.companyId)]);
+
+  return (
+    <div style={{ padding: '2rem' }}>
+      <h1 style={{ fontSize: 20, marginBottom: 4 }}>Organizasyon</h1>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Dinamik pozisyon + raporlama zinciri — workflow motorunun POSITION/MANAGER_CHAIN onay adımları buradan beslenir.</p>
+
+      <h2 style={{ fontSize: 16, marginBottom: 8 }}>Pozisyonlar</h2>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 12 }}>
+        <thead>
+          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+            <th style={{ padding: '6px 8px' }}>Kod</th>
+            <th style={{ padding: '6px 8px' }}>Unvan</th>
+            <th style={{ padding: '6px 8px', textAlign: 'right' }}>Onay Seviyesi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {positions.map((p) => (
+            <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
+              <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{p.code}</td>
+              <td style={{ padding: '6px 8px' }}>{p.title}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{p.approvalLevel}</td>
+            </tr>
+          ))}
+          {positions.length === 0 ? <tr><td colSpan={3} style={{ padding: '8px', color: '#999' }}>Henüz pozisyon yok.</td></tr> : null}
+        </tbody>
+      </table>
+      <div style={{ marginBottom: 28 }}><PositionForm /></div>
+
+      <h2 style={{ fontSize: 16, marginBottom: 8 }}>Kullanıcı Atamaları</h2>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <thead>
+          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+            <th style={{ padding: '6px 8px' }}>Kullanıcı</th>
+            <th style={{ padding: '6px 8px' }}>Mevcut Pozisyon</th>
+            <th style={{ padding: '6px 8px' }}>Mevcut Yönetici</th>
+            <th style={{ padding: '6px 8px' }}>Değiştir</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orgUsers.map((u) => (
+            <tr key={u.id} style={{ borderBottom: '1px solid #eee' }}>
+              <td style={{ padding: '6px 8px' }}>{u.fullName}</td>
+              <td style={{ padding: '6px 8px', color: '#666' }}>{u.positionTitle ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: '#666' }}>{u.managerName ?? '—'}</td>
+              <td style={{ padding: '6px 8px' }}>
+                <OrgAssignmentForm userId={u.id} positions={positions.map((p) => ({ id: p.id, title: p.title }))} users={orgUsers.map((x) => ({ id: x.id, fullName: x.fullName }))} currentPositionId={u.positionId} currentManagerUserId={u.managerUserId} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
