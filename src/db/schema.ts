@@ -1393,6 +1393,33 @@ export const endpointCompliance = mysqlTable('endpoint_compliance', {
   checkedAt: timestamp('checked_at').notNull().defaultNow()
 });
 
+// --- Knowledge Base (Faz 15) ---
+// IT-ARCHITECTURE.md'nin Faz listesinde yalnızca başlığı var — Faz 14
+// (Server/VM) ile AYNI dürüst boşluk, bu fazın kendi PDF metni bu proje
+// boyunca hiç yakalanmadı. Standart bir ITSM bilgi bankası olarak
+// yorumlandı: kategori ağacı + makale, ticket kategorileriyle GEVŞEK
+// ilişkili (madde referansı yok, bu yüzden zorunlu bir FK yerine serbest
+// metin "category" alanı — SERVICE-DESK.md'nin kendi ticket.category'siyle
+// AYNI serbest-metin yaklaşımı).
+export const kbCategories = mysqlTable('kb_categories', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  parentCategoryId: char('parent_category_id', { length: 36 }).references((): AnyMySqlColumn => kbCategories.id)
+});
+
+export const kbArticles = mysqlTable('kb_articles', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  categoryId: char('category_id', { length: 36 }).references(() => kbCategories.id),
+  title: varchar('title', { length: 255 }).notNull(),
+  content: text('content').notNull(),
+  authorUserId: char('author_user_id', { length: 36 }).notNull().references(() => users.id),
+  viewCount: int('view_count').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+});
+
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
   idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),
