@@ -6,6 +6,7 @@ import { TicketAssignForm } from '@/components/it/ticket-assign-form';
 import { TicketCommentForm } from '@/components/it/ticket-comment-form';
 import { TicketWorkLogForm } from '@/components/it/ticket-worklog-form';
 import { ReopenTicketForm } from '@/components/it/reopen-ticket-form';
+import { TicketAiAssistant } from '@/components/it/ticket-ai-assistant';
 
 const STATUS_LABELS: Record<string, string> = {
   NEW: 'Yeni', TRIAGED: 'Triyaj Edildi', ASSIGNED: 'Atandı', ACCEPTED: 'Kabul Edildi',
@@ -39,6 +40,8 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ d
       </div>
 
       {ticket.description ? <p style={{ marginBottom: 20, whiteSpace: 'pre-wrap' }}>{ticket.description}</p> : null}
+
+      <TicketAiAssistant departmentId={departmentId} ticketId={ticketId} />
 
       {access.permissions.update && ticket.status !== 'CLOSED' ? (
         <div style={{ marginBottom: 16 }}>
