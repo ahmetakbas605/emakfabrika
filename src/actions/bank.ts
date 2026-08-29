@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import * as z from 'zod';
 import { requireDepartmentAccess } from '@/lib/dal';
 import { createBankAccount, recordBankTransaction } from '@/lib/bank';
+import { optionalField } from '@/lib/form';
 
 export type FormState = { error?: string; success?: string } | undefined;
 
@@ -15,7 +16,7 @@ const BankAccountSchema = z.object({
 
 export async function createBankAccountAction(departmentId: string, _prevState: FormState, formData: FormData): Promise<FormState> {
   const { session } = await requireDepartmentAccess(departmentId, 'create');
-  const parsed = BankAccountSchema.safeParse({ name: formData.get('name'), iban: formData.get('iban'), accountingAccountId: formData.get('accountingAccountId') });
+  const parsed = BankAccountSchema.safeParse({ name: formData.get('name'), iban: optionalField(formData, 'iban'), accountingAccountId: formData.get('accountingAccountId') });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
   await createBankAccount(session.companyId, parsed.data);
   revalidatePath(`/dashboard/departments/${departmentId}/banka`);
@@ -40,7 +41,7 @@ export async function recordBankTransactionAction(departmentId: string, _prevSta
     method: formData.get('method'),
     amount: formData.get('amount'),
     counterAccountCode: formData.get('counterAccountCode'),
-    description: formData.get('description'),
+    description: optionalField(formData, 'description'),
     transactionDate: formData.get('transactionDate')
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };

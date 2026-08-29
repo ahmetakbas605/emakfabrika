@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import * as z from 'zod';
 import { requireDepartmentAccess } from '@/lib/dal';
 import { createCashAccount, recordCashTransaction } from '@/lib/cash';
+import { optionalField } from '@/lib/form';
 
 export type FormState = { error?: string; success?: string } | undefined;
 
@@ -37,7 +38,7 @@ export async function recordCashTransactionAction(departmentId: string, _prevSta
     transactionType: formData.get('transactionType'),
     amount: formData.get('amount'),
     counterAccountCode: formData.get('counterAccountCode'),
-    description: formData.get('description'),
+    description: optionalField(formData, 'description'),
     transactionDate: formData.get('transactionDate')
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };

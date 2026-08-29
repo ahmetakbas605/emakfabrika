@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import * as z from 'zod';
 import { requireDepartmentAccess } from '@/lib/dal';
 import { createAccount, postJournal, openPeriod, closePeriod, reopenPeriod, AccountingError, type JournalLineInput } from '@/lib/accounting';
+import { optionalField } from '@/lib/form';
 
 export type FormState = { error?: string; success?: string } | undefined;
 
@@ -60,7 +61,7 @@ export async function postJournalAction(departmentId: string, _prevState: FormSt
   const parsed = JournalFormSchema.safeParse({
     journalDate: formData.get('journalDate'),
     documentType: formData.get('documentType') || 'MANUAL',
-    description: formData.get('description'),
+    description: optionalField(formData, 'description'),
     linesJson: formData.get('linesJson')
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };

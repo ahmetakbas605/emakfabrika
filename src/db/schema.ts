@@ -351,6 +351,49 @@ export const bankTransactions = mysqlTable('bank_transactions', {
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
 
+// --- Çek/Senet (PDF madde 28) ---
+
+export const CHECK_DIRECTIONS = ['RECEIVED', 'ISSUED'] as const;
+// Alınan çek: PORTFOLIO(portföyde) → COLLECTED(tahsil)/ENDORSED(ciro edildi)/
+// BOUNCED(karşılıksız)/RETURNED(iade). Verilen çek: DRAFTED(düzenlendi) →
+// DELIVERED(teslim edildi) → PAID(ödendi)/CANCELLED(iptal). Tek "status"
+// varchar sütunu — yönlere göre farklı geçerli değer kümesi UYGULAMA
+// katmanında doğrulanır (lib/checks.ts), iki ayrı ENUM/tablo AÇILMADI
+// (PDF madde 67: gereksiz abstraction oluşturma).
+export const checks = mysqlTable('checks', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  direction: mysqlEnum('direction', CHECK_DIRECTIONS).notNull(),
+  checkNo: varchar('check_no', { length: 64 }).notNull().default(''),
+  bankName: varchar('bank_name', { length: 255 }).notNull().default(''),
+  // Alınan çekte keşideci (çeki veren), verilen çekte lehtar (çeki alacak taraf).
+  partyName: varchar('party_name', { length: 255 }).notNull().default(''),
+  amount: decimal('amount', { precision: 20, scale: 6 }).notNull(),
+  dueDate: date('due_date', { mode: 'string' }).notNull(),
+  status: varchar('status', { length: 32 }).notNull(),
+  // Bu çek grubunun muhasebede karşılığı — ör. "101 Alınan Çekler" (received)
+  // veya "103 Verilen Çekler ve Ödeme Emirleri" (issued).
+  accountingAccountId: char('accounting_account_id', { length: 36 }).notNull().references(() => accountingAccounts.id),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+});
+
+// Her durum geçişi (portföy→tahsil, teslim→ödeme, vb.) bir satır — hangi
+// muhasebe fişinin bu geçişten üretildiği izlenebilir (financial audit trail,
+// PDF madde 38'in çek/senet'e uygulanmış hâli).
+export const checkEvents = mysqlTable('check_events', {
+  id: char('id', { length: 36 }).primaryKey(),
+  checkId: char('check_id', { length: 36 }).notNull().references(() => checks.id, { onDelete: 'cascade' }),
+  fromStatus: varchar('from_status', { length: 32 }).notNull(),
+  toStatus: varchar('to_status', { length: 32 }).notNull(),
+  counterAccountCode: varchar('counter_account_code', { length: 32 }),
+  journalId: char('journal_id', { length: 36 }).references(() => accountingJournals.id),
+  note: text('note'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
   idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),
