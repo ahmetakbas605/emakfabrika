@@ -109,7 +109,7 @@ export async function addCommentAction(departmentId: string, _prevState: FormSta
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
 
   try {
-    await addComment(parsed.data.ticketId, session.id, parsed.data.body, parsed.data.isInternal === 'on');
+    await addComment(session.companyId, parsed.data.ticketId, session.id, parsed.data.body, parsed.data.isInternal === 'on');
   } catch (err) {
     return { error: err instanceof ItError ? err.message : 'Yorum eklenemedi.' };
   }
@@ -125,7 +125,7 @@ export async function logWorkAction(departmentId: string, _prevState: FormState,
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
 
   try {
-    await logWork(parsed.data.ticketId, session.id, Number(parsed.data.minutesSpent), parsed.data.note);
+    await logWork(session.companyId, parsed.data.ticketId, session.id, Number(parsed.data.minutesSpent), parsed.data.note);
   } catch (err) {
     return { error: err instanceof ItError ? err.message : 'İş kaydı eklenemedi.' };
   }

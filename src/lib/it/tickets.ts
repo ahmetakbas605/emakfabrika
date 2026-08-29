@@ -180,12 +180,26 @@ export async function listTicketAssignments(ticketId: string) {
     .orderBy(desc(ticketAssignments.assignedAt));
 }
 
-export async function addComment(ticketId: string, authorUserId: string, body: string, isInternal: boolean): Promise<void> {
+// GÜVENLİK DÜZELTMESİ (2026-08-29, Faz 17 mobil rotaları eklenirken
+// yakalandı) — bu fonksiyon eskiden companyId ALMIYORDU, ticketId'ye
+// kayıtsız şartsız güveniyordu. transitionTicket/assignTicket/reopenTicket
+// AYNI dosyada zaten ticketId'yi companyId ile birlikte doğruluyordu, bu
+// ikisi UNUTULMUŞTU — requireDepartmentAccess(departmentId,'update') YALNIZCA
+// çağıranın KENDİ departmanına erişimini doğruluyor, formdan gelen ticketId
+// BAŞKA BİR ŞİRKETE ait olabilirdi ve sessizce kabul edilirdi (gerçek
+// bir cross-tenant yazma açığı — bkz. proje hafızası
+// feedback_tenant_isolation_admin_fallback, aynı hata sınıfı: aktörün KENDİ
+// tenant'ı yerine yalnızca hedef id'ye göre filtrelemek).
+export async function addComment(companyId: string, ticketId: string, authorUserId: string, body: string, isInternal: boolean): Promise<void> {
+  const [ticket] = await db.select({ id: serviceDeskTickets.id }).from(serviceDeskTickets).where(and(eq(serviceDeskTickets.id, ticketId), eq(serviceDeskTickets.companyId, companyId))).limit(1);
+  if (!ticket) throw new ItError('Ticket bulunamadı.');
   await db.insert(ticketComments).values({ id: newId(), ticketId, authorUserId, body, isInternal });
 }
 
-export async function logWork(ticketId: string, userId: string, minutesSpent: number, note?: string): Promise<void> {
+export async function logWork(companyId: string, ticketId: string, userId: string, minutesSpent: number, note?: string): Promise<void> {
   if (minutesSpent <= 0) throw new ItError('Harcanan süre 0dan büyük olmalı.');
+  const [ticket] = await db.select({ id: serviceDeskTickets.id }).from(serviceDeskTickets).where(and(eq(serviceDeskTickets.id, ticketId), eq(serviceDeskTickets.companyId, companyId))).limit(1);
+  if (!ticket) throw new ItError('Ticket bulunamadı.');
   await db.insert(ticketWorkLogs).values({ id: newId(), ticketId, userId, minutesSpent, note });
 }
 
