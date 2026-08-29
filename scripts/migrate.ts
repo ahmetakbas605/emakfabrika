@@ -8,7 +8,7 @@ import mysql from 'mysql2/promise';
 import { drizzle } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
 import { eq } from 'drizzle-orm';
-import { departmentTypes, roles, permissions, rolePermissions, itAssetTypes } from '../src/db/schema';
+import { departmentTypes, roles, permissions, rolePermissions, itAssetTypes, currencies } from '../src/db/schema';
 
 async function main() {
   const migrateUrl = process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL;
@@ -100,6 +100,19 @@ async function main() {
     { code: 'TABLET', name: 'Tablet' },
     { code: 'NETWORK_APPLIANCE', name: 'Ağ Cihazı' }
   ];
+
+  // ERP Genişletme Faz 1 — currencies company_id TAŞIMAZ (ISO 4217 kodları
+  // evrensel, şirkete özgü değil — companies/roles/permissions İLE AYNI
+  // gerekçeyle global referans verisi).
+  const CURRENCY_SEED: { code: string; name: string; symbol: string }[] = [
+    { code: 'TRY', name: 'Türk Lirası', symbol: '₺' },
+    { code: 'USD', name: 'Amerikan Doları', symbol: '$' },
+    { code: 'EUR', name: 'Euro', symbol: '€' },
+    { code: 'GBP', name: 'İngiliz Sterlini', symbol: '£' }
+  ];
+  for (const row of CURRENCY_SEED) {
+    await db.insert(currencies).values(row).onDuplicateKeyUpdate({ set: { name: row.name, symbol: row.symbol } });
+  }
 
   for (const row of DEPARTMENT_TYPE_SEED) {
     await db.insert(departmentTypes).values(row).onDuplicateKeyUpdate({ set: { name: row.name } });

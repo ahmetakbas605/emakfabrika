@@ -1,6 +1,7 @@
 import { requireDepartmentAccess } from '@/lib/dal';
 import { listStockItems, listWarehouses, listStockMovements } from '@/lib/warehouse';
 import { listAccounts } from '@/lib/accounting';
+import { listProducts } from '@/lib/master-data/products';
 import { StockItemForm } from '@/components/stock-item-form';
 import { StockMovementForm } from '@/components/stock-movement-form';
 
@@ -11,11 +12,12 @@ function num(value: string): string {
 export default async function StockItemsPage({ params }: { params: Promise<{ departmentId: string }> }) {
   const { departmentId } = await params;
   const { session, access } = await requireDepartmentAccess(departmentId);
-  const [stockItems, warehouses, accounts, movements] = await Promise.all([
+  const [stockItems, warehouses, accounts, movements, products] = await Promise.all([
     listStockItems(session.companyId),
     listWarehouses(session.companyId),
     listAccounts(session.companyId),
-    listStockMovements(session.companyId)
+    listStockMovements(session.companyId),
+    listProducts(session.companyId)
   ]);
   const itemBySku = new Map(stockItems.map((s) => [s.id, s]));
 
@@ -52,7 +54,7 @@ export default async function StockItemsPage({ params }: { params: Promise<{ dep
 
       {access.permissions.create ? (
         <div style={{ marginBottom: 20 }}>
-          <StockItemForm departmentId={departmentId} accounts={accounts.map((a) => ({ id: a.id, code: a.code, name: a.name }))} />
+          <StockItemForm departmentId={departmentId} accounts={accounts.map((a) => ({ id: a.id, code: a.code, name: a.name }))} products={products.map((p) => ({ id: p.id, sku: p.sku, name: p.name }))} />
         </div>
       ) : null}
 

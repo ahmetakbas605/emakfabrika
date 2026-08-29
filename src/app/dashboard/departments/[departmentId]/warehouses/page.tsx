@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { requireDepartmentAccess } from '@/lib/dal';
 import { listWarehouses } from '@/lib/warehouse';
 import { WarehouseForm } from '@/components/warehouse-form';
@@ -21,7 +22,7 @@ export default async function WarehousesPage({ params }: { params: Promise<{ dep
         <tbody>
           {warehouses.map((w) => (
             <tr key={w.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td style={{ padding: '6px 8px' }}>{w.name}</td>
+              <td style={{ padding: '6px 8px' }}><Link href={`/dashboard/departments/${departmentId}/warehouses/${w.id}`}>{w.name}</Link></td>
             </tr>
           ))}
           {warehouses.length === 0 ? <tr><td style={{ padding: '8px', color: '#999' }}>Henüz depo yok.</td></tr> : null}

@@ -26,7 +26,9 @@ function navFor(departmentId: string, departmentTypeCode: string): { href: strin
     case 'WAREHOUSE':
       return [
         { href: `${base}/warehouses`, label: 'Depolar' },
-        { href: `${base}/stock-items`, label: 'Stok Kartları' }
+        { href: `${base}/stock-items`, label: 'Stok Kartları' },
+        { href: `${base}/transfers`, label: 'Transferler' },
+        { href: `${base}/reservations`, label: 'Rezervasyonlar' }
       ];
     case 'IT':
       return [

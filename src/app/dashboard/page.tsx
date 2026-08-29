@@ -26,6 +26,12 @@ export default async function DashboardPage() {
         </form>
       </div>
 
+      {session.isFactoryAdmin ? (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <Link href="/dashboard/master-data/parties" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Master Data (Cari/Ürün/Birim/Döviz)</Link>
+        </div>
+      ) : null}
+
       <h2 style={{ fontSize: 16 }}>Departmanlarım</h2>
       {items.length === 0 ? (
         <p style={{ color: '#666' }}>Henüz hiçbir departmana atanmadınız.</p>

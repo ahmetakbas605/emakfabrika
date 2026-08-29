@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { createStockItemAction, type FormState } from '@/actions/warehouse';
 
-export function StockItemForm({ departmentId, accounts }: { departmentId: string; accounts: { id: string; code: string; name: string }[] }) {
+export function StockItemForm({ departmentId, accounts, products }: { departmentId: string; accounts: { id: string; code: string; name: string }[]; products: { id: string; sku: string; name: string }[] }) {
   const action = createStockItemAction.bind(null, departmentId);
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
 
@@ -26,6 +26,13 @@ export function StockItemForm({ departmentId, accounts }: { departmentId: string
         <select name="accountingAccountId" style={{ padding: 6, minWidth: 180 }}>
           <option value="">Yalnızca miktar takibi</option>
           {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}
+        </select>
+      </div>
+      <div>
+        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Master Ürün (opsiyonel)</label>
+        <select name="productId" style={{ padding: 6, minWidth: 180 }}>
+          <option value="">Bağımsız stok kartı</option>
+          {products.map((p) => <option key={p.id} value={p.id}>{p.sku} — {p.name}</option>)}
         </select>
       </div>
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? 'Ekleniyor...' : 'Stok Kartı Ekle'}</button>

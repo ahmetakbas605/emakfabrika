@@ -508,6 +508,12 @@ export const stockItems = mysqlTable('stock_items', {
   // Dolu ise, her hareket otomatik muhasebe fişi üretir (Kasa/Banka ile AYNI
   // opsiyonel-entegrasyon deseni) — boşsa Depo yalnızca miktar takibi yapar.
   accountingAccountId: char('accounting_account_id', { length: 36 }).references(() => accountingAccounts.id),
+  // Faz 2A (ERP Genişletme) — OPSİYONEL bağlantı, aşağıdaki `products` master
+  // tablosuna (dosyanın sonunda tanımlı, bu yüzden AnyMySqlColumn lazy-ref —
+  // network_diagrams/diagram_versions'taki AYNI ileri-referans tekniği).
+  // Doldurulmazsa stock_items eskisi gibi kendi başına çalışmaya devam eder
+  // — mevcut Depo akışı BOZULMAZ.
+  productId: char('product_id', { length: 36 }).references((): AnyMySqlColumn => products.id),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow()
 }, (table) => [uniqueIndex('udx_stock_item_company_sku').on(table.companyId, table.sku)]);
@@ -530,6 +536,10 @@ export const stockMovements = mysqlTable('stock_movements', {
   sourceId: char('source_id', { length: 36 }),
   description: text('description'),
   transactionDate: date('transaction_date', { mode: 'string' }).notNull(),
+  // Faz 2A — OPSİYONEL bin/rack seviyesi konum (aşağıdaki `wh_locations`,
+  // dosyanın sonunda — AnyMySqlColumn lazy-ref). Boşsa hareket yalnızca
+  // depo seviyesinde kalır, eski davranış korunur.
+  locationId: char('location_id', { length: 36 }).references((): AnyMySqlColumn => whLocations.id),
   createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
@@ -1428,3 +1438,302 @@ export const idempotencyKeys = mysqlTable('idempotency_keys', {
   responseSnapshot: json('response_snapshot'),
   createdAt: timestamp('created_at').notNull().defaultNow()
 }, (table) => [uniqueIndex('udx_idempotency_key_endpoint').on(table.idempotencyKey, table.endpoint)]);
+
+// --- ERP Genişletme Faz 1 — Master Data: Party/Product/Currency/Unit/Fiyat
+// Listesi. ERP-GENİŞLEME-FİZİBİLİTE raporunun kararı: TÜM yeni master data
+// company_id ile scope edilir (accounting_accounts/warehouses/stock_items
+// İLE AYNI disiplin — holding-geneli paylaşım TODO: HOLDING_ACCOUNT_PLAN_
+// SCOPE çözülene kadar ertelendi, mevcut tutarsızlık büyütülmedi, aynı
+// desene uyuldu). Hiçbir mevcut Muhasebe/Depo/IT tablosu DEĞİŞTİRİLMEDİ —
+// yalnızca opsiyonel bağlantılar eklendi (yukarıda stock_items.productId,
+// stock_movements.locationId). ---
+
+export const currencies = mysqlTable('currencies', {
+  code: char('code', { length: 3 }).primaryKey(), // ISO 4217 — TRY/USD/EUR/...
+  name: varchar('name', { length: 100 }).notNull(),
+  symbol: varchar('symbol', { length: 8 }).notNull().default(''),
+  decimalPlaces: int('decimal_places').notNull().default(2),
+  active: boolean('active').notNull().default(true)
+});
+
+export const EXCHANGE_RATE_TYPES = ['BUY', 'SELL', 'EFFECTIVE', 'CENTRAL_BANK', 'CUSTOM'] as const;
+
+export const exchangeRates = mysqlTable('exchange_rates', {
+  id: char('id', { length: 36 }).primaryKey(),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  rateDate: date('rate_date', { mode: 'string' }).notNull(),
+  rate: decimal('rate', { precision: 20, scale: 6 }).notNull(),
+  rateType: mysqlEnum('rate_type', EXCHANGE_RATE_TYPES).notNull().default('EFFECTIVE'),
+  source: varchar('source', { length: 100 }),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_exchange_rate_currency_date_type').on(table.currencyCode, table.rateDate, table.rateType)]);
+
+// Doluysa bu birim türetilmiştir: 1 bu birim = conversionFactor × baseUnit
+// (madde 21 — "base unit ve conversion factor mantığı"). Boşsa bu birimin
+// KENDİSİ bir taban birimdir (ör. ADET, KG).
+export const units = mysqlTable('units', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 16 }).notNull(),
+  name: varchar('name', { length: 100 }).notNull(),
+  baseUnitId: char('base_unit_id', { length: 36 }).references((): AnyMySqlColumn => units.id),
+  conversionFactor: decimal('conversion_factor', { precision: 20, scale: 6 }),
+  active: boolean('active').notNull().default(true)
+}, (table) => [uniqueIndex('udx_unit_company_code').on(table.companyId, table.code)]);
+
+// MySQL 64 karakter FK isim sınırı — kendine-referanslı bir kategori ağacı
+// için "product_categories" adı kb_categories'te olduğu gibi kısaltıldı.
+export const productCats = mysqlTable('product_cats', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  parentCategoryId: char('parent_category_id', { length: 36 }).references((): AnyMySqlColumn => productCats.id),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  active: boolean('active').notNull().default(true)
+}, (table) => [uniqueIndex('udx_product_cat_company_code').on(table.companyId, table.code)]);
+
+export const brands = mysqlTable('brands', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  active: boolean('active').notNull().default(true)
+});
+
+export const PRODUCT_TYPES = ['STOCK_ITEM', 'SERVICE', 'ASSET', 'KIT', 'NON_STOCK', 'CONSUMABLE', 'SPARE_PART'] as const;
+export const PRODUCT_TRACKING_TYPES = ['NONE', 'SERIAL', 'LOT'] as const;
+
+// PDF madde 189-190 — tek Ürün Master'ı: it_assets/stock_items/sw_products
+// KENDİ alanlarını korur (donanım/lisans-özel alanlar), bu tablo onları
+// DEĞİŞTİRMEZ — yalnızca Satınalma/Satış'ın ihtiyaç duyacağı GENEL ürün
+// kavramını sağlar.
+export const products = mysqlTable('products', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  sku: varchar('sku', { length: 64 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  shortName: varchar('short_name', { length: 100 }).notNull().default(''),
+  description: text('description'),
+  brandId: char('brand_id', { length: 36 }).references(() => brands.id),
+  categoryId: char('category_id', { length: 36 }).references(() => productCats.id),
+  productType: mysqlEnum('product_type', PRODUCT_TYPES).notNull().default('STOCK_ITEM'),
+  baseUnitId: char('base_unit_id', { length: 36 }).notNull().references(() => units.id),
+  purchaseUnitId: char('purchase_unit_id', { length: 36 }).references(() => units.id),
+  salesUnitId: char('sales_unit_id', { length: 36 }).references(() => units.id),
+  trackingType: mysqlEnum('tracking_type', PRODUCT_TRACKING_TYPES).notNull().default('NONE'),
+  // Basit varyant desteği (madde 26) — tam bir öznitelik/matris sistemi
+  // BİLİNÇLİ OLARAK kapsam dışı, yalnızca "bu ürün şu ürünün varyantı"
+  // ilişkisi (ör. "Dell Latitude" (parent) → "16GB/512GB/i5" (variant)).
+  parentProductId: char('parent_product_id', { length: 36 }).references((): AnyMySqlColumn => products.id),
+  taxRatePercent: decimal('tax_rate_percent', { precision: 5, scale: 2 }),
+  active: boolean('active').notNull().default(true),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+}, (table) => [uniqueIndex('udx_product_company_sku').on(table.companyId, table.sku)]);
+
+export const BARCODE_TYPES = ['EAN13', 'EAN8', 'UPC', 'CODE128', 'CUSTOM'] as const;
+
+export const productBarcodes = mysqlTable('product_barcodes', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  productId: char('product_id', { length: 36 }).notNull().references(() => products.id, { onDelete: 'cascade' }),
+  barcode: varchar('barcode', { length: 64 }).notNull(),
+  barcodeType: mysqlEnum('barcode_type', BARCODE_TYPES).notNull().default('EAN13')
+}, (table) => [uniqueIndex('udx_product_barcode_company').on(table.companyId, table.barcode)]);
+
+export const paymentTerms = mysqlTable('payment_terms', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 100 }).notNull(),
+  netDays: int('net_days').notNull().default(0),
+  active: boolean('active').notNull().default(true)
+}, (table) => [uniqueIndex('udx_payment_term_company_code').on(table.companyId, table.code)]);
+
+export const PARTY_TYPES = ['PERSON', 'COMPANY'] as const;
+
+// PDF madde 34 — tekrar eden customer/supplier tabloları yerine tek PARTY
+// modeli, rol PARTY_ROLES ile ayrılıyor (bir party hem müşteri hem
+// tedarikçi olabilir — madde 33 "BOTH" ihtiyacı ayrı bir enum değeri yerine
+// iki rol satırıyla karşılanıyor, daha esnek).
+export const parties = mysqlTable('parties', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  partyType: mysqlEnum('party_type', PARTY_TYPES).notNull().default('COMPANY'),
+  code: varchar('code', { length: 32 }).notNull(),
+  legalName: varchar('legal_name', { length: 255 }).notNull(),
+  tradeName: varchar('trade_name', { length: 255 }).notNull().default(''),
+  taxNumber: varchar('tax_number', { length: 11 }).notNull().default(''),
+  taxOffice: varchar('tax_office', { length: 255 }).notNull().default(''),
+  email: varchar('email', { length: 255 }).notNull().default(''),
+  phone: varchar('phone', { length: 32 }).notNull().default(''),
+  website: varchar('website', { length: 255 }).notNull().default(''),
+  currencyCode: char('currency_code', { length: 3 }).references(() => currencies.code),
+  paymentTermId: char('payment_term_id', { length: 36 }).references(() => paymentTerms.id),
+  creditLimit: decimal('credit_limit', { precision: 20, scale: 6 }),
+  active: boolean('active').notNull().default(true),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+}, (table) => [uniqueIndex('udx_party_company_code').on(table.companyId, table.code)]);
+
+export const PARTY_ROLE_VALUES = ['CUSTOMER', 'SUPPLIER'] as const;
+
+export const partyRoles = mysqlTable('party_roles', {
+  id: char('id', { length: 36 }).primaryKey(),
+  partyId: char('party_id', { length: 36 }).notNull().references(() => parties.id, { onDelete: 'cascade' }),
+  role: mysqlEnum('role', PARTY_ROLE_VALUES).notNull(),
+  active: boolean('active').notNull().default(true)
+}, (table) => [uniqueIndex('udx_party_role').on(table.partyId, table.role)]);
+
+export const PARTY_ADDRESS_TYPES = ['BILLING', 'SHIPPING', 'OTHER'] as const;
+
+export const partyAddresses = mysqlTable('party_addresses', {
+  id: char('id', { length: 36 }).primaryKey(),
+  partyId: char('party_id', { length: 36 }).notNull().references(() => parties.id, { onDelete: 'cascade' }),
+  addressType: mysqlEnum('address_type', PARTY_ADDRESS_TYPES).notNull().default('OTHER'),
+  label: varchar('label', { length: 100 }).notNull().default(''),
+  addressLine: text('address_line'),
+  city: varchar('city', { length: 100 }).notNull().default(''),
+  district: varchar('district', { length: 100 }).notNull().default(''),
+  country: varchar('country', { length: 100 }).notNull().default('Türkiye'),
+  isDefault: boolean('is_default').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const partyContacts = mysqlTable('party_contacts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  partyId: char('party_id', { length: 36 }).notNull().references(() => parties.id, { onDelete: 'cascade' }),
+  fullName: varchar('full_name', { length: 255 }).notNull(),
+  title: varchar('title', { length: 100 }).notNull().default(''),
+  email: varchar('email', { length: 255 }).notNull().default(''),
+  phone: varchar('phone', { length: 32 }).notNull().default(''),
+  isPrimary: boolean('is_primary').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const productSuppliers = mysqlTable('product_suppliers', {
+  id: char('id', { length: 36 }).primaryKey(),
+  productId: char('product_id', { length: 36 }).notNull().references(() => products.id, { onDelete: 'cascade' }),
+  supplierPartyId: char('supplier_party_id', { length: 36 }).notNull().references(() => parties.id),
+  supplierSku: varchar('supplier_sku', { length: 64 }).notNull().default(''),
+  purchasePrice: decimal('purchase_price', { precision: 20, scale: 6 }),
+  currencyCode: char('currency_code', { length: 3 }).references(() => currencies.code),
+  leadTimeDays: int('lead_time_days'),
+  minOrderQty: decimal('min_order_qty', { precision: 20, scale: 6 }),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_product_supplier').on(table.productId, table.supplierPartyId)]);
+
+export const priceLists = mysqlTable('price_lists', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  validFrom: date('valid_from', { mode: 'string' }),
+  validTo: date('valid_to', { mode: 'string' }),
+  // Doluysa bu fiyat listesi YALNIZCA bu cariye özeldir (madde 30 "müşteri
+  // bazlı fiyat"); boşsa genel liste.
+  partyId: char('party_id', { length: 36 }).references(() => parties.id),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const priceListItems = mysqlTable('price_list_items', {
+  id: char('id', { length: 36 }).primaryKey(),
+  priceListId: char('price_list_id', { length: 36 }).notNull().references(() => priceLists.id, { onDelete: 'cascade' }),
+  productId: char('product_id', { length: 36 }).notNull().references(() => products.id),
+  price: decimal('price', { precision: 20, scale: 6 }).notNull(),
+  discountPercent: decimal('discount_percent', { precision: 5, scale: 2 }),
+  taxInclusive: boolean('tax_inclusive').notNull().default(false)
+}, (table) => [uniqueIndex('udx_price_list_item').on(table.priceListId, table.productId)]);
+
+// PDF madde 97-98 — genelleştirilmiş numaralama servisi. journal_number_
+// counters/ticket_number_counters/ci_key_counters İLE AYNI atomik desen
+// (INSERT...ON DUPLICATE KEY + UPDATE +1), ama TEK tabloda, sequenceKey ile
+// ayrıştırılmış — üç kopyanın dördüncüsünü açmak yerine buradan büyütülür
+// (ERP-GENİŞLEME-FİZİBİLİTE raporunun önerisi). Mevcut üç sayaç KASITLI
+// OLARAK buraya taşınmadı — çalışan, test edilmiş koda dokunmamak için.
+export const docNumberSeqs = mysqlTable('doc_number_seqs', {
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  sequenceKey: varchar('sequence_key', { length: 32 }).notNull(), // 'PARTY' | 'PO' | 'SO' | ...
+  year: int('year').notNull(),
+  lastNumber: int('last_number').notNull().default(0)
+}, (table) => [uniqueIndex('udx_doc_number_seq').on(table.companyId, table.sequenceKey, table.year)]);
+
+// --- ERP Genişletme Faz 2A — Depo'yu gerçek bir stok omurgasına genişletme:
+// bina/rack tipi konum hiyerarşisi (it_locations İLE AYNI desen), depo
+// bazlı bakiye, transfer, rezervasyon. Mevcut stock_items/stock_movements/
+// recordStockMovement DAVRANIŞI BOZULMADI — yalnızca eklendi. ---
+
+export const WH_LOCATION_TYPES = ['ZONE', 'AISLE', 'RACK', 'SHELF', 'BIN'] as const;
+
+export const whLocations = mysqlTable('wh_locations', {
+  id: char('id', { length: 36 }).primaryKey(),
+  warehouseId: char('warehouse_id', { length: 36 }).notNull().references(() => warehouses.id, { onDelete: 'cascade' }),
+  parentLocationId: char('parent_location_id', { length: 36 }).references((): AnyMySqlColumn => whLocations.id),
+  locationType: mysqlEnum('location_type', WH_LOCATION_TYPES).notNull(),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull().default(''),
+  active: boolean('active').notNull().default(true)
+});
+
+// Depo bazlı bakiye — stock_items.currentQty (şirket geneli) DEĞİŞTİRİLMEDİ,
+// hâlâ AYNI şekilde güncelleniyor (mevcut ekranlar/entegrasyonlar bozulmaz);
+// bu tablo EK bir kırılım (madde 50, 53 — depo bazlı görünürlük).
+export const invBalances = mysqlTable('inv_balances', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  warehouseId: char('warehouse_id', { length: 36 }).notNull().references(() => warehouses.id),
+  stockItemId: char('stock_item_id', { length: 36 }).notNull().references(() => stockItems.id),
+  qty: decimal('qty', { precision: 20, scale: 6 }).notNull().default('0'),
+  avgCost: decimal('avg_cost', { precision: 20, scale: 6 }).notNull().default('0'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+}, (table) => [uniqueIndex('udx_inv_balance_warehouse_item').on(table.warehouseId, table.stockItemId)]);
+
+export const STOCK_TRANSFER_STATUSES = ['DRAFT', 'REQUESTED', 'APPROVED', 'IN_TRANSIT', 'RECEIVED', 'CANCELLED'] as const;
+
+export const stockTransfers = mysqlTable('stock_transfers', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  transferNo: varchar('transfer_no', { length: 32 }).notNull(),
+  sourceWarehouseId: char('source_warehouse_id', { length: 36 }).notNull().references(() => warehouses.id),
+  destinationWarehouseId: char('destination_warehouse_id', { length: 36 }).notNull().references(() => warehouses.id),
+  status: mysqlEnum('status', STOCK_TRANSFER_STATUSES).notNull().default('DRAFT'),
+  requestedByUserId: char('requested_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  approvedByUserId: char('approved_by_user_id', { length: 36 }).references(() => users.id),
+  receivedByUserId: char('received_by_user_id', { length: 36 }).references(() => users.id),
+  requestedAt: timestamp('requested_at').notNull().defaultNow(),
+  approvedAt: timestamp('approved_at'),
+  shippedAt: timestamp('shipped_at'),
+  receivedAt: timestamp('received_at'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_stock_transfer_company_no').on(table.companyId, table.transferNo)]);
+
+export const transferLines = mysqlTable('transfer_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  transferId: char('transfer_id', { length: 36 }).notNull().references(() => stockTransfers.id, { onDelete: 'cascade' }),
+  stockItemId: char('stock_item_id', { length: 36 }).notNull().references(() => stockItems.id),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  receivedQuantity: decimal('received_quantity', { precision: 20, scale: 6 })
+});
+
+export const INV_RESERVATION_STATUSES = ['ACTIVE', 'RELEASED', 'CONSUMED'] as const;
+
+// Satış siparişi (Faz 2C) henüz yok — bu tablo şimdiden kuruluyor (madde
+// 57-59), tıpkı idempotency_keys'in Faz 17 mobil'den önce şemada hazır
+// beklemesi gibi. AVAILABLE = ON_HAND − RESERVED hesaplaması lib
+// katmanında yapılır, burada saklanmaz (madde 58).
+export const invReservations = mysqlTable('inv_reservations', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  warehouseId: char('warehouse_id', { length: 36 }).notNull().references(() => warehouses.id),
+  stockItemId: char('stock_item_id', { length: 36 }).notNull().references(() => stockItems.id),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  sourceType: varchar('source_type', { length: 64 }),
+  sourceId: char('source_id', { length: 36 }),
+  status: mysqlEnum('status', INV_RESERVATION_STATUSES).notNull().default('ACTIVE'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  releasedAt: timestamp('released_at')
+});
