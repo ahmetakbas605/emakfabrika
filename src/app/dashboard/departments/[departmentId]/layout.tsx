@@ -38,6 +38,10 @@ function navFor(departmentId: string, departmentTypeCode: string): { href: strin
         { href: `${base}/it/licensing`, label: 'Lisans/Garanti/Sözleşme' },
         { href: `${base}/it/network`, label: 'IPAM/Ağ' },
         { href: `${base}/it/network-diagram`, label: 'Ağ Diyagramı' },
+        { href: `${base}/it/monitoring`, label: 'İzleme' },
+        { href: `${base}/it/backup`, label: 'Yedekleme' },
+        { href: `${base}/it/compliance`, label: 'Uyumluluk' },
+        { href: `${base}/it/credentials`, label: 'Kimlik Kasası' },
         { href: `${base}/it/incidents`, label: 'Incidentlar' },
         { href: `${base}/it/problems`, label: 'Problemler' },
         { href: `${base}/it/changes`, label: 'Değişiklikler' }

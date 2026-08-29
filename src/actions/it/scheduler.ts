@@ -15,5 +15,5 @@ export async function triggerSchedulerAction(departmentId: string, _prevState: F
   revalidatePath(`/dashboard/departments/${departmentId}/it/tickets`);
   if (!result) return { success: 'Zaten çalışıyordu, bu istek atlandı.' };
   if (result.errors.length > 0) return { error: `${result.companiesProcessed} şirket işlendi, ${result.errors.length} hata: ${result.errors.join('; ')}` };
-  return { success: `${result.companiesProcessed} şirket işlendi — ${result.maintenanceGenerated} bakım işi üretildi, ${result.escalated} ticket eskalasyona uğradı.` };
+  return { success: `${result.companiesProcessed} şirket işlendi — ${result.maintenanceGenerated} bakım işi üretildi, ${result.escalated} ticket eskalasyona uğradı, ${result.metricsPruned} eski metrik satırı özetlenip silindi.` };
 }

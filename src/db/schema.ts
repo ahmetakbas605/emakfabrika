@@ -1241,6 +1241,151 @@ export const networkLinks = mysqlTable('network_links', {
   interfaceName: varchar('interface_name', { length: 64 }).notNull().default('')
 });
 
+// --- Network Credentials / Secret Vault (Faz 3 gap, IT-SECURITY.md §1) ---
+
+export const NETWORK_CREDENTIAL_TYPES = ['SSH', 'SNMP_COMMUNITY', 'API_KEY', 'VPN'] as const;
+
+// encryptedSecret ("enc:" önekli, lib/crypto.ts) FRONTEND'E ASLA
+// gönderilmez — bu tabloyu okuyan HER sorgu bu alanı AÇIKÇA hariç tutmalı,
+// SELECT * kullanılmamalı (lib/it/network-credentials.ts'in kendi disiplini).
+export const networkCredentials = mysqlTable('network_credentials', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  assetId: char('asset_id', { length: 36 }).references(() => itAssets.id),
+  credentialType: mysqlEnum('credential_type', NETWORK_CREDENTIAL_TYPES).notNull(),
+  label: varchar('label', { length: 255 }).notNull().default(''),
+  encryptedSecret: text('encrypted_secret').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// --- Monitoring (Faz 13, MONITORING.md) ---
+
+export const MONITOR_TARGET_TYPES = ['PING', 'SNMP', 'SERVICE', 'PORT'] as const;
+
+// "monitor_targets" (monitoring_ değil) — MySQL 64-karakter FK sınırına
+// sığdırmak için bilinçli kısaltma (bu projede altıncı kez proaktif önlenen
+// aynı sınır). config JSON'da düz metin sır TUTULMAZ — gerçek SNMP
+// community/agent anahtarı gerekiyorsa network_credentials'a referans
+// verilir (credentialId), config yalnızca OID/port gibi hassas OLMAYAN
+// ayarları taşır.
+export const monitorTargets = mysqlTable('monitor_targets', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  assetId: char('asset_id', { length: 36 }).notNull().references(() => itAssets.id, { onDelete: 'cascade' }),
+  targetType: mysqlEnum('target_type', MONITOR_TARGET_TYPES).notNull(),
+  credentialId: char('credential_id', { length: 36 }).references(() => networkCredentials.id),
+  config: json('config').$type<Record<string, string | number>>(),
+  intervalSeconds: int('interval_seconds').notNull().default(300),
+  active: boolean('active').notNull().default(true)
+});
+
+// MONITORING.md §4 — üretim ölçeğinde MySQL PARTITION BY RANGE (aylık)
+// gerekiyor; drizzle-kit'in tablo DSL'i bunu doğrudan ifade edemiyor (ham
+// SQL migration + partition bakım görevi gerektirir) — TODO:
+// METRICS_PARTITIONING, gerçek veri hacmi bu ihtiyacı doğurduğunda ele
+// alınacak. Bugün normal (partition'sız) bir tablo — retention/aggregation
+// mantığı (lib/it/monitoring.ts:pruneOldMetrics) ZATEN gerçek ve
+// çalışıyor, yalnızca DELETE ile (partition DROP değil).
+export const monitoringMetrics = mysqlTable('monitoring_metrics', {
+  id: char('id', { length: 36 }).primaryKey(),
+  targetId: char('target_id', { length: 36 }).notNull().references(() => monitorTargets.id, { onDelete: 'cascade' }),
+  metricName: varchar('metric_name', { length: 64 }).notNull(),
+  value: decimal('value', { precision: 20, scale: 6 }).notNull(),
+  recordedAt: timestamp('recorded_at').notNull().defaultNow()
+}, (table) => [index('idx_metric_target_recorded').on(table.targetId, table.recordedAt)]);
+
+export const ALERT_SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'] as const;
+export const ALERT_STATUSES = ['OPEN', 'ACKNOWLEDGED', 'RESOLVED'] as const;
+
+// MONITORING.md §3 — correlationGroupId: aynı target'tan kısa sürede
+// (CORRELATION_WINDOW_SECONDS) birden fazla alert gelirse SONRAKİ alert'ler
+// AYNI grubu paylaşır (ham veri kaybolmaz, her biri yine satır olur) ama
+// Incident zinciri yalnızca grubun İLK alert'i için tetiklenir.
+export const monitoringAlerts = mysqlTable('monitoring_alerts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  targetId: char('target_id', { length: 36 }).notNull().references(() => monitorTargets.id, { onDelete: 'cascade' }),
+  severity: mysqlEnum('severity', ALERT_SEVERITIES).notNull(),
+  message: text('message').notNull(),
+  status: mysqlEnum('status', ALERT_STATUSES).notNull().default('OPEN'),
+  correlationGroupId: char('correlation_group_id', { length: 36 }),
+  incidentId: char('incident_id', { length: 36 }).references(() => incidents.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// MONITORING.md §4 — ham metrik 30 gün sonra silinir (bugün DELETE ile,
+// TODO: METRICS_PARTITIONING gerçek hacimde partition DROP'a geçecek), bu
+// tablo o silmeden ÖNCE günlük özet (avg/min/max) olarak kalıcı tutar —
+// lib/it/monitoring.ts:pruneOldMetrics'in aynı transaction'ında yazılır.
+export const monitoringMetricsDailyAgg = mysqlTable('monitoring_metrics_daily_agg', {
+  id: char('id', { length: 36 }).primaryKey(),
+  targetId: char('target_id', { length: 36 }).notNull().references(() => monitorTargets.id, { onDelete: 'cascade' }),
+  metricName: varchar('metric_name', { length: 64 }).notNull(),
+  date: date('date', { mode: 'string' }).notNull(),
+  avgValue: decimal('avg_value', { precision: 20, scale: 6 }).notNull(),
+  minValue: decimal('min_value', { precision: 20, scale: 6 }).notNull(),
+  maxValue: decimal('max_value', { precision: 20, scale: 6 }).notNull(),
+  sampleCount: int('sample_count').notNull()
+}, (table) => [uniqueIndex('udx_metric_agg_target_name_date').on(table.targetId, table.metricName, table.date)]);
+
+// MONITORING.md §5 — her gün sonunda (scheduler) o günün metriklerinden
+// hesaplanıp buraya YAZILIR, Muhasebe'nin "ham tabloyu her seferinde
+// tarama" karşıtı ilkesiyle AYNI mantık (madde 87), zaman-serisi versiyonu.
+export const monitoringAvailability = mysqlTable('monitoring_availability', {
+  id: char('id', { length: 36 }).primaryKey(),
+  targetId: char('target_id', { length: 36 }).notNull().references(() => monitorTargets.id, { onDelete: 'cascade' }),
+  date: date('date', { mode: 'string' }).notNull(),
+  uptimeSeconds: int('uptime_seconds').notNull().default(0),
+  downtimeSeconds: int('downtime_seconds').notNull().default(0),
+  availabilityPercent: decimal('availability_percent', { precision: 5, scale: 2 }).notNull().default('0')
+}, (table) => [uniqueIndex('udx_availability_target_date').on(table.targetId, table.date)]);
+
+// --- Backup Management (MONITORING.md §6) ---
+
+export const backupJobs = mysqlTable('backup_jobs', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  assetId: char('asset_id', { length: 36 }).notNull().references(() => itAssets.id),
+  source: varchar('source', { length: 255 }).notNull(),
+  destination: varchar('destination', { length: 255 }).notNull(),
+  schedule: varchar('schedule', { length: 64 }).notNull().default(''),
+  retentionDays: int('retention_days').notNull().default(30),
+  encryption: boolean('encryption').notNull().default(false),
+  active: boolean('active').notNull().default(true)
+});
+
+export const BACKUP_RESULTS = ['SUCCESS', 'FAILED', 'PARTIAL'] as const;
+
+// result='FAILED' -> lib/it/backup.ts:recordBackupResult OTOMATİK bir
+// monitoring_alerts satırı (severity='HIGH') üretir (madde 75'in kendi isteği).
+export const backupResults = mysqlTable('backup_results', {
+  id: char('id', { length: 36 }).primaryKey(),
+  backupJobId: char('backup_job_id', { length: 36 }).notNull().references(() => backupJobs.id, { onDelete: 'cascade' }),
+  startedAt: timestamp('started_at').notNull(),
+  finishedAt: timestamp('finished_at'),
+  result: mysqlEnum('result', BACKUP_RESULTS).notNull(),
+  sizeBytes: decimal('size_bytes', { precision: 20, scale: 0 }),
+  verificationStatus: varchar('verification_status', { length: 32 }).notNull().default(''),
+  errorMessage: text('error_message')
+});
+
+// --- Endpoint Compliance (IT-SECURITY.md §4) ---
+
+export const COMPLIANCE_STATUSES = ['COMPLIANT', 'NON_COMPLIANT', 'UNKNOWN'] as const;
+
+// "overall" uygulama katmanında HESAPLANIR (lib/it/compliance.ts) — DB
+// trigger DEĞİL, madde 87'nin "hesaplama uygulama katmanında" ilkesi.
+export const endpointCompliance = mysqlTable('endpoint_compliance', {
+  id: char('id', { length: 36 }).primaryKey(),
+  assetId: char('asset_id', { length: 36 }).notNull().references(() => itAssets.id, { onDelete: 'cascade' }),
+  antivirusStatus: varchar('antivirus_status', { length: 32 }).notNull().default('UNKNOWN'),
+  firewallStatus: varchar('firewall_status', { length: 32 }).notNull().default('UNKNOWN'),
+  encryptionStatus: varchar('encryption_status', { length: 32 }).notNull().default('UNKNOWN'),
+  patchStatus: varchar('patch_status', { length: 32 }).notNull().default('UNKNOWN'),
+  osSupportStatus: varchar('os_support_status', { length: 32 }).notNull().default('UNKNOWN'),
+  overall: mysqlEnum('overall', COMPLIANCE_STATUSES).notNull().default('UNKNOWN'),
+  checkedAt: timestamp('checked_at').notNull().defaultNow()
+});
+
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
   idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),
