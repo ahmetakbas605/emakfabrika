@@ -670,6 +670,176 @@ export const ciRelationships = mysqlTable('ci_relationships', {
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
 
+// --- Service Desk (Faz 6-7, SERVICE-DESK.md) ---
+
+// journalNumberCounters ile AYNI desen — şirket+yıl bazlı atomik ticket no.
+export const ticketNumberCounters = mysqlTable('ticket_number_counters', {
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  year: int('year').notNull(),
+  lastNumber: int('last_number').notNull().default(0)
+}, (table) => [uniqueIndex('udx_ticket_counter_company_year').on(table.companyId, table.year)]);
+
+export const TICKET_PRIORITIES = ['LOW', 'NORMAL', 'HIGH', 'CRITICAL'] as const;
+
+// SERVICE-DESK.md §2 — business_hours/holiday_calendars İLE ayarlama şimdilik
+// YOK (TODO: SLA_AFTER_HOURS_POLICY, BUSINESS_REVIEW gerektiriyor, LEGAL değil).
+// resolveSlaDeadline bugün yalnızca createdAt + dakika/saat ekliyor.
+export const slaPolicies = mysqlTable('sla_policies', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  priority: mysqlEnum('priority', TICKET_PRIORITIES).notNull(),
+  responseMinutes: int('response_minutes').notNull(),
+  resolutionHours: int('resolution_hours').notNull(),
+  active: boolean('active').notNull().default(true)
+}, (table) => [uniqueIndex('udx_sla_policy_company_priority').on(table.companyId, table.priority)]);
+
+// SERVICE-DESK.md §1 — durum makinesi TICKET_TRANSITIONS lib/it/tickets.ts'te.
+export const TICKET_STATUSES = [
+  'NEW', 'TRIAGED', 'ASSIGNED', 'ACCEPTED', 'ON_THE_WAY', 'ARRIVED', 'INSPECTION',
+  'WORKING', 'WAITING', 'TESTING', 'RESOLVED', 'USER_APPROVAL_PENDING', 'CLOSED'
+] as const;
+
+export const serviceDeskTickets = mysqlTable('service_desk_tickets', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  departmentId: char('department_id', { length: 36 }).notNull().references(() => departments.id),
+  ticketNo: varchar('ticket_no', { length: 32 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  category: varchar('category', { length: 64 }).notNull().default(''),
+  priority: mysqlEnum('priority', TICKET_PRIORITIES).notNull().default('NORMAL'),
+  status: mysqlEnum('status', TICKET_STATUSES).notNull().default('NEW'),
+  requestedByUserId: char('requested_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  relatedAssetId: char('related_asset_id', { length: 36 }).references(() => itAssets.id),
+  relatedCiId: char('related_ci_id', { length: 36 }).references(() => configurationItems.id),
+  slaPolicyId: char('sla_policy_id', { length: 36 }).references(() => slaPolicies.id),
+  slaDueAt: timestamp('sla_due_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+  closedAt: timestamp('closed_at')
+}, (table) => [
+  uniqueIndex('udx_ticket_company_no').on(table.companyId, table.ticketNo),
+  index('idx_ticket_status').on(table.status),
+  index('idx_ticket_priority').on(table.priority)
+]);
+
+export const ticketStatusHistory = mysqlTable('ticket_status_history', {
+  id: char('id', { length: 36 }).primaryKey(),
+  ticketId: char('ticket_id', { length: 36 }).notNull().references(() => serviceDeskTickets.id, { onDelete: 'cascade' }),
+  fromStatus: varchar('from_status', { length: 32 }).notNull(),
+  toStatus: varchar('to_status', { length: 32 }).notNull(),
+  changedBy: char('changed_by', { length: 36 }).notNull().references(() => users.id),
+  note: text('note'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// SERVICE-DESK.md §4 — TAM BİR LEADER zorunlu (uygulama katmanı, transaction
+// içinde). it_asset_assignments İLE AYNI desen: unassignedAt IS NULL = aktif.
+export const TICKET_ASSIGNMENT_ROLES = ['LEADER', 'MEMBER'] as const;
+
+export const ticketAssignments = mysqlTable('ticket_assignments', {
+  id: char('id', { length: 36 }).primaryKey(),
+  ticketId: char('ticket_id', { length: 36 }).notNull().references(() => serviceDeskTickets.id, { onDelete: 'cascade' }),
+  userId: char('user_id', { length: 36 }).notNull().references(() => users.id),
+  role: mysqlEnum('role', TICKET_ASSIGNMENT_ROLES).notNull(),
+  assignedAt: timestamp('assigned_at').notNull().defaultNow(),
+  unassignedAt: timestamp('unassigned_at'),
+  assignedBy: char('assigned_by', { length: 36 }).notNull().references(() => users.id)
+});
+
+// SERVICE-DESK.md §7 — ayrı bir timeline tablosu YOK, comments/work_logs/
+// status_history uygulama katmanında UNION edilip sıralanıyor.
+export const ticketComments = mysqlTable('ticket_comments', {
+  id: char('id', { length: 36 }).primaryKey(),
+  ticketId: char('ticket_id', { length: 36 }).notNull().references(() => serviceDeskTickets.id, { onDelete: 'cascade' }),
+  authorUserId: char('author_user_id', { length: 36 }).notNull().references(() => users.id),
+  body: text('body').notNull(),
+  isInternal: boolean('is_internal').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const ticketWorkLogs = mysqlTable('ticket_work_logs', {
+  id: char('id', { length: 36 }).primaryKey(),
+  ticketId: char('ticket_id', { length: 36 }).notNull().references(() => serviceDeskTickets.id, { onDelete: 'cascade' }),
+  userId: char('user_id', { length: 36 }).notNull().references(() => users.id),
+  minutesSpent: int('minutes_spent').notNull(),
+  note: text('note'),
+  loggedAt: timestamp('logged_at').notNull().defaultNow()
+});
+
+// --- Incident / Problem (SERVICE-DESK.md §5) ---
+
+export const INCIDENT_SEVERITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
+export const INCIDENT_STATUSES = ['OPEN', 'INVESTIGATING', 'RESOLVED', 'CLOSED'] as const;
+
+export const incidents = mysqlTable('incidents', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  severity: mysqlEnum('severity', INCIDENT_SEVERITIES).notNull().default('MEDIUM'),
+  status: mysqlEnum('status', INCIDENT_STATUSES).notNull().default('OPEN'),
+  openedByUserId: char('opened_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  resolvedAt: timestamp('resolved_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// Bir ticket birden fazla incident'a, bir incident birden fazla ticket'a
+// bağlanabilir (N:N) — madde 55-57'nin "20 ticket → 1 incident" örneği.
+export const ticketIncidents = mysqlTable('ticket_incidents', {
+  ticketId: char('ticket_id', { length: 36 }).notNull().references(() => serviceDeskTickets.id, { onDelete: 'cascade' }),
+  incidentId: char('incident_id', { length: 36 }).notNull().references(() => incidents.id, { onDelete: 'cascade' })
+}, (table) => [uniqueIndex('udx_ticket_incident').on(table.ticketId, table.incidentId)]);
+
+export const PROBLEM_STATUSES = ['OPEN', 'ROOT_CAUSE_IDENTIFIED', 'RESOLVED', 'CLOSED'] as const;
+
+export const problems = mysqlTable('problems', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 255 }).notNull(),
+  rootCause: text('root_cause'),
+  status: mysqlEnum('status', PROBLEM_STATUSES).notNull().default('OPEN'),
+  openedByUserId: char('opened_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// SERVICE-DESK.md §5 — problem kapandığında bağlı incident'lar OTOMATİK
+// kapanmaz, yalnızca problems.status değişir.
+export const problemIncidents = mysqlTable('problem_incidents', {
+  problemId: char('problem_id', { length: 36 }).notNull().references(() => problems.id, { onDelete: 'cascade' }),
+  incidentId: char('incident_id', { length: 36 }).notNull().references(() => incidents.id, { onDelete: 'cascade' })
+}, (table) => [uniqueIndex('udx_problem_incident').on(table.problemId, table.incidentId)]);
+
+// --- Change Management (SERVICE-DESK.md §6) ---
+
+export const CHANGE_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
+export const CHANGE_STATUSES = ['DRAFT', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'CANCELLED'] as const;
+
+export const changes = mysqlTable('changes', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  riskLevel: mysqlEnum('risk_level', CHANGE_LEVELS).notNull(),
+  impactLevel: mysqlEnum('impact_level', CHANGE_LEVELS).notNull(),
+  status: mysqlEnum('status', CHANGE_STATUSES).notNull().default('DRAFT'),
+  requestedByUserId: char('requested_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  scheduledAt: timestamp('scheduled_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const CHANGE_APPROVAL_DECISIONS = ['APPROVED', 'REJECTED'] as const;
+
+export const changeApprovals = mysqlTable('change_approvals', {
+  id: char('id', { length: 36 }).primaryKey(),
+  changeId: char('change_id', { length: 36 }).notNull().references(() => changes.id, { onDelete: 'cascade' }),
+  approvedByUserId: char('approved_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  decision: mysqlEnum('decision', CHANGE_APPROVAL_DECISIONS).notNull(),
+  note: text('note'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
   idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),

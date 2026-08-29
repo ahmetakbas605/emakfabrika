@@ -9,10 +9,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 // yalnızca bu yüzden var, geniş bir güvenlik gevşetmesi DEĞİL (kimlik
 // doğrulama zaten Authorization bearer token ile yapılıyor, çerez/oturum
 // tabanlı DEĞİL, bu yüzden CSRF riski taşımıyor).
+//
+// Next.js 16'da "middleware" dosya kuralı "proxy" olarak yeniden adlandırıldı
+// (bkz. node_modules/next/dist/docs/.../proxy.md) — AGENTS.md'nin "deprecation
+// notlarına uy" talimatı gereği baştan proxy.ts olarak yazıldı.
 const ALLOWED_METHODS = 'GET, POST, PATCH, DELETE, OPTIONS';
 const ALLOWED_HEADERS = 'Content-Type, Authorization';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (request.method === 'OPTIONS') {
     const res = new NextResponse(null, { status: 204 });
     res.headers.set('Access-Control-Allow-Origin', '*');
