@@ -1,7 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { users, companies, departments } from '@/db/schema';
 import { readSessionCookie } from '@/lib/session';
@@ -92,13 +92,18 @@ export async function requireDepartmentAccess(departmentId: string, permission?:
   }
 
   // Fabrika yöneticisi, açıkça bir user_department_access satırı OLMASA bile
-  // her departmana erişir — hangi rol/izinle çalıştığını belli etmek için
-  // TAM yetkili sanal bir erişim satırı üretiyoruz (DB'ye yazılmaz).
+  // KENDİ ŞİRKETİNİN her departmanına erişir — hangi rol/izinle çalıştığını
+  // belli etmek için TAM yetkili sanal bir erişim satırı üretiyoruz (DB'ye
+  // yazılmaz). companyId filtresi ZORUNLU: 2026-08-29'da IT-SECURITY.md §6'nın
+  // kiracı izolasyon testiyle GERÇEKTEN yakalanan bir güvenlik açığı — bu
+  // filtre olmadan, başka bir şirketin factory admin'i, departmentId'sini
+  // biliyorsa/tahmin ediyorsa KENDİ oturumuyla o departmana (ve o departmanın
+  // adı/türü üzerinden dolaylı olarak diğer akışlara) erişebiliyordu.
   if (session.isFactoryAdmin) {
     const [dept] = await db
       .select({ id: departments.id, departmentTypeCode: departments.departmentTypeCode, name: departments.name })
       .from(departments)
-      .where(eq(departments.id, departmentId))
+      .where(and(eq(departments.id, departmentId), eq(departments.companyId, session.companyId)))
       .limit(1);
     if (!dept) redirect('/dashboard');
     return {
