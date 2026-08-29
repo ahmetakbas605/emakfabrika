@@ -92,6 +92,13 @@
       "when": 1788013685371,
       "tag": "0012_slim_doomsday",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1788015194974,
+      "tag": "0013_wandering_hellcat",
+      "breakpoints": true
     }
   ]
 }

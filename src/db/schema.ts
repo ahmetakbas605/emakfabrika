@@ -1,4 +1,4 @@
-import { mysqlTable, char, varchar, int, decimal, json, timestamp, date, boolean, mysqlEnum, text, index, uniqueIndex } from 'drizzle-orm/mysql-core';
+import { mysqlTable, char, varchar, int, decimal, json, timestamp, date, boolean, mysqlEnum, text, index, uniqueIndex, type AnyMySqlColumn } from 'drizzle-orm/mysql-core';
 
 // Faz 2 (Database) + Faz 3 (Tenant/Auth) + Faz 4 (Accounting Core) — bkz.
 // DATABASE-ARCHITECTURE.md §5. CHAR(36) UUID stratejisi: §2. Bu fabrikanın
@@ -1105,6 +1105,88 @@ export const contractAssets = mysqlTable('contract_assets', {
   contractId: char('contract_id', { length: 36 }).notNull().references(() => contracts.id, { onDelete: 'cascade' }),
   assetId: char('asset_id', { length: 36 }).notNull().references(() => itAssets.id, { onDelete: 'cascade' })
 }, (table) => [uniqueIndex('udx_contract_asset').on(table.contractId, table.assetId)]);
+
+// --- IPAM / Network (Faz 11, IPAM.md + NETWORK.md §1-2) ---
+
+// NETWORK.md §2 — network_vlans, network_subnets'e (aşağıda) İKİ YÖNLÜ
+// referans veriyor (subnet_id burada, vlan_id orada) — PDF'in kendi
+// tasarımı böyle; ikisi de NULL olabildiği için MySQL'de sorun değil
+// (drizzle-kit tüm FK'ları CREATE TABLE'lardan SONRA, ayrı ALTER TABLE
+// ifadeleriyle ekliyor — bu projedeki her migration dosyasında zaten
+// gözlemlenen davranış).
+export const networkVlans = mysqlTable('network_vlans', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  branchId: char('branch_id', { length: 36 }).references(() => branches.id),
+  vlanNumber: int('vlan_number').notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  subnetId: char('subnet_id', { length: 36 }).references((): AnyMySqlColumn => networkSubnets.id),
+  gateway: varchar('gateway', { length: 64 }).notNull().default(''),
+  dhcpEnabled: boolean('dhcp_enabled').notNull().default(false),
+  purpose: varchar('purpose', { length: 255 }).notNull().default(''),
+  networkZone: varchar('network_zone', { length: 64 }).notNull().default(''),
+  securityLevel: varchar('security_level', { length: 32 }).notNull().default('')
+}, (table) => [uniqueIndex('udx_vlan_company_branch_number').on(table.companyId, table.branchId, table.vlanNumber)]);
+
+export const networkSubnets = mysqlTable('network_subnets', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  branchId: char('branch_id', { length: 36 }).references(() => branches.id),
+  cidr: varchar('cidr', { length: 64 }).notNull(),
+  gateway: varchar('gateway', { length: 64 }).notNull().default(''),
+  dnsPrimary: varchar('dns_primary', { length: 64 }).notNull().default(''),
+  dnsSecondary: varchar('dns_secondary', { length: 64 }).notNull().default(''),
+  vlanId: char('vlan_id', { length: 36 }).references(() => networkVlans.id),
+  dhcpEnabled: boolean('dhcp_enabled').notNull().default(false),
+  description: text('description'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// IPAM.md §1 — bilinçli karar (TODO: IP_RANGE_DISPLAY_STRATEGY çözüldü):
+// bir subnet'in TÜM adresleri ÖNCEDEN satır olarak oluşturulmaz (bir /16
+// 65k+ satır demek, gereksiz depolama) — yalnızca GERÇEKTEN atanmış/
+// rezerve/çakışan adresler burada satır tutar, "boş" adresler CIDR
+// aralığından UI'de HESAPLANARAK gösterilir (lib/it/ipam.ts:
+// listAvailableIps).
+export const IP_VERSIONS = ['IPV4', 'IPV6'] as const;
+export const IP_STATUSES = ['AVAILABLE', 'ASSIGNED', 'RESERVED', 'CONFLICT', 'BLOCKED', 'UNKNOWN'] as const;
+
+export const ipAddresses = mysqlTable('ip_addresses', {
+  id: char('id', { length: 36 }).primaryKey(),
+  subnetId: char('subnet_id', { length: 36 }).notNull().references(() => networkSubnets.id, { onDelete: 'cascade' }),
+  ipAddress: varchar('ip_address', { length: 45 }).notNull(),
+  ipVersion: mysqlEnum('ip_version', IP_VERSIONS).notNull().default('IPV4'),
+  status: mysqlEnum('status', IP_STATUSES).notNull().default('AVAILABLE')
+}, (table) => [uniqueIndex('udx_ip_subnet_address').on(table.subnetId, table.ipAddress)]);
+
+export const networkInterfaces = mysqlTable('network_interfaces', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  assetId: char('asset_id', { length: 36 }).notNull().references(() => itAssets.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 64 }).notNull(),
+  macAddress: varchar('mac_address', { length: 17 }).notNull().default(''),
+  interfaceType: mysqlEnum('interface_type', ['ETHERNET', 'FIBER', 'WIFI']).notNull().default('ETHERNET'),
+  switchPortId: char('switch_port_id', { length: 36 }).references((): AnyMySqlColumn => networkInterfaces.id),
+  vlanId: char('vlan_id', { length: 36 }).references(() => networkVlans.id),
+  status: varchar('status', { length: 32 }).notNull().default('UP')
+});
+
+// IPAM.md §2 — ip_addresses.status='ASSIGNED' olması İÇİN aktif (releasedAt
+// IS NULL) bir satır ZORUNLU; status ELLE güncellenmez, yalnızca
+// lib/it/ipam.ts:assignIp/releaseIp üzerinden (tutarsızlık riskine karşı,
+// it_asset_assignments'taki AYNI ilke).
+export const IP_ASSIGNMENT_TYPES = ['STATIC', 'DHCP', 'RESERVED'] as const;
+
+export const ipAssignments = mysqlTable('ip_assignments', {
+  id: char('id', { length: 36 }).primaryKey(),
+  ipAddressId: char('ip_address_id', { length: 36 }).notNull().references(() => ipAddresses.id, { onDelete: 'cascade' }),
+  assetId: char('asset_id', { length: 36 }).references(() => itAssets.id),
+  networkInterfaceId: char('network_interface_id', { length: 36 }).references(() => networkInterfaces.id),
+  assignmentType: mysqlEnum('assignment_type', IP_ASSIGNMENT_TYPES).notNull().default('STATIC'),
+  assignedAt: timestamp('assigned_at').notNull().defaultNow(),
+  releasedAt: timestamp('released_at')
+});
 
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
