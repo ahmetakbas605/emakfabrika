@@ -37,6 +37,7 @@ function navFor(departmentId: string, departmentTypeCode: string): { href: strin
         { href: `${base}/it/maintenance`, label: 'Bakım' },
         { href: `${base}/it/licensing`, label: 'Lisans/Garanti/Sözleşme' },
         { href: `${base}/it/network`, label: 'IPAM/Ağ' },
+        { href: `${base}/it/network-diagram`, label: 'Ağ Diyagramı' },
         { href: `${base}/it/incidents`, label: 'Incidentlar' },
         { href: `${base}/it/problems`, label: 'Problemler' },
         { href: `${base}/it/changes`, label: 'Değişiklikler' }

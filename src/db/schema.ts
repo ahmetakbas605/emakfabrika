@@ -1188,6 +1188,59 @@ export const ipAssignments = mysqlTable('ip_assignments', {
   releasedAt: timestamp('released_at')
 });
 
+// --- Network Diagram (Faz 12, NETWORK.md §3) ---
+
+// DATABASE-ARCHITECTURE.md'nin genel ilkesiyle AYNI: topoloji SADECE
+// frontend canvas state olarak SAKLANMAZ — gerçek, yapılandırılmış
+// düğüm/bağlantı verisi (aşağıda) kalıcı tutulur. Her düzenleme YENİ bir
+// diagram_versions satırı açar, ESKİ versiyon SİLİNMEZ (Muhasebe'nin
+// financial immutability ilkesiyle AYNI disiplin — burada "ağ konfigürasyon
+// geçmişi" için). "diagram_versions" (network_ önekisiz) — network_diagrams
+// ile İKİ YÖNLÜ referansı MySQL'in 64-karakter FK sınırına sığdırmak için
+// bilinçli kısaltma (bu projede beşinci kez karşılaşılan aynı sınır).
+export const networkDiagrams = mysqlTable('network_diagrams', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  currentVersionId: char('current_version_id', { length: 36 }).references((): AnyMySqlColumn => diagramVersions.id)
+});
+
+export const diagramVersions = mysqlTable('diagram_versions', {
+  id: char('id', { length: 36 }).primaryKey(),
+  diagramId: char('diagram_id', { length: 36 }).notNull().references(() => networkDiagrams.id, { onDelete: 'cascade' }),
+  versionNo: int('version_no').notNull(),
+  createdBy: char('created_by', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_diagram_version_no').on(table.diagramId, table.versionNo)]);
+
+export const NETWORK_NODE_TYPES = [
+  'FIREWALL', 'ROUTER', 'SWITCH', 'SERVER', 'ACCESS_POINT', 'PRINTER',
+  'COMPUTER', 'CAMERA', 'NVR', 'INTERNET', 'CLOUD'
+] as const;
+
+// linkedAssetId NULL olabilir — INTERNET/CLOUD gibi soyut düğümlerin bir
+// it_assets karşılığı yok, bu durumda "label" görüntülenen ad olur.
+export const networkNodes = mysqlTable('network_nodes', {
+  id: char('id', { length: 36 }).primaryKey(),
+  diagramVersionId: char('diagram_version_id', { length: 36 }).notNull().references(() => diagramVersions.id, { onDelete: 'cascade' }),
+  nodeType: mysqlEnum('node_type', NETWORK_NODE_TYPES).notNull(),
+  linkedAssetId: char('linked_asset_id', { length: 36 }).references(() => itAssets.id),
+  label: varchar('label', { length: 255 }).notNull().default(''),
+  positionX: int('position_x').notNull().default(0),
+  positionY: int('position_y').notNull().default(0)
+});
+
+export const networkLinks = mysqlTable('network_links', {
+  id: char('id', { length: 36 }).primaryKey(),
+  diagramVersionId: char('diagram_version_id', { length: 36 }).notNull().references(() => diagramVersions.id, { onDelete: 'cascade' }),
+  sourceNodeId: char('source_node_id', { length: 36 }).notNull().references(() => networkNodes.id, { onDelete: 'cascade' }),
+  targetNodeId: char('target_node_id', { length: 36 }).notNull().references(() => networkNodes.id, { onDelete: 'cascade' }),
+  port: varchar('port', { length: 64 }).notNull().default(''),
+  vlanId: char('vlan_id', { length: 36 }).references(() => networkVlans.id),
+  bandwidth: varchar('bandwidth', { length: 64 }).notNull().default(''),
+  interfaceName: varchar('interface_name', { length: 64 }).notNull().default('')
+});
+
 // PDF madde 79 — idempotency (API-ARCHITECTURE.md §4).
 export const idempotencyKeys = mysqlTable('idempotency_keys', {
   idempotencyKey: varchar('idempotency_key', { length: 128 }).notNull(),
