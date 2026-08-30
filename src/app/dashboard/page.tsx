@@ -29,6 +29,7 @@ export default async function DashboardPage() {
       <div style={{ marginBottom: '1.5rem', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <Link href="/dashboard/approvals" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Onay Kutusu</Link>
         <Link href="/dashboard/procurement" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Satınalma Talepleri</Link>
+        <Link href="/dashboard/procurement/dashboard" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Satınalma Kontrol Paneli</Link>
         {session.isFactoryAdmin ? (
           <>
             <Link href="/dashboard/master-data/parties" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Master Data (Cari/Ürün/Birim/Döviz)</Link>
