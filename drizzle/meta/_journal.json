@@ -225,6 +225,13 @@
       "when": 1788090410915,
       "tag": "0031_concerned_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "5",
+      "when": 1788091093836,
+      "tag": "0032_opposite_hardball",
+      "breakpoints": true
     }
   ]
 }

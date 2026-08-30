@@ -1,7 +1,7 @@
 import 'server-only';
 import { eq, and, desc } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { employees, employeeContacts, employeeAddresses, employeeEmergencyContacts, departments, positions, costCenters, branches, users, EMPLOYMENT_STATUSES } from '@/db/schema';
+import { employees, employeeContacts, employeeAddresses, employeeEmergencyContacts, departments, positions, costCenters, branches, users, shifts, EMPLOYMENT_STATUSES } from '@/db/schema';
 import { newId } from '@/lib/id';
 import { nextDocumentNo } from '@/lib/numbering';
 import { HrError } from './errors';
@@ -82,11 +82,13 @@ export async function listEmployees(companyId: string, filter?: ListEmployeesFil
     .select({
       id: employees.id, employeeNumber: employees.employeeNumber, firstName: employees.firstName, lastName: employees.lastName,
       employmentStatus: employees.employmentStatus, hireDate: employees.hireDate,
-      departmentId: employees.departmentId, departmentName: departments.name, positionTitle: positions.title
+      departmentId: employees.departmentId, departmentName: departments.name, positionTitle: positions.title,
+      shiftId: employees.shiftId, shiftName: shifts.name
     })
     .from(employees)
     .leftJoin(departments, eq(departments.id, employees.departmentId))
     .leftJoin(positions, eq(positions.id, employees.positionId))
+    .leftJoin(shifts, eq(shifts.id, employees.shiftId))
     .where(and(...conditions))
     .orderBy(desc(employees.createdAt));
 }
@@ -95,19 +97,20 @@ export async function getEmployee(companyId: string, employeeId: string) {
   const [employee] = await db.select().from(employees).where(and(eq(employees.id, employeeId), eq(employees.companyId, companyId))).limit(1);
   if (!employee) throw new HrError('Çalışan bulunamadı.');
 
-  const [department, position, manager, costCenter, branch, linkedUser, contacts, addresses, emergencyContacts] = await Promise.all([
+  const [department, position, manager, costCenter, branch, shift, linkedUser, contacts, addresses, emergencyContacts] = await Promise.all([
     employee.departmentId ? db.select({ name: departments.name }).from(departments).where(eq(departments.id, employee.departmentId)).limit(1).then((r) => r[0]?.name ?? null) : null,
     employee.positionId ? db.select({ title: positions.title }).from(positions).where(eq(positions.id, employee.positionId)).limit(1).then((r) => r[0]?.title ?? null) : null,
     employee.managerEmployeeId ? db.select({ firstName: employees.firstName, lastName: employees.lastName }).from(employees).where(eq(employees.id, employee.managerEmployeeId)).limit(1).then((r) => (r[0] ? `${r[0].firstName} ${r[0].lastName}` : null)) : null,
     employee.costCenterId ? db.select({ name: costCenters.name }).from(costCenters).where(eq(costCenters.id, employee.costCenterId)).limit(1).then((r) => r[0]?.name ?? null) : null,
     employee.branchId ? db.select({ name: branches.name }).from(branches).where(eq(branches.id, employee.branchId)).limit(1).then((r) => r[0]?.name ?? null) : null,
+    employee.shiftId ? db.select({ name: shifts.name }).from(shifts).where(eq(shifts.id, employee.shiftId)).limit(1).then((r) => r[0]?.name ?? null) : null,
     db.select({ id: users.id, fullName: users.fullName, email: users.email }).from(users).where(eq(users.employeeId, employeeId)).limit(1).then((r) => r[0] ?? null),
     db.select().from(employeeContacts).where(eq(employeeContacts.employeeId, employeeId)),
     db.select().from(employeeAddresses).where(eq(employeeAddresses.employeeId, employeeId)),
     db.select().from(employeeEmergencyContacts).where(eq(employeeEmergencyContacts.employeeId, employeeId))
   ]);
 
-  return { employee, departmentName: department, positionTitle: position, managerName: manager, costCenterName: costCenter, branchName: branch, linkedUser, contacts, addresses, emergencyContacts };
+  return { employee, departmentName: department, positionTitle: position, managerName: manager, costCenterName: costCenter, branchName: branch, shiftName: shift, linkedUser, contacts, addresses, emergencyContacts };
 }
 
 export interface UpdateEmployeeOrganizationInput {

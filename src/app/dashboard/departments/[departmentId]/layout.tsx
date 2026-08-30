@@ -53,7 +53,8 @@ function navFor(departmentId: string, departmentTypeCode: string): { href: strin
       ];
     case 'HR':
       return [
-        { href: `${base}/hr/employees`, label: 'Çalışanlar' }
+        { href: `${base}/hr/employees`, label: 'Çalışanlar' },
+        { href: `${base}/hr/pdks`, label: 'PDKS' }
       ];
     default:
       return [];

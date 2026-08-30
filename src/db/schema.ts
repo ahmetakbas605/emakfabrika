@@ -1,4 +1,4 @@
-import { mysqlTable, char, varchar, int, decimal, json, timestamp, date, boolean, mysqlEnum, text, index, uniqueIndex, type AnyMySqlColumn } from 'drizzle-orm/mysql-core';
+import { mysqlTable, char, varchar, int, decimal, json, timestamp, date, time, boolean, mysqlEnum, text, index, uniqueIndex, type AnyMySqlColumn } from 'drizzle-orm/mysql-core';
 
 // Faz 2 (Database) + Faz 3 (Tenant/Auth) + Faz 4 (Accounting Core) — bkz.
 // DATABASE-ARCHITECTURE.md §5. CHAR(36) UUID stratejisi: §2. Bu fabrikanın
@@ -2496,6 +2496,11 @@ export const employees = mysqlTable('employees', {
   // ayrı bir facilities tablosu AÇILMADI.
   branchId: char('branch_id', { length: 36 }).references(() => branches.id),
   workLocation: varchar('work_location', { length: 255 }).notNull().default(''),
+  // İK Faz 2 (PDKS) — ileri-referans (shifts bu dosyada daha aşağıda
+  // tanımlı, managerEmployeeId'nin kendi kendine yaptığı AnyMySqlColumn
+  // lazy-ref tekniğiyle aynı). Versiyon geçmişi YOK — "şu an hangi
+  // vardiyada" sorusuna cevap, PDKS çekirdeğinin ihtiyacı bu kadarı.
+  shiftId: char('shift_id', { length: 36 }).references((): AnyMySqlColumn => shifts.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
 }, (table) => [uniqueIndex('udx_employees_company_number').on(table.companyId, table.employeeNumber)]);
@@ -2589,3 +2594,88 @@ export const employeeQualifications = mysqlTable('employee_qualifications', {
   status: mysqlEnum('status', EMPLOYEE_QUALIFICATION_STATUSES).notNull().default('ACTIVE'),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
+
+// --- İK Faz 2 — PDKS Çekirdeği (İK Mimarisi raporu §06) ---
+// Akış: PDKS Cihazı → Integration Gateway (Adapter) → Raw Punch (silinmez)
+// → Employee/Shift Eşleştirme → Attendance Kaydı → Payroll. Bu faz cihaz
+// ENTEGRASYONU içermiyor — yalnızca MANUAL adaptörü gerçek: PDKS personeli
+// bir giriş/çıkış kaydını elle girer (test/backfill amaçlı), akışın geri
+// kalanı (raw_punch → attendance işleme) GERÇEK kod, hardware'e bağlı
+// değil. GENERIC_RFID/ZKTECO/HIKVISION yalnızca adapterType seçenekleri
+// olarak duruyor — madde 170-172'nin "vendor-neutral adapter" ilkesi,
+// gerçek cihaz entegrasyonu geldiğinde İK modülü hiçbir markaya DOĞRUDAN
+// bağlanmayacak, yalnızca yeni bir adapter implementasyonu eklenecek.
+
+export const shifts = mysqlTable('shifts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 100 }).notNull(),
+  startTime: time('start_time').notNull(),
+  endTime: time('end_time').notNull(),
+  breakMinutes: int('break_minutes').notNull().default(0),
+  graceMinutes: int('grace_minutes').notNull().default(0),
+  // true ise endTime, startTime'dan KÜÇÜK/EŞİT okunur (gece vardiyası,
+  // örn. 22:00-06:00) — attendance processor'ın gün sınırını nasıl
+  // yorumlayacağını belirler.
+  crossesMidnight: boolean('crosses_midnight').notNull().default(false),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_shifts_company_code').on(table.companyId, table.code)]);
+
+export const PDKS_ADAPTER_TYPES = ['MANUAL', 'GENERIC_RFID', 'ZKTECO', 'HIKVISION'] as const;
+
+export const pdksDevices = mysqlTable('pdks_devices', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 150 }).notNull(),
+  adapterType: mysqlEnum('adapter_type', PDKS_ADAPTER_TYPES).notNull().default('MANUAL'),
+  branchId: char('branch_id', { length: 36 }).references(() => branches.id),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_pdks_devices_company_code').on(table.companyId, table.code)]);
+
+export const PDKS_PUNCH_DIRECTIONS = ['IN', 'OUT', 'UNKNOWN'] as const;
+
+// madde 53/164 — "silinmez": normal akışta SİLİNMEZ/GÜNCELLENMEZ, tek
+// istisna processed bayrağı (attendance processor bu punch'ı işlediğinde
+// true'ya çevrilir, kendisi asla değişmez).
+export const pdksRawPunches = mysqlTable('pdks_raw_punches', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  deviceId: char('device_id', { length: 36 }).notNull().references(() => pdksDevices.id),
+  employeeId: char('employee_id', { length: 36 }).references(() => employees.id),
+  // Gerçek RFID/kart cihazları önce kart UID'sini bildirir, employee
+  // eşleştirmesi SONRADAN yapılabilir — MANUAL adaptörde employeeId zaten
+  // giriş anında bilindiği için bu alan o durumda kullanılmaz.
+  cardReference: varchar('card_reference', { length: 100 }),
+  punchAt: timestamp('punch_at').notNull(),
+  direction: mysqlEnum('direction', PDKS_PUNCH_DIRECTIONS).notNull().default('UNKNOWN'),
+  rawPayload: json('raw_payload'),
+  processed: boolean('processed').notNull().default(false),
+  recordedByUserId: char('recorded_by_user_id', { length: 36 }).references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [index('idx_pdks_raw_punches_employee_date').on(table.employeeId, table.punchAt)]);
+
+export const PDKS_ATTENDANCE_STATUSES = ['PRESENT', 'LATE', 'INCOMPLETE', 'ABSENT'] as const;
+
+// Bir çalışan + bir takvim günü için TEK satır (attendance processor'ın
+// ürettiği türetilmiş kayıt) — raw_punches'ın aksine bu YENİDEN
+// işlenebilir/üzerine yazılabilir (aynı gün için processor tekrar
+// çalıştırılırsa upsert edilir).
+export const pdksAttendanceRecords = mysqlTable('pdks_attendance_records', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  workDate: date('work_date', { mode: 'string' }).notNull(),
+  shiftId: char('shift_id', { length: 36 }).references(() => shifts.id),
+  checkInAt: timestamp('check_in_at'),
+  checkOutAt: timestamp('check_out_at'),
+  workedMinutes: int('worked_minutes'),
+  lateMinutes: int('late_minutes').notNull().default(0),
+  earlyLeaveMinutes: int('early_leave_minutes').notNull().default(0),
+  status: mysqlEnum('status', PDKS_ATTENDANCE_STATUSES).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+}, (table) => [uniqueIndex('udx_pdks_attendance_employee_date').on(table.employeeId, table.workDate)]);

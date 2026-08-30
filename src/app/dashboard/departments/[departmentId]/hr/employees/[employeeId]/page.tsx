@@ -32,7 +32,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     listEmployeeContracts(session.companyId, employeeId),
     listEmployeeQualifications(session.companyId, employeeId)
   ]);
-  const { employee, departmentName, positionTitle, managerName, costCenterName, linkedUser, contacts, addresses, emergencyContacts } = detail;
+  const { employee, departmentName, positionTitle, managerName, costCenterName, shiftName, linkedUser, contacts, addresses, emergencyContacts } = detail;
   const [contractAttachments, qualificationAttachments] = await Promise.all([
     Promise.all(contracts.map((c) => listAttachments(session.companyId, 'EMPLOYEE_CONTRACT', c.id))),
     Promise.all(qualifications.map((q) => listAttachments(session.companyId, 'EMPLOYEE_QUALIFICATION', q.id)))
@@ -70,6 +70,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Yönetici</td><td>{managerName ?? '—'}</td></tr>
           <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Masraf Merkezi</td><td>{costCenterName ?? '—'}</td></tr>
           <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Çalışma Yeri</td><td>{employee.workLocation || '—'}</td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Vardiya</td><td>{shiftName ?? '—'}<span style={{ color: '#999', fontSize: 12 }}> (PDKS sayfasından atanır)</span></td></tr>
         </tbody>
       </table>
       {access.permissions.update ? (
