@@ -2155,3 +2155,56 @@ export const procAwardLines = mysqlTable('proc_award_lines', {
   awardedTotal: decimal('awarded_total', { precision: 20, scale: 6 }).notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
+
+// --- Satınalma Faz 5 — Purchase Order / Sözleşme (madde 83-95 civarı).
+// Award KARARI zaten onaylandı (Faz 4) — PO bu kararın tedarikçiye
+// gönderilen RESMİ kağıdı, o yüzden AYRI bir onay akışından GEÇMEZ (ikinci
+// bir onay, zaten onaylanmış bir kararı tekrar onaya sokmak olurdu — gerçek
+// bir kontrol değil, gereksiz bir sürtünme). Bir Award BİRDEN FAZLA
+// tedarikçiye bölünmüşse (Faz 4), her tedarikçi kendi PO'sunu alır —
+// tedarikçi başına GRUPLANMIŞ proc_award_lines, tek bir "karma" PO değil
+// (bir tedarikçiye gönderilecek kağıt başka bir tedarikçinin fiyatını
+// GÖRMEMELİ). "Sözleşme" ayrı bir şema DEĞİL — imzalı sözleşme dosyası
+// document_attachments'a (Faz 0) entityType='PROC_PO' ile eklenir, tıpkı
+// Requisition kalemlerinin ek dosyalarının aynı altyapıyı kullanması gibi
+// (madde 25-28'in genel amacı zaten buydu — procurement'a özel bir dosya
+// deposu icat etmemek).
+export const PROC_PO_STATUSES = ['DRAFT', 'ISSUED', 'ACKNOWLEDGED', 'CANCELLED'] as const;
+
+export const procPos = mysqlTable('proc_pos', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  awardId: char('award_id', { length: 36 }).notNull().references(() => procAwards.id),
+  supplierPartyId: char('supplier_party_id', { length: 36 }).notNull().references(() => parties.id),
+  poNo: varchar('po_no', { length: 32 }).notNull(),
+  status: mysqlEnum('status', PROC_PO_STATUSES).notNull().default('DRAFT'),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  deliveryLocation: varchar('delivery_location', { length: 255 }).notNull().default(''),
+  paymentTerms: varchar('payment_terms', { length: 255 }).notNull().default(''),
+  warrantyRequirement: varchar('warranty_requirement', { length: 255 }).notNull().default(''),
+  notes: text('notes'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  issuedAt: timestamp('issued_at'),
+  acknowledgedAt: timestamp('acknowledged_at'),
+  cancelledAt: timestamp('cancelled_at')
+}, (table) => [uniqueIndex('udx_proc_pos_company_no').on(table.companyId, table.poNo)]);
+
+// awardLineId ÜZERİNDE benzersiz — bir Award satırı en fazla BİR PO
+// satırına dönüşebilir (proc_rfq_lines.srcRequestLineId'nin "bir talep
+// satırı yalnızca bir RFQ'ya eklenebilir" kısıtıyla AYNI desen, burada
+// bir geri-işaretçi yerine bu tablonun kendi UNIQUE'i üzerinden uygulanıyor
+// — Award satırı hangi PO'ya "gittiğini" bilmek ZORUNDA değil, sorgu
+// PO satırlarından yeter). Fiyat/miktar YİNE snapshot — award satırından
+// kopyalanır, canlı referans değil.
+export const procPoLines = mysqlTable('proc_po_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  poId: char('po_id', { length: 36 }).notNull().references(() => procPos.id, { onDelete: 'cascade' }),
+  awardLineId: char('award_line_id', { length: 36 }).notNull().references(() => procAwardLines.id),
+  description: varchar('description', { length: 255 }).notNull(),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitId: char('unit_id', { length: 36 }).notNull().references(() => units.id),
+  unitPrice: decimal('unit_price', { precision: 20, scale: 6 }).notNull(),
+  lineTotal: decimal('line_total', { precision: 20, scale: 6 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_proc_po_lines_award_line').on(table.awardLineId)]);

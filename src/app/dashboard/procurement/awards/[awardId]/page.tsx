@@ -1,9 +1,13 @@
+import Link from 'next/link';
 import { requireSession } from '@/lib/dal';
 import { getAward } from '@/lib/procurement/award';
+import { listPurchaseOrdersForAward, hasUnconvertedAwardLines } from '@/lib/procurement/purchaseOrder';
 import { SubmitAwardButton, CancelAwardButton } from '@/components/procurement/award-form';
+import { CreatePurchaseOrdersButton } from '@/components/procurement/po-actions';
 
 const AWARD_STATUS_LABEL: Record<string, string> = { DRAFT: 'Taslak', SUBMITTED: 'Onayda', APPROVED: 'Onaylandı', REJECTED: 'Reddedildi', REVISION_REQUIRED: 'Revizyon Gerekli', CANCELLED: 'İptal' };
 const APPROVAL_STEP_STATUS_LABEL: Record<string, string> = { PENDING: 'Sırada', IN_PROGRESS: 'Aktif', APPROVED: 'Onaylandı', REJECTED: 'Reddedildi' };
+const PO_STATUS_LABEL: Record<string, string> = { DRAFT: 'Taslak', ISSUED: 'Gönderildi', ACKNOWLEDGED: 'Tedarikçi Onayladı', CANCELLED: 'İptal' };
 
 function fmt(d: string | Date) {
   return new Date(d).toLocaleString('tr-TR');
@@ -16,6 +20,9 @@ export default async function AwardDetailPage({ params }: { params: Promise<{ aw
 
   const canSubmit = (award.status === 'DRAFT' || award.status === 'REVISION_REQUIRED') && award.createdByUserId === session.id;
   const canCancel = (award.status === 'DRAFT' || award.status === 'REVISION_REQUIRED') && award.createdByUserId === session.id;
+
+  const purchaseOrders = award.status === 'APPROVED' ? await listPurchaseOrdersForAward(session.companyId, awardId) : [];
+  const canCreatePos = award.status === 'APPROVED' && (await hasUnconvertedAwardLines(session.companyId, awardId));
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -54,7 +61,7 @@ export default async function AwardDetailPage({ params }: { params: Promise<{ aw
       {approval ? (
         <>
           <h2 style={{ fontSize: 16, marginBottom: 8 }}>Onay Süreci</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
             {approval.steps.map((step) => (
               <div key={step.id} style={{ borderLeft: '2px solid #ddd', paddingLeft: 10, fontSize: 13 }}>
                 <span style={{ fontWeight: 600 }}>{step.stepOrder + 1}. adım — {APPROVAL_STEP_STATUS_LABEL[step.status] ?? step.status}</span>
@@ -64,6 +71,21 @@ export default async function AwardDetailPage({ params }: { params: Promise<{ aw
                 ))}
               </div>
             ))}
+          </div>
+        </>
+      ) : null}
+
+      {award.status === 'APPROVED' ? (
+        <>
+          <h2 style={{ fontSize: 16, marginBottom: 8 }}>Satınalma Siparişleri</h2>
+          {canCreatePos ? <div style={{ marginBottom: 12 }}><CreatePurchaseOrdersButton awardId={awardId} /></div> : null}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {purchaseOrders.map((po) => (
+              <Link key={po.id} href={`/dashboard/procurement/purchase-orders/${po.id}`} style={{ fontSize: 13, color: '#111' }}>
+                {po.poNo} — {po.supplierName} ({PO_STATUS_LABEL[po.status] ?? po.status})
+              </Link>
+            ))}
+            {purchaseOrders.length === 0 ? <span style={{ color: '#999', fontSize: 13 }}>Henüz sipariş oluşturulmadı.</span> : null}
           </div>
         </>
       ) : null}

@@ -176,6 +176,13 @@
       "when": 1788037304196,
       "tag": "0024_eminent_marauders",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1788073113884,
+      "tag": "0025_hard_adam_warlock",
+      "breakpoints": true
     }
   ]
 }
