@@ -36,6 +36,7 @@ async function main() {
     { code: 'WAREHOUSE_MANAGER', name: 'Depo Müdürü' },
     { code: 'WAREHOUSE_USER', name: 'Depo Personeli' },
     { code: 'HR_MANAGER', name: 'İK Müdürü' },
+    { code: 'HR_SPECIALIST', name: 'İK Uzmanı' },
     { code: 'AUDITOR', name: 'Denetçi' },
     { code: 'EMPLOYEE', name: 'Çalışan' },
     // IT-ARCHITECTURE.md §6 — IT_ADMIN kasıtlı olarak YOK (isFactoryAdmin
@@ -74,7 +75,8 @@ async function main() {
   const DEPARTMENT_TYPE_SEED: { code: string; name: string }[] = [
     { code: 'ACCOUNTING', name: 'Muhasebe' },
     { code: 'WAREHOUSE', name: 'Depo' },
-    { code: 'IT', name: 'Bilgi Teknolojileri' }
+    { code: 'IT', name: 'Bilgi Teknolojileri' },
+    { code: 'HR', name: 'İnsan Kaynakları' }
   ];
 
   // PDF (IT) madde 3 — kod içine sabit gömülmeyen varlık tipi listesi.
@@ -173,9 +175,21 @@ async function main() {
       }
     }
   }
+  // İK Faz 0 — HR_MANAGER tam yetki, HR_SPECIALIST silme/onay HARİÇ (madde
+  // 143-145'in "HR Specialist: özlük/PDKS/izin/eğitim" ile "HR Manager: tüm
+  // İK" ayrımı). PAYROLL_SPECIALIST (madde 144) Bordro fazına kadar
+  // EKLENMEDİ — henüz bir bordro modülü yok, kullanılmayan bir rol
+  // tanımlamak bu projenin "önce gerçek tüketici, sonra altyapı" ilkesine
+  // aykırı olurdu.
+  const HR_ROLE_PERMISSIONS: Record<string, string[]> = {
+    HR_MANAGER: ['view', 'create', 'update', 'delete', 'approve', 'export', 'print'],
+    HR_SPECIALIST: ['view', 'create', 'update', 'export', 'print']
+  };
+
   await seedRolePermissions('ACCOUNTING', ACCOUNTING_ROLE_PERMISSIONS);
   await seedRolePermissions('WAREHOUSE', WAREHOUSE_ROLE_PERMISSIONS);
   await seedRolePermissions('IT', IT_ROLE_PERMISSIONS);
+  await seedRolePermissions('HR', HR_ROLE_PERMISSIONS);
 
   const appUser = process.env.APP_DB_USER;
   const dbName = process.env.APP_DB_NAME || 'emakfabrika';

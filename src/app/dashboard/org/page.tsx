@@ -1,16 +1,49 @@
 import { requireFactoryAdmin } from '@/lib/dal';
 import { listPositions, listCompanyOrgUsers } from '@/lib/org';
+import { listCompanyDepartments, listDepartmentTypes } from '@/lib/departments';
 import { PositionForm } from '@/components/org/position-form';
 import { OrgAssignmentForm } from '@/components/org/org-assignment-form';
+import { DepartmentForm } from '@/components/org/department-form';
 
 export default async function OrgPage() {
   const session = await requireFactoryAdmin();
-  const [positions, orgUsers] = await Promise.all([listPositions(session.companyId), listCompanyOrgUsers(session.companyId)]);
+  const [positions, orgUsers, departmentList, departmentTypes] = await Promise.all([
+    listPositions(session.companyId),
+    listCompanyOrgUsers(session.companyId),
+    listCompanyDepartments(session.companyId),
+    listDepartmentTypes()
+  ]);
+  const departmentTypeNameByCode = new Map(departmentTypes.map((t) => [t.code, t.name]));
+  const departmentNameById = new Map(departmentList.map((d) => [d.id, d.name]));
 
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Organizasyon</h1>
       <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Dinamik pozisyon + raporlama zinciri — workflow motorunun POSITION/MANAGER_CHAIN onay adımları buradan beslenir.</p>
+
+      <h2 style={{ fontSize: 16, marginBottom: 8 }}>Departmanlar</h2>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 12 }}>
+        <thead>
+          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+            <th style={{ padding: '6px 8px' }}>Ad</th>
+            <th style={{ padding: '6px 8px' }}>Tür</th>
+            <th style={{ padding: '6px 8px' }}>Üst Departman</th>
+          </tr>
+        </thead>
+        <tbody>
+          {departmentList.map((d) => (
+            <tr key={d.id} style={{ borderBottom: '1px solid #eee' }}>
+              <td style={{ padding: '6px 8px' }}>{d.name}</td>
+              <td style={{ padding: '6px 8px', color: '#666' }}>{departmentTypeNameByCode.get(d.departmentTypeCode) ?? d.departmentTypeCode}</td>
+              <td style={{ padding: '6px 8px', color: '#666' }}>{d.parentDepartmentId ? (departmentNameById.get(d.parentDepartmentId) ?? '—') : '—'}</td>
+            </tr>
+          ))}
+          {departmentList.length === 0 ? <tr><td colSpan={3} style={{ padding: '8px', color: '#999' }}>Henüz departman yok.</td></tr> : null}
+        </tbody>
+      </table>
+      <div style={{ marginBottom: 28 }}>
+        <DepartmentForm departmentTypes={departmentTypes} departments={departmentList.map((d) => ({ id: d.id, name: d.name }))} />
+      </div>
 
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Pozisyonlar</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 12 }}>

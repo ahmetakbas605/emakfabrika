@@ -48,6 +48,10 @@ export const departments = mysqlTable('departments', {
   companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
   departmentTypeCode: varchar('department_type_code', { length: 32 }).notNull().references(() => departmentTypes.code),
   name: varchar('name', { length: 255 }).notNull(),
+  // İK Faz 0 — madde 7'nin "Sub Department" katmanı. Opsiyonel self-ref
+  // (AnyMySqlColumn lazy-ref — users.managerUserId İLE AYNI teknik, bu
+  // dosyada zaten defalarca kullanıldı). NULL = üst-seviye departman.
+  parentDepartmentId: char('parent_department_id', { length: 36 }).references((): AnyMySqlColumn => departments.id),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
@@ -103,6 +107,13 @@ export const users = mysqlTable('users', {
   // tanımlı (AnyMySqlColumn lazy-ref — network_diagrams'taki AYNI teknik).
   positionId: char('position_id', { length: 36 }).references((): AnyMySqlColumn => positions.id),
   managerUserId: char('manager_user_id', { length: 36 }).references((): AnyMySqlColumn => users.id),
+  // İK Faz 0 — bir ERP giriş hesabını KENDİ özlük kaydına bağlar (madde 195'in
+  // employees vs. users ayrımı, İK Mimarisi raporu §03). OPSİYONEL ve TEK
+  // YÖNLÜ: it_asset_assignments.userId, approval_actions.actedByUserId gibi
+  // "ERP'de KİM yaptı" alanları users.id'ye bağlı KALIYOR, bu FK yalnızca
+  // "bu ERP hesabının özlük karşılığı hangi employee" sorusuna cevap veriyor
+  // — dış danışman gibi employees kaydı OLMAYAN bir users satırı da geçerli.
+  employeeId: char('employee_id', { length: 36 }).references((): AnyMySqlColumn => employees.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
 });
@@ -2430,5 +2441,86 @@ export const procTenderBidLines = mysqlTable('proc_tender_bid_lines', {
   deliveryDays: int('delivery_days'),
   isAlternative: boolean('is_alternative').notNull().default(false),
   alternativeDescription: varchar('alternative_description', { length: 255 }).notNull().default(''),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// --- İnsan Kaynakları Faz 0 — Employee Core + Organizasyon (İK Mimarisi
+// raporu §03-04). employees, users'TAN AYRI: bordrodaki HERKESİN kaydı
+// (ERP'ye hiç giriş yapmayan üretim işçisi DAHİL) — users yalnızca bir ERP
+// GİRİŞ hesabı. Mevcut hiçbir modülün users.id referansı DEĞİŞMEDİ (IT
+// zimmet ataması, onay aksiyonları vb. hâlâ users.id'ye bağlı) — bu, o
+// modüllerin "ERP'de kim yaptı" sorusunu yanıtlamaya devam etmesi gerektiği
+// için bilinçli bir tercih (rapor §03), employees'e taşınmadı.
+export const EMPLOYMENT_STATUSES = ['ACTIVE', 'ON_LEAVE', 'SUSPENDED', 'TERMINATED'] as const;
+
+// TC/pasaport gibi hassas alanlar (identityReference) bu fazda YALNIZCA
+// düz metin olarak tutuluyor — maskeleme/şifreleme İK Mimarisi raporunun
+// §11 (KVKK/Güvenlik Sertleştirme) fazına BİLİNÇLİ OLARAK bırakıldı, o
+// faza kadar bu alana erişim normal RBAC (requireDepartmentAccess) ile
+// sınırlı. TODO: HR_SENSITIVE_FIELD_MASKING.
+export const employees = mysqlTable('employees', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  employeeNumber: varchar('employee_number', { length: 32 }).notNull(),
+  firstName: varchar('first_name', { length: 100 }).notNull(),
+  lastName: varchar('last_name', { length: 100 }).notNull(),
+  preferredName: varchar('preferred_name', { length: 100 }),
+  gender: varchar('gender', { length: 32 }),
+  birthDate: date('birth_date', { mode: 'string' }),
+  nationality: varchar('nationality', { length: 100 }),
+  identityReference: varchar('identity_reference', { length: 32 }),
+  maritalStatus: varchar('marital_status', { length: 32 }),
+  employmentStatus: mysqlEnum('employment_status', EMPLOYMENT_STATUSES).notNull().default('ACTIVE'),
+  hireDate: date('hire_date', { mode: 'string' }).notNull(),
+  terminationDate: date('termination_date', { mode: 'string' }),
+  departmentId: char('department_id', { length: 36 }).references(() => departments.id),
+  positionId: char('position_id', { length: 36 }).references(() => positions.id),
+  // madde 8 — raporlama zinciri hard-code DEĞİL. users.managerUserId İLE
+  // AYNI self-ref teknik, ama KASITLI OLARAK AYRI bir alan: workflow
+  // motorunun MANAGER_CHAIN çözümlemesi hâlâ users.managerUserId'yi
+  // kullanıyor (değişmedi) — bu alan yalnızca İK'nın kendi org şeması için.
+  managerEmployeeId: char('manager_employee_id', { length: 36 }).references((): AnyMySqlColumn => employees.id),
+  costCenterId: char('cost_center_id', { length: 36 }).references(() => costCenters.id),
+  // madde 04'ün Facility kararı — branches Facility yerine kullanılıyor,
+  // ayrı bir facilities tablosu AÇILMADI.
+  branchId: char('branch_id', { length: 36 }).references(() => branches.id),
+  workLocation: varchar('work_location', { length: 255 }).notNull().default(''),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+}, (table) => [uniqueIndex('udx_employees_company_number').on(table.companyId, table.employeeNumber)]);
+
+export const EMPLOYEE_CONTACT_TYPES = ['PHONE_MOBILE', 'PHONE_HOME', 'PHONE_WORK', 'EMAIL_PERSONAL', 'EMAIL_WORK', 'OTHER'] as const;
+
+export const employeeContacts = mysqlTable('employee_contacts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  contactType: mysqlEnum('contact_type', EMPLOYEE_CONTACT_TYPES).notNull(),
+  value: varchar('value', { length: 255 }).notNull(),
+  isPrimary: boolean('is_primary').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const EMPLOYEE_ADDRESS_TYPES = ['HOME', 'WORK', 'OTHER'] as const;
+
+export const employeeAddresses = mysqlTable('employee_addresses', {
+  id: char('id', { length: 36 }).primaryKey(),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  addressType: mysqlEnum('address_type', EMPLOYEE_ADDRESS_TYPES).notNull().default('HOME'),
+  line: text('line').notNull(),
+  city: varchar('city', { length: 100 }).notNull().default(''),
+  district: varchar('district', { length: 100 }).notNull().default(''),
+  postalCode: varchar('postal_code', { length: 16 }).notNull().default(''),
+  country: varchar('country', { length: 100 }).notNull().default('Türkiye'),
+  isPrimary: boolean('is_primary').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const employeeEmergencyContacts = mysqlTable('employee_emergency_contacts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  fullName: varchar('full_name', { length: 255 }).notNull(),
+  relationship: varchar('relationship', { length: 100 }).notNull().default(''),
+  phone: varchar('phone', { length: 32 }).notNull(),
+  isPrimary: boolean('is_primary').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
