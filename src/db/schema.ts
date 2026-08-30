@@ -580,6 +580,11 @@ export const stockItems = mysqlTable('stock_items', {
   // Doldurulmazsa stock_items eskisi gibi kendi başına çalışmaya devam eder
   // — mevcut Depo akışı BOZULMAZ.
   productId: char('product_id', { length: 36 }).references((): AnyMySqlColumn => products.id),
+  // Holding ERP Faz 3 (MRP) — OPSİYONEL minimum stok/sipariş noktası
+  // (madde 20: "Minimum stok"). Şirket-geneli (depo-bazlı DEĞİL) — daha
+  // ayrıntılı depo-bazlı politika ihtiyacı doğarsa ayrı bir tabloya
+  // taşınabilir, bugünkü ölçek için bu basitleştirme yeterli.
+  minQty: decimal('min_qty', { precision: 20, scale: 6 }),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow()
 }, (table) => [uniqueIndex('udx_stock_item_company_sku').on(table.companyId, table.sku)]);
@@ -3511,5 +3516,58 @@ export const prodOperations = mysqlTable('prod_operations', {
   completedAt: timestamp('completed_at'),
   goodQuantity: decimal('good_quantity', { precision: 20, scale: 6 }).notNull().default('0'),
   scrapQuantity: decimal('scrap_quantity', { precision: 20, scale: 6 }).notNull().default('0'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// --- Holding ERP Faz 3 — MRP (Material Requirements Planning,
+// MASTER-ERP-ROADMAP.md). madde 19'un beş girdisi: Satış siparişleri +
+// Minimum stok + Mevcut stok + Açık satın alma + Açık üretim. Tahmin
+// ("forecast") KASITLI OLARAK bu fazın kapsamı DIŞINDA — hiçbir talep-tahmin
+// altyapısı (istatistiksel/manuel tahmin girişi) bu projede henüz yok, sıfır
+// veriyle "tahmin" hesaplamak anlamlı bir sonuç üretmezdi; gerçek bir
+// tüketici doğduğunda (BI/Faz 12 civarı) eklenecek, TODO not edildi.
+//
+// Bu bir emir/işlem tablosu DEĞİL, bir PLANLAMA ÇIKTISI: runMrp() net
+// ihtiyacı hesaplar (BOM'u çok-seviyeli PATLATARAK — bir mamul için önerilen
+// üretim, kendi bileşenleri için YENİ satırlar üretir, parentId ile
+// izlenebilir), mrp_planned_orders'a SUGGESTED olarak yazar. Kullanıcı her
+// öneriyi GERÇEK bir productionOrder/procRequest'e dönüştürmeyi (ya da
+// iptal etmeyi) seçer — MRP hiçbir zaman OTOMATİK bir sipariş açmaz.
+
+export const MRP_RUN_STATUSES = ['RUNNING', 'COMPLETED', 'FAILED'] as const;
+
+export const mrpRuns = mysqlTable('mrp_runs', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  warehouseId: char('warehouse_id', { length: 36 }).notNull().references(() => warehouses.id),
+  runDate: date('run_date', { mode: 'string' }).notNull(),
+  status: mysqlEnum('status', MRP_RUN_STATUSES).notNull().default('RUNNING'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at')
+});
+
+export const MRP_PLANNED_ORDER_TYPES = ['PRODUCTION', 'PURCHASE'] as const;
+export const MRP_PLANNED_ORDER_STATUSES = ['SUGGESTED', 'CONVERTED', 'CANCELLED'] as const;
+export const MRP_DEMAND_SOURCES = ['SALES_ORDER', 'MIN_STOCK', 'BOM_EXPLOSION'] as const;
+
+export const mrpPlannedOrders = mysqlTable('mrp_planned_orders', {
+  id: char('id', { length: 36 }).primaryKey(),
+  mrpRunId: char('mrp_run_id', { length: 36 }).notNull().references(() => mrpRuns.id, { onDelete: 'cascade' }),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  productId: char('product_id', { length: 36 }).notNull().references(() => products.id),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitId: char('unit_id', { length: 36 }).notNull().references(() => units.id),
+  warehouseId: char('warehouse_id', { length: 36 }).notNull().references(() => warehouses.id),
+  dueDate: date('due_date', { mode: 'string' }),
+  orderType: mysqlEnum('order_type', MRP_PLANNED_ORDER_TYPES).notNull(),
+  status: mysqlEnum('status', MRP_PLANNED_ORDER_STATUSES).notNull().default('SUGGESTED'),
+  demandSource: mysqlEnum('demand_source', MRP_DEMAND_SOURCES).notNull(),
+  // BOM patlatmasının kendi kendine referansı — KISALTILMIŞ ad
+  // (prod_operations'ın 2026-08-31 ER_TOO_LONG_IDENT dersiyle AYNI önlem,
+  // bu kez MIGRATION ÇALIŞMADAN ÖNCE uygulandı).
+  parentId: char('parent_id', { length: 36 }).references((): AnyMySqlColumn => mrpPlannedOrders.id),
+  convertedOrderType: varchar('converted_order_type', { length: 32 }),
+  convertedOrderId: char('converted_order_id', { length: 36 }),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });

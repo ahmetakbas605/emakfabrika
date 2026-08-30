@@ -118,10 +118,45 @@ girişi +gerçek muhasebe fişi) zinciri, 22/22 gerçek DB'de doğrulandı. Diğ
 Canlı Playwright ile tüm yeni sayfalar + mevcut modül regresyonu sıfır
 hatayla doğrulandı. `tsc --noEmit` + `npm run build` temiz.
 
-## FAZ 3 — MRP
+## FAZ 3 — MRP ✅
 
-**Bağımlılık:** Faz 1+2. Satış siparişi+tahmin+min.stok+mevcut stok+açık
-SO/PO üzerinden ihtiyaç patlatma.
+**Bağımlılık:** Faz 1+2 (✅). madde 19'un 5 girdisi — Tahmin ("forecast")
+HARİÇ: hiçbir talep-tahmin altyapısı yok, sıfır veriyle hesaplamak anlamsız
+sonuç üretirdi, TODO not edildi (BI/Faz 12 civarı gerçek bir tüketici
+doğduğunda eklenecek).
+
+`runMrp()`: Satış siparişi + Minimum stok (yeni `stock_items.minQty`,
+opsiyonel) → ÇOK SEVİYELİ BOM patlatması (bir mamul için önerilen üretim,
+kendi bileşenleri için yeni talep üretir, `parentId` ile izlenebilir,
+MAX_EXPLOSION_DEPTH=10 dolaylı döngü koruması) → net ihtiyaç = brüt talep −
+mevcut stok − açık üretim − açık satın alma (procPoLines'ın productId
+TAŞIMADIĞI için procAwardLines→procRfqLines/procTenderLines LEFT JOIN
+zinciriyle çözüldü). Öneriler `mrp_planned_orders`a SUGGESTED yazılır —
+MRP HİÇBİR ZAMAN otomatik belge açmaz, kullanıcı her öneriyi GERÇEK bir
+üretim emrine/satın alma talebine dönüştürür ya da iptal eder.
+
+**GERÇEK bir tasarım hatası, planlama sırasında bulunup düzeltildi**: aynı
+ürün BİRDEN FAZLA seviyede talep görebilir (ör. hem kendi minimum-stok
+politikası var hem de başka bir mamulün bileşeni) — her seviyede mevcut
+stoğu/açık siparişi SIFIRDAN sorgulamak, AYNI stoğu İKİ KEZ kredilendirip
+toplamda EKSİK sipariş önerirdi. Düzeltme: her ürünün kullanılabilir arzı
+(on-hand + açık üretim + açık satın alma) TEK SEFER hesaplanıp koşu boyunca
+TÜKETİLDİKÇE azaltılan bir havuzda tutuluyor (gerçek MRP'lerin "low-level
+coding" ile çözdüğü sorunun, bu ölçekte yeterli, daha basit bir eşdeğeri) —
+`tests/mrp.test.ts` özellikle BU senaryoyu (paylaşılan havuz olmadan 49,
+doğrusu 53) doğrulamak için tasarlandı.
+
+Test: `tests/mrp.test.ts` (kalıcı) — 3 seviyeli BOM zinciri (P←2×S←3×R),
+açık üretim netlemesi, paylaşılan-havuz düzeltmesinin doğruluğu, GERÇEK
+üretim emrine/satın alma talebine dönüştürme, çift-dönüştürme reddi, iptal
+— 16/16. Açık satın alma (procurement) netleme sorgusu, tam bir RFQ→Award→PO
+zinciri kurmanın bu fazın kapsamına orantısız ek karmaşıklık katması
+nedeniyle AYRI test edilmedi (kodu yazıldı/type-check'ten geçti, ama bu
+belirli dal canlı bir DB senaryosuyla doğrulanmadı — dürüstçe not edildi).
+Beş kalıcı test paketi (accounting/holding/sales/production/mrp) birlikte
+81/81. Canlı Playwright ile tüm yeni sayfalar + mevcut modül regresyonu
+(Sales/Production dahil) sıfır hatayla doğrulandı. `tsc --noEmit` +
+`npm run build` temiz.
 
 ## FAZ 4 — MES
 

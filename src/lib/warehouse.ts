@@ -1,5 +1,5 @@
 import 'server-only';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, isNotNull } from 'drizzle-orm';
 import { db, type Tx } from '@/db/client';
 import { warehouses, stockItems, stockMovements, accountingAccounts, whLocations, invBalances, stockTransfers, transferLines, invReservations } from '@/db/schema';
 import { newId } from '@/lib/id';
@@ -56,6 +56,24 @@ export async function listStockItems(companyId: string) {
     .from(stockItems)
     .leftJoin(accountingAccounts, eq(accountingAccounts.id, stockItems.accountingAccountId))
     .where(and(eq(stockItems.companyId, companyId), eq(stockItems.active, true)));
+}
+
+// Holding ERP Faz 3 (MRP) — listStockItems'ın MEVCUT dönüş şeklini
+// (uygulamanın başka yerlerinde tüketiliyor) DEĞİŞTİRMEMEK için ayrı bir
+// fonksiyon: yalnızca MRP'nin ihtiyaç duyduğu productId/minQty alanlarını
+// taşır, yalnızca Master Data'ya bağlı (productId dolu) kartları listeler
+// (MRP zaten yalnızca bunları planlayabiliyor).
+export async function listStockItemsWithProduct(companyId: string) {
+  return db
+    .select({ id: stockItems.id, sku: stockItems.sku, name: stockItems.name, productId: stockItems.productId, minQty: stockItems.minQty })
+    .from(stockItems)
+    .where(and(eq(stockItems.companyId, companyId), eq(stockItems.active, true), isNotNull(stockItems.productId)));
+}
+
+export async function setStockItemMinQty(companyId: string, stockItemId: string, minQty: number | null): Promise<void> {
+  const [item] = await db.select({ id: stockItems.id }).from(stockItems).where(and(eq(stockItems.id, stockItemId), eq(stockItems.companyId, companyId))).limit(1);
+  if (!item) throw new AccountingError('Stok kartı bulunamadı.');
+  await db.update(stockItems).set({ minQty: minQty === null ? null : toDb(minQty) }).where(eq(stockItems.id, stockItemId));
 }
 
 export interface RecordStockMovementInput {

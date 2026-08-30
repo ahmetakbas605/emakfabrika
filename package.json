@@ -12,7 +12,8 @@
     "test:accounting": "tsx tests/accounting.test.ts",
     "test:holding": "tsx tests/holding.test.ts",
     "test:sales": "tsx tests/sales.test.ts",
-    "test:production": "tsx tests/production.test.ts"
+    "test:production": "tsx tests/production.test.ts",
+    "test:mrp": "tsx tests/mrp.test.ts"
   },
   "dependencies": {
     "@xyflow/react": "^12.11.5",
