@@ -183,6 +183,13 @@
       "when": 1788073113884,
       "tag": "0025_hard_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "5",
+      "when": 1788076941048,
+      "tag": "0026_glorious_korvac",
+      "breakpoints": true
     }
   ]
 }

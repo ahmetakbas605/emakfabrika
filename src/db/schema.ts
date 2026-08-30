@@ -2208,3 +2208,75 @@ export const procPoLines = mysqlTable('proc_po_lines', {
   lineTotal: decimal('line_total', { precision: 20, scale: 6 }).notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow()
 }, (table) => [uniqueIndex('udx_proc_po_lines_award_line').on(table.awardLineId)]);
+
+// --- Satınalma Faz 6 — Mal Kabul (Goods Receipt) + 3-Way Match. PO'nun
+// KENDİ durumuna "RECEIVED" gibi bir alan EKLENMEDİ — kısmi/tam teslim
+// alındı bilgisi proc_receipt_lines'ın proc_po_lines.quantity'ye göre
+// TOPLAMINDAN her seferinde HESAPLANIR (budget/reservation availability'nin
+// zaten bu projede hiç STOK bir kalıcı alan olarak tutulmaması, hep canlı
+// SUM ile hesaplanması İLE AYNI tercih — durumun kendisiyle senkron
+// tutulması gereken YENİ bir alan, senkron KAÇIRILDIĞINDA yanlış bilgi
+// gösterme riski taşır).
+export const procReceipts = mysqlTable('proc_receipts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  poId: char('po_id', { length: 36 }).notNull().references(() => procPos.id),
+  receiptNo: varchar('receipt_no', { length: 32 }).notNull(),
+  receiptDate: date('receipt_date', { mode: 'string' }).notNull(),
+  notes: text('notes'),
+  receivedByUserId: char('received_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_proc_receipts_company_no').on(table.companyId, table.receiptNo)]);
+
+// warehouseId/stockItemId İKİSİ de OPSİYONEL — Requisition'ın kendi
+// stockItemId/warehouseId opsiyonelliğiyle AYNI gerekçe (madde 18): fiziksel
+// stok kartı olmayan bir kalem (hizmet, doğrudan tüketilen sarf) yalnızca
+// 3-way match için kaydedilir, gerçek bir stok hareketi ÜRETMEZ. İkisi de
+// doluysa recordStockMovementInTx (Depo, Faz 2A) ÇAĞRILIR — procurement
+// kendi stok mantığını TEKRAR YAZMAZ, var olanı SARAR (stockMovementId bu
+// çağrının sonucuna işaret eder, izlenebilirlik için).
+export const procReceiptLines = mysqlTable('proc_receipt_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  receiptId: char('receipt_id', { length: 36 }).notNull().references(() => procReceipts.id, { onDelete: 'cascade' }),
+  poLineId: char('po_line_id', { length: 36 }).notNull().references(() => procPoLines.id),
+  receivedQty: decimal('received_qty', { precision: 20, scale: 6 }).notNull(),
+  warehouseId: char('warehouse_id', { length: 36 }).references(() => warehouses.id),
+  stockItemId: char('stock_item_id', { length: 36 }).references(() => stockItems.id),
+  stockMovementId: char('stock_movement_id', { length: 36 }).references(() => stockMovements.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// Tedarikçi faturası — genel bir "Muhasebe Alacaklı Fatura" modülü BİLİNÇLİ
+// OLARAK inşa EDİLMEDİ (accounting_journals zaten genel amaçlı fiş
+// altyapısı; ayrı bir tam AP modülü bu fazın kapsamı DEĞİL, kendi başına
+// ayrı bir girişim olurdu). Burada YALNIZCA 3-way match'in ihtiyaç duyduğu
+// minimum: PO'ya karşı gelen tedarikçi faturasının miktar/fiyatını
+// kaydetmek. Onaylanınca (madde ~90 civarı) GR/IR clearing muhasebesi
+// postJournalInTx (lib/accounting.ts) ile OPSİYONEL olarak fişlenir — Depo
+// stok hareketlerinin counterAccountCode İLE AYNI opsiyonel-entegrasyon
+// deseni, yeni bir doğrudan tablo yazımı DEĞİL.
+export const PROC_VENDOR_INVOICE_STATUSES = ['DRAFT', 'APPROVED', 'CANCELLED'] as const;
+
+export const procVinvoices = mysqlTable('proc_vinvoices', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  poId: char('po_id', { length: 36 }).notNull().references(() => procPos.id),
+  supplierInvoiceNo: varchar('supplier_invoice_no', { length: 64 }).notNull(),
+  invoiceDate: date('invoice_date', { mode: 'string' }).notNull(),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  status: mysqlEnum('status', PROC_VENDOR_INVOICE_STATUSES).notNull().default('DRAFT'),
+  notes: text('notes'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  approvedAt: timestamp('approved_at')
+}, (table) => [uniqueIndex('udx_proc_vinvoices_company_no').on(table.companyId, table.supplierInvoiceNo)]);
+
+export const procVinvoiceLines = mysqlTable('proc_vinvoice_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  invoiceId: char('invoice_id', { length: 36 }).notNull().references(() => procVinvoices.id, { onDelete: 'cascade' }),
+  poLineId: char('po_line_id', { length: 36 }).notNull().references(() => procPoLines.id),
+  invoicedQty: decimal('invoiced_qty', { precision: 20, scale: 6 }).notNull(),
+  invoicedUnitPrice: decimal('invoiced_unit_price', { precision: 20, scale: 6 }).notNull(),
+  lineTotal: decimal('line_total', { precision: 20, scale: 6 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
