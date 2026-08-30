@@ -1869,6 +1869,12 @@ export const approvalDelegations = mysqlTable('approval_delegations', {
 // REQUEST_LINE' gibi) — herhangi bir modül kullanabilir. Fiziksel dosya
 // yerel diskte (bu fabrikanın kendi sunucusu — tek-sunucu on-prem model,
 // S3/cloud abstraction'ı bilinçli olarak YOK), bkz. lib/documents/storage.ts.
+// İK Faz 1 — documentCategory/issueDate/expiryDate/version/supersedesId
+// hepsi OPSİYONEL: Satınalma'nın (IT dahil) mevcut hiçbir kullanıcısı bu
+// alanları set etmez, davranışları değişmez (İK Mimarisi raporu §05,
+// Satınalma Faz 8B'nin proc_tech_evals'a tenderBidLineId eklediği AYNI
+// additive desen). version/supersedesId proc_quotations'ın "eski
+// silinmez, yeni satır + artan versiyon" ilkesiyle aynı (madde 14).
 export const documentAttachments = mysqlTable('document_attachments', {
   id: char('id', { length: 36 }).primaryKey(),
   companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
@@ -1879,6 +1885,11 @@ export const documentAttachments = mysqlTable('document_attachments', {
   sizeBytes: int('size_bytes').notNull(),
   storageKey: varchar('storage_key', { length: 512 }).notNull(),
   uploadedByUserId: char('uploaded_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  documentCategory: varchar('document_category', { length: 64 }),
+  issueDate: date('issue_date', { mode: 'string' }),
+  expiryDate: date('expiry_date', { mode: 'string' }),
+  version: int('version').notNull().default(1),
+  supersedesId: char('supersedes_id', { length: 36 }).references((): AnyMySqlColumn => documentAttachments.id),
   createdAt: timestamp('created_at').notNull().defaultNow()
 }, (table) => [index('idx_attachment_entity').on(table.entityType, table.entityId)]);
 
@@ -2522,5 +2533,59 @@ export const employeeEmergencyContacts = mysqlTable('employee_emergency_contacts
   relationship: varchar('relationship', { length: 100 }).notNull().default(''),
   phone: varchar('phone', { length: 32 }).notNull(),
   isPrimary: boolean('is_primary').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// İK Faz 1 — İK Mimarisi raporu §05/Faz 1: sözleşme versiyon zinciri.
+// Yalnızca EN SON versiyon status='ACTIVE' olur — bir öncekini yeni
+// versiyon oluşturulurken 'SUPERSEDED'e çeviriyoruz (proc_quotations'ın
+// aksine, burada "güncel olan" tekil ve sık sorgulandığı için MAX(version)
+// yerine açık bir status kolonu tercih edildi). supersedesId zincirin
+// kendisini (hangi versiyon hangisinin yerine geçti) izlenebilir kılar.
+// Sözleşmenin imzalı belgesi document_attachments'a (entityType=
+// 'EMPLOYEE_CONTRACT', entityId=bu satırın id'si) AYRICA yüklenir.
+export const EMPLOYEE_CONTRACT_TYPES = ['INDEFINITE', 'DEFINITE', 'PART_TIME', 'INTERNSHIP', 'CONSULTANT'] as const;
+export const EMPLOYEE_CONTRACT_STATUSES = ['ACTIVE', 'SUPERSEDED', 'EXPIRED', 'TERMINATED'] as const;
+
+export const employeeContracts = mysqlTable('employee_contracts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  contractType: mysqlEnum('contract_type', EMPLOYEE_CONTRACT_TYPES).notNull(),
+  status: mysqlEnum('status', EMPLOYEE_CONTRACT_STATUSES).notNull().default('ACTIVE'),
+  startDate: date('start_date', { mode: 'string' }).notNull(),
+  endDate: date('end_date', { mode: 'string' }),
+  probationEndDate: date('probation_end_date', { mode: 'string' }),
+  weeklyWorkingHours: decimal('weekly_working_hours', { precision: 5, scale: 2 }),
+  terms: text('terms'),
+  version: int('version').notNull().default(1),
+  supersedesId: char('supersedes_id', { length: 36 }).references((): AnyMySqlColumn => employeeContracts.id),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// İK Faz 1 — madde 16-22: diploma/sertifika/eğitim tek bir tabloda
+// (qualificationType ile ayrışır) — üçü de aynı şekli paylaşıyor (ad,
+// veren kurum, tarih aralığı), ayrı tablolara bölmek gereksiz tekrar
+// olurdu. expiryDate, süre-dolma uyarısının VERİ modeli — gönderim
+// (Bildirim altyapısı henüz yok) Faz 8'e kadar bekler, bu faz yalnızca
+// sorgulanabilir veriyi kurar (bkz. lib/hr/qualifications.ts
+// listExpiringQualifications). Belge dosyası document_attachments'a
+// (entityType='EMPLOYEE_QUALIFICATION') ayrıca yüklenir.
+export const EMPLOYEE_QUALIFICATION_TYPES = ['DIPLOMA', 'CERTIFICATE', 'TRAINING', 'LICENSE', 'OTHER'] as const;
+export const EMPLOYEE_QUALIFICATION_STATUSES = ['ACTIVE', 'EXPIRED', 'REVOKED'] as const;
+
+export const employeeQualifications = mysqlTable('employee_qualifications', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  qualificationType: mysqlEnum('qualification_type', EMPLOYEE_QUALIFICATION_TYPES).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  institution: varchar('institution', { length: 255 }).notNull().default(''),
+  fieldOfStudy: varchar('field_of_study', { length: 255 }).notNull().default(''),
+  credentialNumber: varchar('credential_number', { length: 100 }).notNull().default(''),
+  issueDate: date('issue_date', { mode: 'string' }),
+  expiryDate: date('expiry_date', { mode: 'string' }),
+  status: mysqlEnum('status', EMPLOYEE_QUALIFICATION_STATUSES).notNull().default('ACTIVE'),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });

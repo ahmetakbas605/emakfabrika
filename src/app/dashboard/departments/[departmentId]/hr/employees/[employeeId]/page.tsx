@@ -1,27 +1,42 @@
 import { requireDepartmentAccess, listCompanyUsers } from '@/lib/dal';
 import { getEmployee, listEmployees } from '@/lib/hr/employees';
+import { listEmployeeContracts } from '@/lib/hr/contracts';
+import { listEmployeeQualifications } from '@/lib/hr/qualifications';
+import { listAttachments } from '@/lib/documents/attachments';
 import { listCompanyDepartments } from '@/lib/departments';
 import { listPositions } from '@/lib/org';
 import { listCostCenters } from '@/lib/cost-centers';
 import { OrganizationForm } from '@/components/hr/organization-form';
 import { ContactForm, AddressForm, EmergencyContactForm, TerminateForm, LinkUserForm } from '@/components/hr/personnel-forms';
+import { ContractForm } from '@/components/hr/contract-form';
+import { QualificationForm, RevokeQualificationButton } from '@/components/hr/qualification-form';
 
 const STATUS_LABELS: Record<string, string> = { ACTIVE: 'Aktif', ON_LEAVE: 'İzinde', SUSPENDED: 'Askıda', TERMINATED: 'İşten Ayrıldı' };
 const CONTACT_TYPE_LABELS: Record<string, string> = { PHONE_MOBILE: 'Cep Telefonu', PHONE_HOME: 'Ev Telefonu', PHONE_WORK: 'İş Telefonu', EMAIL_PERSONAL: 'Kişisel E-posta', EMAIL_WORK: 'İş E-postası', OTHER: 'Diğer' };
 const ADDRESS_TYPE_LABELS: Record<string, string> = { HOME: 'Ev', WORK: 'İş', OTHER: 'Diğer' };
+const CONTRACT_TYPE_LABELS: Record<string, string> = { INDEFINITE: 'Belirsiz Süreli', DEFINITE: 'Belirli Süreli', PART_TIME: 'Kısmi Zamanlı', INTERNSHIP: 'Stajyer', CONSULTANT: 'Danışman' };
+const CONTRACT_STATUS_LABELS: Record<string, string> = { ACTIVE: 'Yürürlükte', SUPERSEDED: 'Yenilendi', EXPIRED: 'Süresi Doldu', TERMINATED: 'Feshedildi' };
+const QUALIFICATION_TYPE_LABELS: Record<string, string> = { DIPLOMA: 'Diploma', CERTIFICATE: 'Sertifika', TRAINING: 'Eğitim', LICENSE: 'Lisans', OTHER: 'Diğer' };
+const QUALIFICATION_STATUS_LABELS: Record<string, string> = { ACTIVE: 'Geçerli', EXPIRED: 'Süresi Doldu', REVOKED: 'İptal Edildi' };
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ departmentId: string; employeeId: string }> }) {
   const { departmentId, employeeId } = await params;
   const { session, access } = await requireDepartmentAccess(departmentId);
-  const [detail, employees, departments, positions, costCenters, companyUsers] = await Promise.all([
+  const [detail, employees, departments, positions, costCenters, companyUsers, contracts, qualifications] = await Promise.all([
     getEmployee(session.companyId, employeeId),
     listEmployees(session.companyId),
     listCompanyDepartments(session.companyId),
     listPositions(session.companyId),
     listCostCenters(session.companyId),
-    listCompanyUsers(session.companyId)
+    listCompanyUsers(session.companyId),
+    listEmployeeContracts(session.companyId, employeeId),
+    listEmployeeQualifications(session.companyId, employeeId)
   ]);
   const { employee, departmentName, positionTitle, managerName, costCenterName, linkedUser, contacts, addresses, emergencyContacts } = detail;
+  const [contractAttachments, qualificationAttachments] = await Promise.all([
+    Promise.all(contracts.map((c) => listAttachments(session.companyId, 'EMPLOYEE_CONTRACT', c.id))),
+    Promise.all(qualifications.map((q) => listAttachments(session.companyId, 'EMPLOYEE_QUALIFICATION', q.id)))
+  ]);
 
   return (
     <div>
@@ -69,6 +84,64 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           />
         </div>
       ) : null}
+
+      <h2 style={{ fontSize: 15, marginBottom: 8 }}>Sözleşmeler</h2>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 8 }}>
+        <thead>
+          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+            <th style={{ padding: '6px 8px' }}>Versiyon</th>
+            <th style={{ padding: '6px 8px' }}>Tür</th>
+            <th style={{ padding: '6px 8px' }}>Başlangıç</th>
+            <th style={{ padding: '6px 8px' }}>Bitiş</th>
+            <th style={{ padding: '6px 8px' }}>Durum</th>
+            <th style={{ padding: '6px 8px' }}>Belge</th>
+          </tr>
+        </thead>
+        <tbody>
+          {contracts.map((c, i) => (
+            <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+              <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>v{c.version}</td>
+              <td style={{ padding: '6px 8px' }}>{CONTRACT_TYPE_LABELS[c.contractType] ?? c.contractType}</td>
+              <td style={{ padding: '6px 8px', color: '#666' }}>{c.startDate}</td>
+              <td style={{ padding: '6px 8px', color: '#666' }}>{c.endDate ?? '—'}</td>
+              <td style={{ padding: '6px 8px', fontWeight: 600 }}>{CONTRACT_STATUS_LABELS[c.status] ?? c.status}</td>
+              <td style={{ padding: '6px 8px', color: '#666' }}>{contractAttachments[i].map((a) => a.fileName).join(', ') || '—'}</td>
+            </tr>
+          ))}
+          {contracts.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: '#999' }}>Henüz sözleşme yok.</td></tr> : null}
+        </tbody>
+      </table>
+      {access.permissions.update ? <div style={{ marginBottom: 24 }}><ContractForm departmentId={departmentId} employeeId={employeeId} /></div> : null}
+
+      <h2 style={{ fontSize: 15, marginBottom: 8 }}>Belgeler / Diploma / Sertifika / Eğitim</h2>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 8 }}>
+        <thead>
+          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+            <th style={{ padding: '6px 8px' }}>Tür</th>
+            <th style={{ padding: '6px 8px' }}>Ad</th>
+            <th style={{ padding: '6px 8px' }}>Veren Kurum</th>
+            <th style={{ padding: '6px 8px' }}>Geçerlilik</th>
+            <th style={{ padding: '6px 8px' }}>Durum</th>
+            <th style={{ padding: '6px 8px' }}>Belge</th>
+            <th style={{ padding: '6px 8px' }}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {qualifications.map((q, i) => (
+            <tr key={q.id} style={{ borderBottom: '1px solid #eee' }}>
+              <td style={{ padding: '6px 8px' }}>{QUALIFICATION_TYPE_LABELS[q.qualificationType] ?? q.qualificationType}</td>
+              <td style={{ padding: '6px 8px' }}>{q.name}</td>
+              <td style={{ padding: '6px 8px', color: '#666' }}>{q.institution || '—'}</td>
+              <td style={{ padding: '6px 8px', color: '#666' }}>{q.expiryDate ?? '—'}</td>
+              <td style={{ padding: '6px 8px', fontWeight: 600 }}>{QUALIFICATION_STATUS_LABELS[q.status] ?? q.status}</td>
+              <td style={{ padding: '6px 8px', color: '#666' }}>{qualificationAttachments[i].map((a) => a.fileName).join(', ') || '—'}</td>
+              <td style={{ padding: '6px 8px' }}>{access.permissions.update && q.status === 'ACTIVE' ? <RevokeQualificationButton departmentId={departmentId} employeeId={employeeId} qualificationId={q.id} /> : null}</td>
+            </tr>
+          ))}
+          {qualifications.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: '#999' }}>Henüz belge/eğitim kaydı yok.</td></tr> : null}
+        </tbody>
+      </table>
+      {access.permissions.update ? <div style={{ marginBottom: 24 }}><QualificationForm departmentId={departmentId} employeeId={employeeId} /></div> : null}
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>İletişim</h2>
       <ul style={{ fontSize: 13, marginBottom: 8, paddingLeft: 18 }}>

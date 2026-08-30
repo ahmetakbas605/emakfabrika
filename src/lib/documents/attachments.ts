@@ -16,11 +16,27 @@ export interface UploadAttachmentInput {
   mimeType: string;
   buffer: Buffer;
   uploadedByUserId: string;
+  // İK Faz 1 (İK Mimarisi raporu §05) — hepsi opsiyonel, mevcut hiçbir
+  // çağıran (IT, Satınalma) bunları set etmiyor, davranışları değişmez.
+  documentCategory?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  // Verilirse, önceki versiyonun yerine geçen YENİ bir satır oluşturulur
+  // (version = önceki.version + 1) — proc_quotations'ın "eski silinmez,
+  // yeni satır + artan versiyon" ilkesiyle aynı (madde 14).
+  supersedesId?: string;
 }
 
 export async function uploadAttachment(companyId: string, input: UploadAttachmentInput): Promise<string> {
   const check = validateFile(input.mimeType, input.buffer.length);
   if (!check.ok) throw new CoreError(check.reason);
+
+  let version = 1;
+  if (input.supersedesId) {
+    const [prev] = await db.select({ version: documentAttachments.version }).from(documentAttachments).where(and(eq(documentAttachments.id, input.supersedesId), eq(documentAttachments.companyId, companyId))).limit(1);
+    if (!prev) throw new CoreError('Önceki belge versiyonu bulunamadı.');
+    version = prev.version + 1;
+  }
 
   const storageKey = await saveFile(companyId, input.entityType, input.entityId, input.fileName, input.buffer);
   const id = newId();
@@ -32,7 +48,12 @@ export async function uploadAttachment(companyId: string, input: UploadAttachmen
     mimeType: input.mimeType,
     sizeBytes: input.buffer.length,
     storageKey,
-    uploadedByUserId: input.uploadedByUserId
+    uploadedByUserId: input.uploadedByUserId,
+    documentCategory: input.documentCategory,
+    issueDate: input.issueDate,
+    expiryDate: input.expiryDate,
+    version,
+    supersedesId: input.supersedesId
   });
   return id;
 }
