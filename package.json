@@ -10,7 +10,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "test:accounting": "tsx tests/accounting.test.ts",
-    "test:holding": "tsx tests/holding.test.ts"
+    "test:holding": "tsx tests/holding.test.ts",
+    "test:sales": "tsx tests/sales.test.ts"
   },
   "dependencies": {
     "@xyflow/react": "^12.11.5",

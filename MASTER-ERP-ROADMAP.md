@@ -28,7 +28,7 @@ faz başında yazılır — 20 belgeyi baştan, boş şablon olarak üretmek yer
 | IT/ITSM (CMDB/Ticket/Network/Monitoring/Backup) | ✅ | `IT-ARCHITECTURE.md` ve alt belgeleri |
 | Core Security (Audit/MFA/Maskeleme/SoD/KVKK DSR) | ✅ | bu oturum |
 
-## FAZ 0 — Tenant/Holding Sertleştirme (ŞİMDİ BAŞLIYOR)
+## FAZ 0 — Tenant/Holding Sertleştirme ✅ (commit `b876855`)
 
 **Bağımlılık:** yok — her şeyin altında. **Kapsam:**
 - `holdings` tablosu (additive) + `companies.holdingId` FK; mevcut 4 test
@@ -51,12 +51,33 @@ faz başında yazılır — 20 belgeyi baştan, boş şablon olarak üretmek yer
   TÜM şirketlerine, `isFactoryAdmin`'in tek-şirket sınırını aşan tam erişim.
 - CEO/Holding Dashboard'un veri iskeleti (widget'ların kendisi Faz 13/BI'da).
 
-## FAZ 1 — Satış & CRM
+## FAZ 1 — Satış & CRM ✅
 
 **Bağımlılık:** Master Data (✅), Muhasebe (✅). **Neden şimdi:** MRP'nin talep
 girdisi (§19: "Satış siparişleri + Tahmin") olmadan MRP anlamsız — master
 prompt §145'in kendi bağımlılık zincirinin ilk halkası.
-Müşteri/aday/fırsat/teklif/sipariş/sevkiyat/fatura/tahsilat/servis/şikayet.
+
+Teslim edilenler: `leads`→`opportunities`→`sales_quotes`(+lines)→
+`sales_orders`(+lines, documentType='SALES_ORDER' jenerik onay motoruna
+bağlı)→`sales_shipments`(+lines, onay sonrası opsiyonel stok rezervasyonu +
+sevkiyatta gerçek stok çıkışı)→`sales_invoices`(+lines, opsiyonel muhasebe
+entegrasyonu — Satınalma'nın vendor-invoice deseniyle AYNI)→
+`sales_collections`→`customer_complaints`. **Müşteri kavramı** mevcut
+`parties`+`CUSTOMER` rolünü YENİDEN KULLANDI (ayrı bir customers tablosu
+AÇILMADI — §150 Single Source of Truth). **"Servis" bilinçli olarak dışarıda
+bırakıldı** — mevcut IT Field Service altyapısıyla (work_orders) çakışmaması
+için, gerçek entegrasyonu ayrı bir faz.
+
+UI: `/dashboard/sales` (+leads/opportunities/quotes/orders/orders/[id]/
+invoices/complaints), onay kutusuna (mevcut `/dashboard/approvals`) SALES_ORDER
+onayı için opsiyonel depo seçici eklendi (yalnızca APPROVE'da tüketilir).
+
+Test: `tests/sales.test.ts` (kalıcı) — tam Lead→Fırsat→Teklif→Sipariş→
+Onay(+stok rezervasyonu)→Sevkiyat(+gerçek stok çıkışı)→Fatura(+gerçek muhasebe
+fişi, KDV dahil)→Tahsilat(+gerçek Kasa/Banka fişi)→Şikayet zinciri, 17/17
+gerçek DB üzerinde geçti (ondalık muhasebe matematiği dahil doğrulandı). Canlı
+Playwright ile tüm yeni sayfalar + mevcut Onay Kutusu regresyonu doğrulandı.
+`tsc --noEmit` + `npm run build` temiz.
 
 ## FAZ 2 — Üretim Çekirdeği (BOM + Routing + Production Order)
 

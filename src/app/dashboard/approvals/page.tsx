@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { requireSession, listCompanyUsers } from '@/lib/dal';
 import { listPendingApprovalsForUser } from '@/lib/workflow/engine';
+import { listWarehouses } from '@/lib/warehouse';
 import { ApprovalActionForm } from '@/components/workflow/approval-action-form';
 
 export default async function ApprovalsInboxPage() {
   const session = await requireSession();
-  const [pending, users] = await Promise.all([listPendingApprovalsForUser(session.companyId, session.id), listCompanyUsers(session.companyId)]);
+  const [pending, users, warehouses] = await Promise.all([listPendingApprovalsForUser(session.companyId, session.id), listCompanyUsers(session.companyId), listWarehouses(session.companyId)]);
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -33,7 +34,7 @@ export default async function ApprovalsInboxPage() {
               <td style={{ padding: '6px 8px', color: '#666' }}>{new Date(p.createdAt).toLocaleString('tr-TR')}</td>
               <td style={{ padding: '6px 8px', color: '#666' }}>{p.stepOrder + 1}. adım</td>
               <td style={{ padding: '6px 8px' }}>
-                <ApprovalActionForm stepId={p.stepId} users={users.map((u) => ({ id: u.id, fullName: u.fullName }))} />
+                <ApprovalActionForm stepId={p.stepId} users={users.map((u) => ({ id: u.id, fullName: u.fullName }))} documentType={p.documentType} warehouses={warehouses.map((w) => ({ id: w.id, name: w.name }))} />
               </td>
             </tr>
           ))}

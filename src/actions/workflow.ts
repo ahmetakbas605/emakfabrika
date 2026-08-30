@@ -11,10 +11,12 @@ import { actOnLeaveStep } from '@/lib/hr/leave';
 import { actOnOvertimeStep } from '@/lib/hr/overtime';
 import { actOnBonusStep } from '@/lib/hr/bonus';
 import { actOnDsrStep } from '@/lib/security/dsr';
+import { actOnOrderStep } from '@/lib/sales/orders';
 import { CoreError } from '@/lib/core/errors';
 import { ProcurementError } from '@/lib/procurement/errors';
 import { HrError } from '@/lib/hr/errors';
 import { SecurityError } from '@/lib/security/errors';
+import { SalesError } from '@/lib/sales/errors';
 import { optionalField } from '@/lib/form';
 
 export type FormState = { error?: string; success?: string } | undefined;
@@ -84,7 +86,11 @@ const ActOnStepSchema = z.object({
   stepId: z.string().trim().min(1),
   decision: z.enum(['APPROVE', 'REJECT', 'REQUEST_CHANGES', 'DELEGATE']),
   comment: z.string().trim().optional(),
-  delegateToUserId: z.string().trim().optional()
+  delegateToUserId: z.string().trim().optional(),
+  // Holding ERP Faz 1 — yalnızca documentType='SALES_ORDER' + decision=APPROVE
+  // tüketir (lib/sales/orders.ts:actOnOrderStep'in opsiyonel stok
+  // rezervasyonu). Diğer tüm belge türleri bu alanı YOK SAYAR.
+  warehouseId: z.string().trim().optional()
 });
 
 export async function actOnStepAction(_prevState: FormState, formData: FormData): Promise<FormState> {
@@ -93,7 +99,8 @@ export async function actOnStepAction(_prevState: FormState, formData: FormData)
     stepId: formData.get('stepId'),
     decision: formData.get('decision'),
     comment: optionalField(formData, 'comment'),
-    delegateToUserId: optionalField(formData, 'delegateToUserId')
+    delegateToUserId: optionalField(formData, 'delegateToUserId'),
+    warehouseId: optionalField(formData, 'warehouseId')
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
 
@@ -119,11 +126,13 @@ export async function actOnStepAction(_prevState: FormState, formData: FormData)
       await actOnBonusStep(session.companyId, actionInput);
     } else if (documentType === 'DATA_SUBJECT_REQUEST') {
       await actOnDsrStep(session.companyId, actionInput);
+    } else if (documentType === 'SALES_ORDER') {
+      await actOnOrderStep(session.companyId, { ...actionInput, warehouseId: parsed.data.warehouseId });
     } else {
       await actOnStep(session.companyId, actionInput);
     }
   } catch (err) {
-    return { error: err instanceof CoreError || err instanceof ProcurementError || err instanceof HrError || err instanceof SecurityError ? err.message : 'İşlem gerçekleştirilemedi.' };
+    return { error: err instanceof CoreError || err instanceof ProcurementError || err instanceof HrError || err instanceof SecurityError || err instanceof SalesError ? err.message : 'İşlem gerçekleştirilemedi.' };
   }
   revalidatePath('/dashboard/approvals');
   revalidatePath('/dashboard/procurement');
@@ -131,5 +140,6 @@ export async function actOnStepAction(_prevState: FormState, formData: FormData)
   revalidatePath('/dashboard/hr/overtime');
   revalidatePath('/dashboard/hr/bonus');
   revalidatePath('/dashboard/security/requests');
+  revalidatePath('/dashboard/sales/orders');
   return { success: 'Karar kaydedildi.' };
 }

@@ -3127,3 +3127,226 @@ export const breakGlassAccess = mysqlTable('break_glass_access', {
   endAt: timestamp('end_at'),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
+
+// --- Holding ERP Faz 1 — Satış & CRM (MASTER-ERP-ROADMAP.md). §150 Single
+// Source of Truth: "Customer → Master Data" — parties tablosu (CUSTOMER rolü
+// zaten şemada VARDI, master-data/parties.ts + price-lists sayfası zaten
+// kullanıyordu, yalnızca gerçek bir SATIŞ modülü onu tüketmiyordu) YENİDEN
+// KULLANILIYOR, ayrı bir customers tablosu AÇILMADI. Sevkiyat, mevcut
+// inv_reservations/stock_movements'a (Depo Faz 2A) bağlanır — Satınalma'nın
+// zaten kullandığı sourceType/sourceId polimorfik desenle (bu kez
+// sourceType='SALES_ORDER'). Fatura onayı, Satınalma'nın vendor-invoice
+// akışıyla BİREBİR aynı "opsiyonel muhasebe entegrasyonu" deseniyle
+// (yalnızca hesap kodları verilirse fiş üretir) çalışır.
+//
+// "Servis" (satış-sonrası) BİLİNÇLİ OLARAK bu faza DAHİL EDİLMEDİ — IT
+// domain'i zaten tam bir saha-servis/iş emri altyapısına sahip
+// (work_orders/wo_checklists, FIELD-SERVICE.md); paralel bir servis tablosu
+// açmak §149 "No Duplication" ilkesini ihlal ederdi. Gerçek entegrasyon
+// (satış siparişi → saha servis iş emri) iki tarafı da analiz eden AYRI bir
+// faz olarak MASTER-ERP-ROADMAP.md'ye eklenecek.
+
+// --- Aday Müşteri (Lead) — henüz bir Party DEĞİL, kalifiye olunca
+// convertLeadToOpportunity ile bir parties satırına (CUSTOMER rolüyle) ve
+// bir opportunities satırına dönüşür. ---
+
+export const LEAD_STATUSES = ['NEW', 'CONTACTED', 'QUALIFIED', 'DISQUALIFIED', 'CONVERTED'] as const;
+
+export const leads = mysqlTable('leads', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  contactName: varchar('contact_name', { length: 255 }).notNull(),
+  companyName: varchar('company_name', { length: 255 }).notNull().default(''),
+  email: varchar('email', { length: 255 }).notNull().default(''),
+  phone: varchar('phone', { length: 32 }).notNull().default(''),
+  source: varchar('source', { length: 100 }).notNull().default(''),
+  status: mysqlEnum('status', LEAD_STATUSES).notNull().default('NEW'),
+  assignedToUserId: char('assigned_to_user_id', { length: 36 }).references(() => users.id),
+  notes: text('notes'),
+  convertedPartyId: char('converted_party_id', { length: 36 }).references(() => parties.id),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+});
+
+export const OPPORTUNITY_STAGES = ['NEW', 'QUALIFICATION', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST'] as const;
+
+export const opportunities = mysqlTable('opportunities', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  partyId: char('party_id', { length: 36 }).notNull().references(() => parties.id),
+  leadId: char('lead_id', { length: 36 }).references(() => leads.id),
+  name: varchar('name', { length: 255 }).notNull(),
+  stage: mysqlEnum('stage', OPPORTUNITY_STAGES).notNull().default('NEW'),
+  estimatedValue: decimal('estimated_value', { precision: 20, scale: 6 }),
+  currencyCode: char('currency_code', { length: 3 }).references(() => currencies.code),
+  expectedCloseDate: date('expected_close_date', { mode: 'string' }),
+  assignedToUserId: char('assigned_to_user_id', { length: 36 }).references(() => users.id),
+  lostReason: text('lost_reason'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  closedAt: timestamp('closed_at')
+});
+
+// --- Teklif (Quote) ---
+
+export const SALES_QUOTE_STATUSES = ['DRAFT', 'SENT', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'CONVERTED'] as const;
+
+export const salesQuotes = mysqlTable('sales_quotes', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  quoteNo: varchar('quote_no', { length: 32 }).notNull(),
+  partyId: char('party_id', { length: 36 }).notNull().references(() => parties.id),
+  opportunityId: char('opportunity_id', { length: 36 }).references(() => opportunities.id),
+  quoteDate: date('quote_date', { mode: 'string' }).notNull(),
+  validUntil: date('valid_until', { mode: 'string' }),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  status: mysqlEnum('status', SALES_QUOTE_STATUSES).notNull().default('DRAFT'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_sales_quotes_company_no').on(table.companyId, table.quoteNo)]);
+
+export const salesQuoteLines = mysqlTable('sales_quote_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  quoteId: char('quote_id', { length: 36 }).notNull().references(() => salesQuotes.id, { onDelete: 'cascade' }),
+  productId: char('product_id', { length: 36 }).notNull().references(() => products.id),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitPrice: decimal('unit_price', { precision: 20, scale: 6 }).notNull(),
+  discountPercent: decimal('discount_percent', { precision: 5, scale: 2 }),
+  taxRatePercent: decimal('tax_rate_percent', { precision: 5, scale: 2 }).notNull().default('0'),
+  lineTotal: decimal('line_total', { precision: 20, scale: 6 }).notNull()
+});
+
+// --- Sipariş (Sales Order) — jenerik workflow motoruna documentType='SALES_ORDER'
+// olarak bağlanır (leave/bonus/DSR İLE AYNI create-draft→submit→onay deseni).
+
+export const SALES_ORDER_STATUSES = ['DRAFT', 'SUBMITTED', 'CONFIRMED', 'REJECTED', 'REVISION_REQUIRED', 'IN_FULFILLMENT', 'SHIPPED', 'INVOICED', 'COMPLETED', 'CANCELLED'] as const;
+
+export const salesOrders = mysqlTable('sales_orders', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  orderNo: varchar('order_no', { length: 32 }).notNull(),
+  partyId: char('party_id', { length: 36 }).notNull().references(() => parties.id),
+  quoteId: char('quote_id', { length: 36 }).references(() => salesQuotes.id),
+  orderDate: date('order_date', { mode: 'string' }).notNull(),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  status: mysqlEnum('status', SALES_ORDER_STATUSES).notNull().default('DRAFT'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  submittedAt: timestamp('submitted_at'),
+  confirmedAt: timestamp('confirmed_at'),
+  completedAt: timestamp('completed_at')
+}, (table) => [uniqueIndex('udx_sales_orders_company_no').on(table.companyId, table.orderNo)]);
+
+export const salesOrderLines = mysqlTable('sales_order_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  orderId: char('order_id', { length: 36 }).notNull().references(() => salesOrders.id, { onDelete: 'cascade' }),
+  productId: char('product_id', { length: 36 }).notNull().references(() => products.id),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitPrice: decimal('unit_price', { precision: 20, scale: 6 }).notNull(),
+  discountPercent: decimal('discount_percent', { precision: 5, scale: 2 }),
+  taxRatePercent: decimal('tax_rate_percent', { precision: 5, scale: 2 }).notNull().default('0'),
+  lineTotal: decimal('line_total', { precision: 20, scale: 6 }).notNull(),
+  // Kısmi sevkiyat/faturalama takibi — Satınalma'nın procPoLines'ında
+  // AYRI bir "received" alanı olmaması (orada satır-bazlı mal kabul kaydı
+  // proc_receipt_lines'ta tutuluyor) İLE FARKLI bir tercih: burada satır
+  // üzerinde doğrudan kümülatif alan tutmak, "ne kadarı sevk edildi" sorgusunu
+  // her seferinde receipt/shipment satırlarını toplamaktan daha basit kılıyor
+  // — küçük bir tutarlılık riski (iki yerde sayı) kabul edildi, KISITLI
+  // OLARAK yalnızca bu iki alan için (shipShipmentLine/invoiceLine INSERT'i
+  // İLE AYNI transaction'da güncellenir, asla bağımsız).
+  shippedQuantity: decimal('shipped_quantity', { precision: 20, scale: 6 }).notNull().default('0'),
+  invoicedQuantity: decimal('invoiced_quantity', { precision: 20, scale: 6 }).notNull().default('0')
+});
+
+// --- Sevkiyat (Shipment) ---
+
+export const SALES_SHIPMENT_STATUSES = ['DRAFT', 'SHIPPED', 'DELIVERED', 'CANCELLED'] as const;
+
+export const salesShipments = mysqlTable('sales_shipments', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  shipmentNo: varchar('shipment_no', { length: 32 }).notNull(),
+  orderId: char('order_id', { length: 36 }).notNull().references(() => salesOrders.id),
+  warehouseId: char('warehouse_id', { length: 36 }).notNull().references(() => warehouses.id),
+  shipmentDate: date('shipment_date', { mode: 'string' }).notNull(),
+  status: mysqlEnum('status', SALES_SHIPMENT_STATUSES).notNull().default('DRAFT'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_sales_shipments_company_no').on(table.companyId, table.shipmentNo)]);
+
+export const salesShipmentLines = mysqlTable('sales_shipment_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  shipmentId: char('shipment_id', { length: 36 }).notNull().references(() => salesShipments.id, { onDelete: 'cascade' }),
+  orderLineId: char('order_line_id', { length: 36 }).notNull().references(() => salesOrderLines.id),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull()
+});
+
+// --- Fatura (Sales Invoice) — Satınalma'nın vendor-invoice'uyla AYNI
+// "opsiyonel muhasebe entegrasyonu" deseni (approveSalesInvoice, hesap
+// kodları verilirse fiş üretir).
+
+export const SALES_INVOICE_STATUSES = ['DRAFT', 'APPROVED', 'CANCELLED'] as const;
+
+export const salesInvoices = mysqlTable('sales_invoices', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  invoiceNo: varchar('invoice_no', { length: 32 }).notNull(),
+  orderId: char('order_id', { length: 36 }).references(() => salesOrders.id),
+  partyId: char('party_id', { length: 36 }).notNull().references(() => parties.id),
+  invoiceDate: date('invoice_date', { mode: 'string' }).notNull(),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  status: mysqlEnum('status', SALES_INVOICE_STATUSES).notNull().default('DRAFT'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  approvedAt: timestamp('approved_at')
+}, (table) => [uniqueIndex('udx_sales_invoices_company_no').on(table.companyId, table.invoiceNo)]);
+
+export const salesInvoiceLines = mysqlTable('sales_invoice_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  invoiceId: char('invoice_id', { length: 36 }).notNull().references(() => salesInvoices.id, { onDelete: 'cascade' }),
+  orderLineId: char('order_line_id', { length: 36 }).references(() => salesOrderLines.id),
+  productId: char('product_id', { length: 36 }).notNull().references(() => products.id),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitPrice: decimal('unit_price', { precision: 20, scale: 6 }).notNull(),
+  taxRatePercent: decimal('tax_rate_percent', { precision: 5, scale: 2 }).notNull().default('0'),
+  lineTotal: decimal('line_total', { precision: 20, scale: 6 }).notNull()
+});
+
+// --- Tahsilat (Collection) ---
+
+export const SALES_COLLECTION_METHODS = ['CASH', 'BANK', 'CHECK', 'OTHER'] as const;
+
+export const salesCollections = mysqlTable('sales_collections', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  invoiceId: char('invoice_id', { length: 36 }).notNull().references(() => salesInvoices.id),
+  collectionDate: date('collection_date', { mode: 'string' }).notNull(),
+  amount: decimal('amount', { precision: 20, scale: 6 }).notNull(),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  method: mysqlEnum('method', SALES_COLLECTION_METHODS).notNull().default('BANK'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// --- Müşteri Şikayeti (Complaint) ---
+
+export const COMPLAINT_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const;
+export const COMPLAINT_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
+
+export const customerComplaints = mysqlTable('customer_complaints', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  complaintNo: varchar('complaint_no', { length: 32 }).notNull(),
+  partyId: char('party_id', { length: 36 }).notNull().references(() => parties.id),
+  orderId: char('order_id', { length: 36 }).references(() => salesOrders.id),
+  subject: varchar('subject', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  status: mysqlEnum('status', COMPLAINT_STATUSES).notNull().default('OPEN'),
+  priority: mysqlEnum('priority', COMPLAINT_PRIORITIES).notNull().default('MEDIUM'),
+  assignedToUserId: char('assigned_to_user_id', { length: 36 }).references(() => users.id),
+  resolutionNote: text('resolution_note'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  resolvedAt: timestamp('resolved_at')
+}, (table) => [uniqueIndex('udx_customer_complaints_company_no').on(table.companyId, table.complaintNo)]);

@@ -1,6 +1,6 @@
 import 'server-only';
 import { eq, and } from 'drizzle-orm';
-import { db } from '@/db/client';
+import { db, type Tx } from '@/db/client';
 import { parties, partyRoles, partyAddresses, partyContacts, paymentTerms } from '@/db/schema';
 import { newId } from '@/lib/id';
 import { nextDocumentNo } from '@/lib/numbering';
@@ -26,36 +26,42 @@ export interface CreatePartyInput {
 // hiçbir rolü olmaması (ne müşteri ne tedarikçi) anlamsız bir durum, erken
 // reddedilir.
 export async function createParty(companyId: string, createdByUserId: string, input: CreatePartyInput): Promise<string> {
+  return db.transaction((tx) => createPartyInTx(tx, companyId, createdByUserId, input));
+}
+
+// Holding ERP Faz 1 — lib/sales/leads.ts:convertLeadToOpportunity'nin TEK
+// transaction'da (lead dönüşümü + yeni Party + yeni Opportunity, hepsi
+// birlikte ya da hiçbiri) yeni bir Party doğurabilmesi için dışa aktarıldı
+// — recordStockMovementInTx/reserveStockInTx İLE AYNI ...InTx deseni.
+export async function createPartyInTx(tx: Tx, companyId: string, createdByUserId: string, input: CreatePartyInput): Promise<string> {
   if (input.roles.length === 0) throw new CoreError('En az bir rol (Müşteri/Tedarikçi) seçilmeli.');
 
-  return db.transaction(async (tx) => {
-    const id = newId();
-    const code = input.code?.trim() || (await nextDocumentNo(tx, companyId, 'PARTY', 'CARI', new Date().getFullYear(), 6));
+  const id = newId();
+  const code = input.code?.trim() || (await nextDocumentNo(tx, companyId, 'PARTY', 'CARI', new Date().getFullYear(), 6));
 
-    await tx.insert(parties).values({
-      id,
-      companyId,
-      partyType: input.partyType ?? 'COMPANY',
-      code,
-      legalName: input.legalName,
-      tradeName: input.tradeName ?? '',
-      taxNumber: input.taxNumber ?? '',
-      taxOffice: input.taxOffice ?? '',
-      email: input.email ?? '',
-      phone: input.phone ?? '',
-      website: input.website ?? '',
-      currencyCode: input.currencyCode,
-      paymentTermId: input.paymentTermId,
-      creditLimit: input.creditLimit === undefined ? undefined : String(input.creditLimit),
-      createdByUserId
-    });
-
-    for (const role of input.roles) {
-      await tx.insert(partyRoles).values({ id: newId(), partyId: id, role });
-    }
-
-    return id;
+  await tx.insert(parties).values({
+    id,
+    companyId,
+    partyType: input.partyType ?? 'COMPANY',
+    code,
+    legalName: input.legalName,
+    tradeName: input.tradeName ?? '',
+    taxNumber: input.taxNumber ?? '',
+    taxOffice: input.taxOffice ?? '',
+    email: input.email ?? '',
+    phone: input.phone ?? '',
+    website: input.website ?? '',
+    currencyCode: input.currencyCode,
+    paymentTermId: input.paymentTermId,
+    creditLimit: input.creditLimit === undefined ? undefined : String(input.creditLimit),
+    createdByUserId
   });
+
+  for (const role of input.roles) {
+    await tx.insert(partyRoles).values({ id: newId(), partyId: id, role });
+  }
+
+  return id;
 }
 
 export interface ListPartiesFilter {
