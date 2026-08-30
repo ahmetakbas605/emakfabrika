@@ -2,14 +2,19 @@ import { requireDepartmentAccess, listCompanyUsers } from '@/lib/dal';
 import { getEmployee, listEmployees } from '@/lib/hr/employees';
 import { listEmployeeContracts } from '@/lib/hr/contracts';
 import { listEmployeeQualifications } from '@/lib/hr/qualifications';
+import { listCompensationHistory } from '@/lib/hr/compensation';
+import { listBonusRequests } from '@/lib/hr/bonus';
 import { listAttachments } from '@/lib/documents/attachments';
 import { listCompanyDepartments } from '@/lib/departments';
 import { listPositions } from '@/lib/org';
 import { listCostCenters } from '@/lib/cost-centers';
+import { listCurrencies } from '@/lib/master-data/currency';
 import { OrganizationForm } from '@/components/hr/organization-form';
 import { ContactForm, AddressForm, EmergencyContactForm, TerminateForm, LinkUserForm } from '@/components/hr/personnel-forms';
 import { ContractForm } from '@/components/hr/contract-form';
 import { QualificationForm, RevokeQualificationButton } from '@/components/hr/qualification-form';
+import { CompensationForm } from '@/components/hr/compensation-forms';
+import { BonusForm, SubmitBonusButton, CancelBonusButton, BONUS_TYPE_LABELS } from '@/components/hr/bonus-forms';
 
 const STATUS_LABELS: Record<string, string> = { ACTIVE: 'Aktif', ON_LEAVE: 'İzinde', SUSPENDED: 'Askıda', TERMINATED: 'İşten Ayrıldı' };
 const CONTACT_TYPE_LABELS: Record<string, string> = { PHONE_MOBILE: 'Cep Telefonu', PHONE_HOME: 'Ev Telefonu', PHONE_WORK: 'İş Telefonu', EMAIL_PERSONAL: 'Kişisel E-posta', EMAIL_WORK: 'İş E-postası', OTHER: 'Diğer' };
@@ -18,11 +23,13 @@ const CONTRACT_TYPE_LABELS: Record<string, string> = { INDEFINITE: 'Belirsiz Sü
 const CONTRACT_STATUS_LABELS: Record<string, string> = { ACTIVE: 'Yürürlükte', SUPERSEDED: 'Yenilendi', EXPIRED: 'Süresi Doldu', TERMINATED: 'Feshedildi' };
 const QUALIFICATION_TYPE_LABELS: Record<string, string> = { DIPLOMA: 'Diploma', CERTIFICATE: 'Sertifika', TRAINING: 'Eğitim', LICENSE: 'Lisans', OTHER: 'Diğer' };
 const QUALIFICATION_STATUS_LABELS: Record<string, string> = { ACTIVE: 'Geçerli', EXPIRED: 'Süresi Doldu', REVOKED: 'İptal Edildi' };
+const COMPENSATION_STATUS_LABELS: Record<string, string> = { ACTIVE: 'Yürürlükte', SUPERSEDED: 'Değişti' };
+const BONUS_STATUS_LABELS: Record<string, string> = { DRAFT: 'Taslak', SUBMITTED: 'Onayda', APPROVED: 'Onaylandı', REJECTED: 'Reddedildi', REVISION_REQUIRED: 'Revizyon Gerekli', CANCELLED: 'İptal' };
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ departmentId: string; employeeId: string }> }) {
   const { departmentId, employeeId } = await params;
   const { session, access } = await requireDepartmentAccess(departmentId);
-  const [detail, employees, departments, positions, costCenters, companyUsers, contracts, qualifications] = await Promise.all([
+  const [detail, employees, departments, positions, costCenters, companyUsers, contracts, qualifications, compensationHistory, bonusRequests, currencies] = await Promise.all([
     getEmployee(session.companyId, employeeId),
     listEmployees(session.companyId),
     listCompanyDepartments(session.companyId),
@@ -30,7 +37,10 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     listCostCenters(session.companyId),
     listCompanyUsers(session.companyId),
     listEmployeeContracts(session.companyId, employeeId),
-    listEmployeeQualifications(session.companyId, employeeId)
+    listEmployeeQualifications(session.companyId, employeeId),
+    listCompensationHistory(session.companyId, employeeId),
+    listBonusRequests(session.companyId, employeeId),
+    listCurrencies()
   ]);
   const { employee, departmentName, positionTitle, managerName, costCenterName, shiftName, linkedUser, contacts, addresses, emergencyContacts } = detail;
   const [contractAttachments, qualificationAttachments] = await Promise.all([
@@ -85,6 +95,57 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           />
         </div>
       ) : null}
+
+      <h2 style={{ fontSize: 15, marginBottom: 8 }}>Ücret Geçmişi</h2>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 8 }}>
+        <thead>
+          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+            <th style={{ padding: '6px 8px' }}>Versiyon</th><th style={{ padding: '6px 8px' }}>Yürürlük</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Maaş</th><th style={{ padding: '6px 8px' }}>Neden</th><th style={{ padding: '6px 8px' }}>Durum</th>
+          </tr>
+        </thead>
+        <tbody>
+          {compensationHistory.map((c) => (
+            <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+              <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>v{c.version}</td>
+              <td style={{ padding: '6px 8px', color: '#666' }}>{c.effectiveDate}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right' }}>{c.baseSalary} {c.currencyCode}</td>
+              <td style={{ padding: '6px 8px', color: '#666' }}>{c.changeReason || '—'}</td>
+              <td style={{ padding: '6px 8px', fontWeight: 600 }}>{COMPENSATION_STATUS_LABELS[c.status] ?? c.status}</td>
+            </tr>
+          ))}
+          {compensationHistory.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: '#999' }}>Henüz maaş kaydı yok.</td></tr> : null}
+        </tbody>
+      </table>
+      {access.permissions.update ? <div style={{ marginBottom: 24 }}><CompensationForm departmentId={departmentId} employeeId={employeeId} currencies={currencies.map((c) => ({ code: c.code, name: c.name }))} /></div> : null}
+
+      <h2 style={{ fontSize: 15, marginBottom: 8 }}>Ödüller / Bonuslar</h2>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 8 }}>
+        <thead>
+          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+            <th style={{ padding: '6px 8px' }}>No</th><th style={{ padding: '6px 8px' }}>Tür</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Tutar</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}>İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          {bonusRequests.map((b) => (
+            <tr key={b.id} style={{ borderBottom: '1px solid #eee' }}>
+              <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{b.bonusNo}</td>
+              <td style={{ padding: '6px 8px' }}>{BONUS_TYPE_LABELS[b.bonusType] ?? b.bonusType}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right' }}>{b.amount} {b.currencyCode}</td>
+              <td style={{ padding: '6px 8px', fontWeight: 600 }}>{BONUS_STATUS_LABELS[b.status] ?? b.status}</td>
+              <td style={{ padding: '6px 8px' }}>
+                {b.status === 'DRAFT' || b.status === 'REVISION_REQUIRED' ? (
+                  <>
+                    <SubmitBonusButton departmentId={departmentId} employeeId={employeeId} bonusRequestId={b.id} />
+                    <CancelBonusButton departmentId={departmentId} employeeId={employeeId} bonusRequestId={b.id} />
+                  </>
+                ) : null}
+              </td>
+            </tr>
+          ))}
+          {bonusRequests.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: '#999' }}>Henüz ödül talebi yok.</td></tr> : null}
+        </tbody>
+      </table>
+      {access.permissions.update ? <div style={{ marginBottom: 24 }}><BonusForm departmentId={departmentId} employeeId={employeeId} currencies={currencies.map((c) => ({ code: c.code, name: c.name }))} /></div> : null}
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Sözleşmeler</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 8 }}>

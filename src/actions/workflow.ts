@@ -9,6 +9,7 @@ import { actOnRequisitionStep } from '@/lib/procurement/requisition';
 import { actOnAwardStep } from '@/lib/procurement/award';
 import { actOnLeaveStep } from '@/lib/hr/leave';
 import { actOnOvertimeStep } from '@/lib/hr/overtime';
+import { actOnBonusStep } from '@/lib/hr/bonus';
 import { CoreError } from '@/lib/core/errors';
 import { ProcurementError } from '@/lib/procurement/errors';
 import { HrError } from '@/lib/hr/errors';
@@ -112,6 +113,8 @@ export async function actOnStepAction(_prevState: FormState, formData: FormData)
       await actOnLeaveStep(session.companyId, actionInput);
     } else if (documentType === 'OVERTIME') {
       await actOnOvertimeStep(session.companyId, actionInput);
+    } else if (documentType === 'BONUS') {
+      await actOnBonusStep(session.companyId, actionInput);
     } else {
       await actOnStep(session.companyId, actionInput);
     }
@@ -122,5 +125,6 @@ export async function actOnStepAction(_prevState: FormState, formData: FormData)
   revalidatePath('/dashboard/procurement');
   revalidatePath('/dashboard/hr/leave');
   revalidatePath('/dashboard/hr/overtime');
+  revalidatePath('/dashboard/hr/bonus');
   return { success: 'Karar kaydedildi.' };
 }

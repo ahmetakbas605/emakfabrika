@@ -2828,3 +2828,51 @@ export const accessLogs = mysqlTable('access_logs', {
   recordedByUserId: char('recorded_by_user_id', { length: 36 }).references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow()
 }, (table) => [index('idx_access_logs_employee_date').on(table.employeeId, table.accessAt)]);
+
+// --- İK Faz 5 — Compensation + Bonus/Ödül (İK Mimarisi raporu §09 Faz 5) ---
+
+// employee_contracts'ın (Faz 1) AYNI versiyon zinciri ilkesi: yeni bir
+// maaş kaydı oluşturulduğunda önceki ACTIVE kayıt SUPERSEDED'e çevrilir,
+// SİLİNMEZ (madde 39-41'in "geçmiş bordro/maaş kaydı değişmez" ilkesiyle
+// tutarlı). Terfi/Transfer/Maaş Değişikliği'nin KENDİ onay akışı (madde
+// 100-103) BİLİNÇLİ OLARAK yok — Faz 0'da employees.managerEmployeeId
+// için verilen AYNI karar: bu, İK'nın doğrudan düzenleyebildiği bir CRUD,
+// onay zinciri ileri bir faz. Alan-seviyesi izin (§142, "Müdür maaş
+// göremesin") de raporun kendi notuyla (§02 satır 5) HENÜZ yok — bu bir
+// eksiklik DEĞİL, raporun kendi ilan ettiği, Faz 11 KVKK sertleştirmesine
+// bırakılan bir sınır.
+export const employeeCompensations = mysqlTable('emp_compensations', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  effectiveDate: date('effective_date', { mode: 'string' }).notNull(),
+  baseSalary: decimal('base_salary', { precision: 14, scale: 2 }).notNull(),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  changeReason: varchar('change_reason', { length: 100 }).notNull().default(''),
+  status: mysqlEnum('status', ['ACTIVE', 'SUPERSEDED'] as const).notNull().default('ACTIVE'),
+  version: int('version').notNull().default(1),
+  supersedesId: char('supersedes_id', { length: 36 }).references((): AnyMySqlColumn => employeeCompensations.id),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const BONUS_TYPES = ['PERFORMANCE', 'HOLIDAY', 'REFERRAL', 'RETENTION', 'OTHER'] as const;
+// leave_requests/overtime_requests İLE BİREBİR AYNI durum makinesi —
+// jenerik workflow motoruna documentType='BONUS' ile devrediliyor.
+export const BONUS_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'REVISION_REQUIRED', 'CANCELLED'] as const;
+
+export const bonusRequests = mysqlTable('bonus_requests', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  bonusNo: varchar('bonus_no', { length: 32 }).notNull(),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  bonusType: mysqlEnum('bonus_type', BONUS_TYPES).notNull(),
+  amount: decimal('amount', { precision: 14, scale: 2 }).notNull(),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  reason: text('reason'),
+  status: mysqlEnum('status', BONUS_STATUSES).notNull().default('DRAFT'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  submittedAt: timestamp('submitted_at'),
+  completedAt: timestamp('completed_at')
+}, (table) => [uniqueIndex('udx_bonus_requests_company_no').on(table.companyId, table.bonusNo)]);

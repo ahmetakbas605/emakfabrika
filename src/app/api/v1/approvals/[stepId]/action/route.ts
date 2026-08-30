@@ -6,6 +6,7 @@ import { actOnRequisitionStep } from '@/lib/procurement/requisition';
 import { actOnAwardStep } from '@/lib/procurement/award';
 import { actOnLeaveStep } from '@/lib/hr/leave';
 import { actOnOvertimeStep } from '@/lib/hr/overtime';
+import { actOnBonusStep } from '@/lib/hr/bonus';
 import { CoreError } from '@/lib/core/errors';
 import { ProcurementError } from '@/lib/procurement/errors';
 import { HrError } from '@/lib/hr/errors';
@@ -52,6 +53,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ ste
       await actOnLeaveStep(auth.user.companyId, actionInput);
     } else if (documentType === 'OVERTIME') {
       await actOnOvertimeStep(auth.user.companyId, actionInput);
+    } else if (documentType === 'BONUS') {
+      await actOnBonusStep(auth.user.companyId, actionInput);
     } else {
       await actOnStep(auth.user.companyId, actionInput);
     }
