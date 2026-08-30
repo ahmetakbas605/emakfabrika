@@ -2,15 +2,33 @@ import { mysqlTable, char, varchar, int, decimal, json, timestamp, date, time, b
 
 // Faz 2 (Database) + Faz 3 (Tenant/Auth) + Faz 4 (Accounting Core) — bkz.
 // DATABASE-ARCHITECTURE.md §5. CHAR(36) UUID stratejisi: §2. Bu fabrikanın
-// KENDİ MySQL veritabanı (kiracı sınırı = DB sınırı) — hiçbir tabloda
-// tenant_id/organization_id YOK, en dış seviye zaten company.
+// KENDİ MySQL veritabanı (DIŞ kiracı sınırı = fiziksel DB sınırı, bkz.
+// TENANT-ARCHITECTURE.md §1) — hiçbir tabloda `tenant_id` YOK ve OLMAYACAK
+// (bkz. ASSUMPTIONS.md §1 — database-per-tenant kararı KORUNUYOR).
+// Holding ERP genişletmesi (Faz 0, MASTER-ERP-ROADMAP.md) — İÇ seviyede,
+// AYNI fiziksel DB içinde birden fazla şirketi gruplayan `holdings` tablosu
+// eklendi: bu bir tenant sınırı DEĞİL (tenant sınırı hâlâ = fiziksel DB),
+// yalnızca "bu holding'in TÜM şirketleri" sorgusunu/konsolide raporlamayı
+// mümkün kılan organizasyonel bir üst-seviye.
 
-// --- Şirket / Şube / Departman (TENANT-ARCHITECTURE.md §1-3) ---
+// --- Holding / Şirket / Şube / Departman (TENANT-ARCHITECTURE.md §1-3) ---
+
+export const holdings = mysqlTable('holdings', {
+  id: char('id', { length: 36 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
 
 export const ACCOUNTING_MODES = ['PRE_ACCOUNTING', 'FULL_ACCOUNTING'] as const;
 
 export const companies = mysqlTable('companies', {
   id: char('id', { length: 36 }).primaryKey(),
+  // Faz 0 — additive, NULLABLE: mevcut satırlar migrate.ts'in idempotent
+  // backfill adımıyla bir "Varsayılan Holding"e bağlanır (bkz. ASSUMPTIONS.md
+  // §3), ama şema seviyesinde NOT NULL'a çevirmek AYRI, sonraki bir migration
+  // (bugünkü tek geçişte veri+şema sırasını riske atmamak için — bu session'ın
+  // audit hash-zinciri fix'inde de aynı temkinli disiplin uygulanmıştı).
+  holdingId: char('holding_id', { length: 36 }).references(() => holdings.id),
   name: varchar('name', { length: 255 }).notNull(),
   // VKN (10 hane) veya TCKN (11 hane, şahıs işletmesi) — PDF madde 9.
   taxId: varchar('tax_id', { length: 11 }).notNull().default(''),
@@ -90,6 +108,11 @@ export const users = mysqlTable('users', {
   // rolüyle aynı fikir, platform-geneli bir SUPER_ADMIN kavramı YOK (bkz.
   // TENANT-ARCHITECTURE.md — platform seviyesi emakerp'te yaşıyor).
   isFactoryAdmin: boolean('is_factory_admin').notNull().default(false),
+  // Holding ERP Faz 0 — isFactoryAdmin'in TEK ŞİRKET sınırını aşan, aynı
+  // holding'deki TÜM şirketlere erişim veren üst yetki (master prompt §87
+  // HOLDING_ADMIN). Company-scope'lu isFactoryAdmin'den AYRI bir bayrak —
+  // bir kullanıcı ikisine de, yalnızca birine, ya da hiçbirine sahip olabilir.
+  isHoldingAdmin: boolean('is_holding_admin').notNull().default(false),
   // Core Security Faz 4 — web oturumu artık user_sessions tablosunda
   // (çoklu eşzamanlı oturum + tek tek iptal desteği, madde 15). Eski tekil
   // sessionToken/sessionExpiresAt kolonları KALDIRILDI (kullanılmayan kod

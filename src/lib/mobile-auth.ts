@@ -25,7 +25,9 @@ export interface MobileUser {
   email: string;
   companyId: string;
   companyName: string;
+  holdingId: string | null;
   isFactoryAdmin: boolean;
+  isHoldingAdmin: boolean;
   employeeId: string | null;
 }
 
@@ -43,7 +45,7 @@ export type MobileLoginResult = { ok: true; user: MobileUser; token: string } | 
 
 export async function mobileLogin(email: string, password: string, rememberDays: number): Promise<MobileLoginResult> {
   const [found] = await db
-    .select({ user: users, companyName: companies.name })
+    .select({ user: users, companyName: companies.name, holdingId: companies.holdingId })
     .from(users)
     .innerJoin(companies, eq(companies.id, users.companyId))
     .where(eq(users.email, email))
@@ -80,7 +82,7 @@ export async function mobileLogin(email: string, password: string, rememberDays:
   return {
     ok: true,
     token: encodeMobileToken(found.user.id, rawToken),
-    user: { id: found.user.id, fullName: found.user.fullName, email: found.user.email, companyId: found.user.companyId, companyName: found.companyName, isFactoryAdmin: found.user.isFactoryAdmin, employeeId: found.user.employeeId }
+    user: { id: found.user.id, fullName: found.user.fullName, email: found.user.email, companyId: found.user.companyId, companyName: found.companyName, holdingId: found.holdingId, isFactoryAdmin: found.user.isFactoryAdmin, isHoldingAdmin: found.user.isHoldingAdmin, employeeId: found.user.employeeId }
   };
 }
 
@@ -90,18 +92,18 @@ export async function resolveMobileUser(authorizationHeader: string | null): Pro
   if (!decoded) return null;
 
   const [row] = await db
-    .select({ user: users, companyName: companies.name })
+    .select({ user: users, companyName: companies.name, holdingId: companies.holdingId })
     .from(users)
     .innerJoin(companies, eq(companies.id, users.companyId))
     .where(eq(users.id, decoded.userId))
     .limit(1);
   if (!row) return null;
-  const { user, companyName } = row;
+  const { user, companyName, holdingId } = row;
   if (!user.mobileSessionToken || !tokensMatch(decoded.rawToken, user.mobileSessionToken)) return null;
   if (!user.mobileSessionExpiresAt || user.mobileSessionExpiresAt.getTime() < Date.now()) return null;
   if (!user.active) return null;
 
-  return { id: user.id, fullName: user.fullName, email: user.email, companyId: user.companyId, companyName, isFactoryAdmin: user.isFactoryAdmin, employeeId: user.employeeId };
+  return { id: user.id, fullName: user.fullName, email: user.email, companyId: user.companyId, companyName, holdingId, isFactoryAdmin: user.isFactoryAdmin, isHoldingAdmin: user.isHoldingAdmin, employeeId: user.employeeId };
 }
 
 export async function mobileLogout(userId: string): Promise<void> {
@@ -111,7 +113,7 @@ export async function mobileLogout(userId: string): Promise<void> {
 // requireDepartmentAccess (lib/dal.ts, web) İLE AYNI ruh — mobil için
 // redirect() ETMEZ, JSON döner.
 export function toAuthedUser(mobileUser: MobileUser): AuthedUser {
-  return { id: mobileUser.id, companyId: mobileUser.companyId, companyName: mobileUser.companyName, fullName: mobileUser.fullName, email: mobileUser.email, isFactoryAdmin: mobileUser.isFactoryAdmin, employeeId: mobileUser.employeeId };
+  return { id: mobileUser.id, companyId: mobileUser.companyId, companyName: mobileUser.companyName, holdingId: mobileUser.holdingId, fullName: mobileUser.fullName, email: mobileUser.email, isFactoryAdmin: mobileUser.isFactoryAdmin, isHoldingAdmin: mobileUser.isHoldingAdmin, employeeId: mobileUser.employeeId };
 }
 
 // lib/dal.ts:requireDepartmentAccess'in fabrika-yöneticisi fallback'iyle AYNI

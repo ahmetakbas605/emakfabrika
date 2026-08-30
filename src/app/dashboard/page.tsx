@@ -7,7 +7,7 @@ import { logout } from '@/actions/auth';
 import { AuroraShell, type NavGroup } from '@/components/shell/AuroraShell';
 import { StatCard } from '@/components/shell/StatCard';
 import { PageHeader, GlassPanel } from '@/components/shell/ui';
-import { ShieldCheck, PalmtreeIcon, ArrowUpRight, Boxes, Landmark, Users2, Settings2 } from 'lucide-react';
+import { ShieldCheck, PalmtreeIcon, ArrowUpRight, Boxes, Landmark, Users2, Settings2, Building2 } from 'lucide-react';
 import Link from 'next/link';
 
 const NAV: NavGroup[] = [
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
         {session.isFactoryAdmin ? (
           <GlassPanel title="Yönetim" className="md:col-span-3">
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-              {ADMIN_LINKS.map((l) => {
+              {(session.isHoldingAdmin ? [...ADMIN_LINKS, { href: '/dashboard/holding', label: 'Holding Yönetimi', icon: Building2 }] : ADMIN_LINKS).map((l) => {
                 const Icon = l.icon;
                 return (
                   <Link key={l.href} href={l.href} className="flex items-center gap-2.5 px-3.5 py-3 rounded-xl border transition-colors hover:border-[var(--aurora-border-strong)]" style={{ borderColor: 'var(--aurora-border)', background: 'rgba(255,255,255,0.02)' }}>

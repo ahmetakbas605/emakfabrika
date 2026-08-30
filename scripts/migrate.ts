@@ -7,8 +7,8 @@ import path from 'path';
 import mysql from 'mysql2/promise';
 import { drizzle } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
-import { eq } from 'drizzle-orm';
-import { departmentTypes, roles, permissions, rolePermissions, itAssetTypes, currencies } from '../src/db/schema';
+import { eq, isNull } from 'drizzle-orm';
+import { departmentTypes, roles, permissions, rolePermissions, itAssetTypes, currencies, holdings, companies } from '../src/db/schema';
 
 async function main() {
   const migrateUrl = process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL;
@@ -25,6 +25,10 @@ async function main() {
   // TENANT_ADMIN) BİLİNÇLİ OLARAK dışarıda bırakıldı — bu tek bir fabrikanın
   // kendi DB'si, platform seviyesi emakerp'te yaşıyor (TENANT-ARCHITECTURE.md §6).
   const ROLE_SEED: { code: string; name: string }[] = [
+    // Holding ERP Faz 0 (master prompt §87) — isFactoryAdmin/FACTORY_ADMIN'in
+    // TEK ŞİRKET sınırını aşan üst yetki. dal.ts:requireHoldingAdmin ve
+    // requireDepartmentAccess'in holding-scope fallback'i bu bayrağa bakar.
+    { code: 'HOLDING_ADMIN', name: 'Holding Yöneticisi' },
     { code: 'FACTORY_ADMIN', name: 'Fabrika Yöneticisi' },
     { code: 'COMPANY_ADMIN', name: 'Şirket Yöneticisi' },
     { code: 'ACCOUNTING_MANAGER', name: 'Muhasebe Müdürü' },
@@ -195,6 +199,23 @@ async function main() {
   await seedRolePermissions('WAREHOUSE', WAREHOUSE_ROLE_PERMISSIONS);
   await seedRolePermissions('IT', IT_ROLE_PERMISSIONS);
   await seedRolePermissions('HR', HR_ROLE_PERMISSIONS);
+
+  // Holding ERP Faz 0 (ASSUMPTIONS.md §1, §3) — idempotent backfill:
+  // holdingId'si NULL olan (henüz migrate edilmemiş) her şirket, tek bir
+  // "Varsayılan Holding"e bağlanır. Kolon NULLABLE kaldı (schema.ts yorumu) —
+  // NOT NULL'a sıkılaştırma ayrı, sonraki bir adım.
+  const orphanCompanies = await db.select({ id: companies.id }).from(companies).where(isNull(companies.holdingId));
+  if (orphanCompanies.length > 0) {
+    const [existingDefault] = await db.select({ id: holdings.id }).from(holdings).where(eq(holdings.name, 'Varsayılan Holding')).limit(1);
+    const defaultHoldingId = existingDefault?.id ?? crypto.randomUUID();
+    if (!existingDefault) {
+      await db.insert(holdings).values({ id: defaultHoldingId, name: 'Varsayılan Holding' });
+    }
+    for (const c of orphanCompanies) {
+      await db.update(companies).set({ holdingId: defaultHoldingId }).where(eq(companies.id, c.id));
+    }
+    console.log(`${orphanCompanies.length} şirket "Varsayılan Holding"e bağlandı (id=${defaultHoldingId}).`);
+  }
 
   const appUser = process.env.APP_DB_USER;
   const dbName = process.env.APP_DB_NAME || 'emakfabrika';

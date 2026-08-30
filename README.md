@@ -4,10 +4,14 @@ Fabrika/holding bazlı, departman modüllü ERP — EM-AK'ın küçük işletme 
 olan `emakerp`'ten bilinçli olarak ayrı, kiracı-başına fiziksel MySQL
 veritabanı kullanan bir sistem.
 
-**Durum:** Mimari/analiz aşaması — henüz hiçbir iş modülü kodlanmadı. Başlamadan
-önce mutlaka okuyun:
+**Durum:** Muhasebe/İK/Satın Alma/IT-ITSM/Core Security departmanları
+tamamlandı; Holding ERP genişletmesi (MES/EAM/Filo/Proje/Hukuk/Risk/Çevre/
+Ar-Ge/BI/Integration Hub) Faz 0'da. Başlamadan önce mutlaka okuyun:
 
-1. [ARCHITECTURE.md](./ARCHITECTURE.md) — genel bakış, emakerp'ten fark, riskler, faz planı
+0. [ARCHITECTURE-GAP-REPORT.md](./ARCHITECTURE-GAP-REPORT.md) — güncel envanter (Mevcut/Eksik/Riskli/Migration Needed)
+0. [MASTER-ERP-ROADMAP.md](./MASTER-ERP-ROADMAP.md) — güncel faz planı (Holding ERP genişletmesi)
+0. [ASSUMPTIONS.md](./ASSUMPTIONS.md) — kritik mimari kararlar (tenant modeli dahil)
+1. [ARCHITECTURE.md](./ARCHITECTURE.md) — genel bakış, emakerp'ten fark, riskler (ilk faz planı artık MASTER-ERP-ROADMAP.md'de)
 2. [DATABASE-ARCHITECTURE.md](./DATABASE-ARCHITECTURE.md)
 3. [TENANT-ARCHITECTURE.md](./TENANT-ARCHITECTURE.md)
 4. [ACCOUNTING-ENGINE.md](./ACCOUNTING-ENGINE.md) — 1. departman: Muhasebe (tamamlandı)

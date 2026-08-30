@@ -12,9 +12,14 @@ export interface AuthedUser {
   id: string;
   companyId: string;
   companyName: string;
+  // Holding ERP Faz 0 — bu şirketin bağlı olduğu holding. NULL olabilir
+  // (henüz `migrate.ts`'in backfill adımı çalışmamış eski bir kayıt) —
+  // holding-scope'lu her kontrol bunu ele almalı (bkz. requireHoldingAdmin).
+  holdingId: string | null;
   fullName: string;
   email: string;
   isFactoryAdmin: boolean;
+  isHoldingAdmin: boolean;
   // İK Faz 0'ın users.employeeId köprüsü (schema.ts yorumu) — bu oturumun
   // kendi özlük kaydı (İzin/Fazla Mesai gibi employeeId'ye bağlı öz-hizmet
   // akışları için). Bağlı değilse null (örn. dış danışman/salt-admin hesap).
@@ -40,9 +45,11 @@ export const getSession = cache(async (): Promise<AuthedUser | null> => {
       id: users.id,
       companyId: users.companyId,
       companyName: companies.name,
+      holdingId: companies.holdingId,
       fullName: users.fullName,
       email: users.email,
       isFactoryAdmin: users.isFactoryAdmin,
+      isHoldingAdmin: users.isHoldingAdmin,
       employeeId: users.employeeId,
       active: users.active
     })
@@ -61,9 +68,11 @@ export const getSession = cache(async (): Promise<AuthedUser | null> => {
     id: row.id,
     companyId: row.companyId,
     companyName: row.companyName,
+    holdingId: row.holdingId,
     fullName: row.fullName,
     email: row.email,
     isFactoryAdmin: row.isFactoryAdmin,
+    isHoldingAdmin: row.isHoldingAdmin,
     employeeId: row.employeeId
   };
 });
@@ -81,6 +90,17 @@ export async function requireFactoryAdmin(): Promise<AuthedUser> {
   const session = await requireSession();
   if (!session.isFactoryAdmin) redirect('/dashboard');
   return session;
+}
+
+// Holding ERP Faz 0 — requireFactoryAdmin'in TEK ŞİRKET sınırını aşan üst
+// karşılığı: aynı holding'deki TÜM şirketlere erişim (konsolide raporlama,
+// holding-geneli kullanıcı/şirket yönetimi). holdingId NULL ise (backfill
+// henüz uygulanmamış eski bir kayıt) reddedilir — "her şirkete erişebilir"
+// gibi tehlikeli bir varsayılan YERİNE açıkça engellenir.
+export async function requireHoldingAdmin(): Promise<AuthedUser & { holdingId: string }> {
+  const session = await requireSession();
+  if (!session.isHoldingAdmin || !session.holdingId) redirect('/dashboard');
+  return session as AuthedUser & { holdingId: string };
 }
 
 export interface DepartmentSession {
@@ -125,6 +145,33 @@ export async function requireDepartmentAccess(departmentId: string, permission?:
         departmentName: dept.name,
         roleCode: 'FACTORY_ADMIN',
         roleName: 'Fabrika Yöneticisi',
+        permissions: FULL_PERMISSIONS
+      }
+    };
+  }
+
+  // Holding ERP Faz 0 — factory admin'in AYNI mantığı, bir seviye yukarı:
+  // holding yöneticisi kendi şirketine atanmamış olsa bile, KENDİ HOLDİNG'İNE
+  // ait BAŞKA bir şirketin departmanına erişebilir. companyId eşleşmesi
+  // YERİNE holdingId eşleşmesi kontrol edilir — 2026-08-29'un company-scope
+  // sızıntı dersiyle AYNI disiplin, bir seviye genişletilmiş: dept'in
+  // company'sinin holdingId'si session'ınkiyle BİREBİR eşleşmeli.
+  if (session.isHoldingAdmin && session.holdingId) {
+    const [dept] = await db
+      .select({ id: departments.id, departmentTypeCode: departments.departmentTypeCode, name: departments.name, companyHoldingId: companies.holdingId })
+      .from(departments)
+      .innerJoin(companies, eq(companies.id, departments.companyId))
+      .where(eq(departments.id, departmentId))
+      .limit(1);
+    if (!dept || dept.companyHoldingId !== session.holdingId) redirect('/dashboard');
+    return {
+      session,
+      access: {
+        departmentId: dept.id,
+        departmentTypeCode: dept.departmentTypeCode,
+        departmentName: dept.name,
+        roleCode: 'HOLDING_ADMIN',
+        roleName: 'Holding Yöneticisi',
         permissions: FULL_PERMISSIONS
       }
     };
