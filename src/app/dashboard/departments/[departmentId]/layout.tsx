@@ -55,7 +55,8 @@ function navFor(departmentId: string, departmentTypeCode: string): { href: strin
       return [
         { href: `${base}/hr/employees`, label: 'Çalışanlar' },
         { href: `${base}/hr/pdks`, label: 'PDKS' },
-        { href: `${base}/hr/leave`, label: 'İzin Yönetimi' }
+        { href: `${base}/hr/leave`, label: 'İzin Yönetimi' },
+        { href: `${base}/hr/access`, label: 'Erişim Kontrolü' }
       ];
     default:
       return [];

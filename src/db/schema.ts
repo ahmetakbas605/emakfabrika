@@ -2744,3 +2744,87 @@ export const overtimeRequests = mysqlTable('overtime_requests', {
   submittedAt: timestamp('submitted_at'),
   completedAt: timestamp('completed_at')
 }, (table) => [uniqueIndex('udx_overtime_requests_company_no').on(table.companyId, table.overtimeNo)]);
+
+// --- İK Faz 4 — Erişim Kontrolü (İK Mimarisi raporu §06, §09 Faz 4):
+// PDKS'ten AYRI ama AYNI cihaz-adapter altyapısını (pdksDevices) paylaşan
+// bir alt-domain — "aynı Integration Gateway, farklı event türü" (madde
+// 53/164: CardDetected → giriş/çıkış PDKS'e, kapı-açma Erişim Log'a).
+// Bu yüzden access_logs YENİ bir cihaz tablosu AÇMIYOR, doğrudan
+// pdksDevices.id'ye referans veriyor.
+
+export const accessZones = mysqlTable('access_zones', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 150 }).notNull(),
+  branchId: char('branch_id', { length: 36 }).references(() => branches.id),
+  description: varchar('description', { length: 255 }).notNull().default(''),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_access_zones_company_code').on(table.companyId, table.code)]);
+
+export const accessGroups = mysqlTable('access_groups', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 150 }).notNull(),
+  description: varchar('description', { length: 255 }).notNull().default(''),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_access_groups_company_code').on(table.companyId, table.code)]);
+
+// Bir grup birden fazla bölgeye erişebilir (madde 87 — Access Group ↔
+// Access Zone çoktan-çoğa).
+export const accessGroupZones = mysqlTable('access_group_zones', {
+  id: char('id', { length: 36 }).primaryKey(),
+  groupId: char('group_id', { length: 36 }).notNull().references(() => accessGroups.id, { onDelete: 'cascade' }),
+  zoneId: char('zone_id', { length: 36 }).notNull().references(() => accessZones.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_access_group_zones_group_zone').on(table.groupId, table.zoneId)]);
+
+// validFrom/validUntil — orijinal master prompt'un "temporary access"
+// istediği kapsam (örn. 2 haftalığına saha teknisyenine sunucu odası
+// erişimi): NULL ise süresiz üyelik.
+export const accessGroupMembers = mysqlTable('access_group_members', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  groupId: char('group_id', { length: 36 }).notNull().references(() => accessGroups.id, { onDelete: 'cascade' }),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  validFrom: date('valid_from', { mode: 'string' }),
+  validUntil: date('valid_until', { mode: 'string' }),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const ACCESS_CARD_STATUSES = ['ACTIVE', 'LOST', 'REVOKED', 'EXPIRED'] as const;
+
+// madde 86-88 — kart yönetimi.
+export const accessCards = mysqlTable('access_cards', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  cardNumber: varchar('card_number', { length: 64 }).notNull(),
+  status: mysqlEnum('status', ACCESS_CARD_STATUSES).notNull().default('ACTIVE'),
+  issuedAt: timestamp('issued_at').notNull().defaultNow(),
+  revokedAt: timestamp('revoked_at')
+}, (table) => [uniqueIndex('udx_access_cards_company_number').on(table.companyId, table.cardNumber)]);
+
+export const ACCESS_LOG_RESULTS = ['GRANTED', 'DENIED'] as const;
+
+// PDKS'in pdksRawPunches'ı İLE AYNI "silinmez günlük" ilkesi — bir erişim
+// denemesinin KENDİSİ asla güncellenmez/silinmez, yalnızca yeni satırlar
+// eklenir. GRANTED/DENIED kararı recordAccessAttempt'in KENDİSİ tarafından
+// verilir (raw_punch'ın aksine, burada karar VERME işi bu katmanın asıl
+// değeri — madde 84-85).
+export const accessLogs = mysqlTable('access_logs', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  deviceId: char('device_id', { length: 36 }).notNull().references(() => pdksDevices.id),
+  zoneId: char('zone_id', { length: 36 }).notNull().references(() => accessZones.id),
+  cardId: char('card_id', { length: 36 }).references(() => accessCards.id),
+  employeeId: char('employee_id', { length: 36 }).references(() => employees.id),
+  accessAt: timestamp('access_at').notNull(),
+  result: mysqlEnum('result', ACCESS_LOG_RESULTS).notNull(),
+  reason: varchar('reason', { length: 100 }).notNull().default(''),
+  recordedByUserId: char('recorded_by_user_id', { length: 36 }).references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [index('idx_access_logs_employee_date').on(table.employeeId, table.accessAt)]);
