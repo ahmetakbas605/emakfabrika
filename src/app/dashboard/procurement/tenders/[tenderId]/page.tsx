@@ -5,7 +5,6 @@ import { getAwardByTender } from '@/lib/procurement/award';
 import { listParties } from '@/lib/master-data/parties';
 import { PublishTenderButton, CancelTenderButton } from '@/components/procurement/tender-form';
 import { TenderBidForm, OpenTenderBiddingButton } from '@/components/procurement/tender-bid-form';
-import { TenderAwardCreateForm, type TenderAwardLineOption } from '@/components/procurement/tender-award-form';
 
 const TENDER_STATUS_LABEL: Record<string, string> = { DRAFT: 'Taslak', PUBLISHED: 'Yayınlandı', OPENED: 'Teklifler Açıldı', AWARDED: 'Ödüllendirildi', CANCELLED: 'İptal' };
 const SUPPLIER_STATUS_LABEL: Record<string, string> = { INVITED: 'Davet Edildi', RESPONDED: 'Teklif Verdi', DECLINED: 'Reddetti' };
@@ -24,12 +23,6 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
 
   const bidSuppliers = tender.openParticipation ? await listParties(session.companyId, { role: 'SUPPLIER' }) : suppliers.map((s) => ({ id: s.supplierPartyId, legalName: s.supplierName }));
 
-  const awardLines: TenderAwardLineOption[] = comparison.map((row) => ({
-    tenderLineId: row.tenderLineId, description: row.description, quantity: row.quantity,
-    unitCode: lines.find((l) => l.id === row.tenderLineId)?.unitCode ?? '',
-    cells: row.cells.map((c) => ({ supplierPartyId: c.supplierPartyId, supplierName: c.supplierName, tenderBidLineId: c.tenderBidLineId, netUnitPrice: c.netUnitPrice }))
-  }));
-
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{tender.tenderNo} — {tender.title}</h1>
@@ -47,7 +40,12 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
         {tender.status === 'DRAFT' ? <PublishTenderButton tenderId={tenderId} /> : null}
         {tender.status === 'PUBLISHED' ? <OpenTenderBiddingButton tenderId={tenderId} /> : null}
         {tender.status !== 'CANCELLED' && tender.status !== 'AWARDED' ? <CancelTenderButton tenderId={tenderId} /> : null}
-        {award ? <Link href={`/dashboard/procurement/awards/${award.id}`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Ödülü Görüntüle</Link> : null}
+        {canSeeComparison ? <Link href={`/dashboard/procurement/tenders/${tenderId}/evaluate`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Değerlendirme</Link> : null}
+        {award ? (
+          <Link href={`/dashboard/procurement/awards/${award.id}`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Ödülü Görüntüle</Link>
+        ) : tender.status === 'OPENED' ? (
+          <Link href={`/dashboard/procurement/tenders/${tenderId}/award`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Ödül Oluştur</Link>
+        ) : null}
       </div>
 
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Kalemler</h2>
@@ -107,7 +105,7 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
       {canSeeComparison ? (
         <>
           <h2 style={{ fontSize: 16, marginBottom: 8 }}>Teklif Karşılaştırması</h2>
-          <p style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>Her tedarikçinin EN SON teklif versiyonu kullanılır, en ucuzdan pahalıya sıralanır. Ağırlıklı değerlendirme (Faz 8C) henüz yok.</p>
+          <p style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>Her tedarikçinin EN SON teklif versiyonu kullanılır, en ucuzdan pahalıya sıralanır. Ağırlıklı skor için Değerlendirme sayfasına bakın.</p>
           {comparison.map((row) => (
             <div key={row.tenderLineId} style={{ marginBottom: 16 }}>
               <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{row.description} ({Number(row.quantity).toLocaleString('tr-TR')})</p>
@@ -138,13 +136,6 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
               </table>
             </div>
           ))}
-
-          {tender.status === 'OPENED' && !award ? (
-            <>
-              <h2 style={{ fontSize: 16, marginBottom: 8 }}>Ödül Oluştur</h2>
-              <TenderAwardCreateForm tenderId={tenderId} lines={awardLines} />
-            </>
-          ) : null}
         </>
       ) : null}
     </div>

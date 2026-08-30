@@ -3,15 +3,14 @@
 import { useActionState, useState } from 'react';
 import { createTenderAwardAction, type FormState } from '@/actions/procurement-tender';
 
-export interface TenderAwardCell { supplierPartyId: string; supplierName: string; tenderBidLineId: string; netUnitPrice: string }
+export interface TenderAwardCell { supplierPartyId: string; supplierName: string; tenderBidLineId: string; weightedTotal: number | null }
 export interface TenderAwardLineOption { tenderLineId: string; description: string; quantity: string; unitCode: string; cells: TenderAwardCell[] }
 
 interface Row { supplierPartyId: string; awardedQty: string }
 
-// award-form.tsx:AwardCreateForm İLE AYNI desen (Faz 4) — YALNIZCA
-// quotationLineId yerine tenderBidLineId, ve varsayılan öneri Faz 3'ün
-// ağırlıklı skoru yerine (Faz 8C'ye kadar yok) en ucuz teklif. Kasıtlı
-// olarak AYRI bir bileşen — RFQ'nun award-form.tsx'i hiç değişmedi.
+// award-form.tsx:AwardCreateForm İLE AYNI desen (Faz 4, Faz 8C'de
+// weightedTotal eklendi) — yalnızca quotationLineId yerine tenderBidLineId.
+// Kasıtlı olarak AYRI bir bileşen — RFQ'nun award-form.tsx'i hiç değişmedi.
 export function TenderAwardCreateForm({ tenderId, lines }: { tenderId: string; lines: TenderAwardLineOption[] }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(createTenderAwardAction, undefined);
   const [rowsByLine, setRowsByLine] = useState<Record<string, Row[]>>(() =>
@@ -51,7 +50,7 @@ export function TenderAwardCreateForm({ tenderId, lines }: { tenderId: string; l
               <select value={row.supplierPartyId} onChange={(e) => updateRow(line.tenderLineId, idx, { supplierPartyId: e.target.value })} style={{ padding: 5, minWidth: 200 }}>
                 <option value="">Tedarikçi seçin</option>
                 {line.cells.map((c) => (
-                  <option key={c.supplierPartyId} value={c.supplierPartyId}>{c.supplierName} — net birim {c.netUnitPrice}</option>
+                  <option key={c.supplierPartyId} value={c.supplierPartyId}>{c.supplierName}{c.weightedTotal !== null ? ` — skor ${c.weightedTotal}` : ''}</option>
                 ))}
               </select>
               <input value={row.awardedQty} onChange={(e) => updateRow(line.tenderLineId, idx, { awardedQty: e.target.value })} placeholder="Miktar" style={{ padding: 5, width: 90 }} />

@@ -21,11 +21,10 @@ export default async function AwardDetailPage({ params }: { params: Promise<{ aw
   const canSubmit = (award.status === 'DRAFT' || award.status === 'REVISION_REQUIRED') && award.createdByUserId === session.id;
   const canCancel = (award.status === 'DRAFT' || award.status === 'REVISION_REQUIRED') && award.createdByUserId === session.id;
 
-  // Faz 8B — sipariş üretimi henüz yalnızca RFQ kaynaklı ödüller için var
-  // (lib/procurement/purchaseOrder.ts:createPurchaseOrdersFromAward, Faz 8C'ye
-  // kadar). Tender kaynaklı bir ödül için bu bölümü hiç GÖSTERMEMEK, tıklanınca
-  // hata verecek bir buton göstermekten daha dürüst.
-  const showPoSection = award.status === 'APPROVED' && !award.tenderId;
+  // Faz 8C — sipariş üretimi artık RFQ VE Tender kaynaklı ödüller için de
+  // çalışıyor (lib/procurement/purchaseOrder.ts:createPurchaseOrdersFromAward
+  // genellendi) — kaynak ayrımı bu ekranda ARTIK gerekmiyor.
+  const showPoSection = award.status === 'APPROVED';
   const purchaseOrders = showPoSection ? await listPurchaseOrdersForAward(session.companyId, awardId) : [];
   const canCreatePos = showPoSection && (await hasUnconvertedAwardLines(session.companyId, awardId));
 

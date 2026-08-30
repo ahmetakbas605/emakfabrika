@@ -1,7 +1,7 @@
 import 'server-only';
-import { eq, and, desc, isNull } from 'drizzle-orm';
+import { eq, and, desc, isNull, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { procPos, procPoLines, procAwards, procAwardLines, procRfqs, procRfqLines, units, parties } from '@/db/schema';
+import { procPos, procPoLines, procAwards, procAwardLines, procRfqs, procRfqLines, procTenders, procTenderLines, units, parties } from '@/db/schema';
 import { newId } from '@/lib/id';
 import { money, toDb } from '@/lib/money';
 import { nextDocumentNo } from '@/lib/numbering';
@@ -23,20 +23,30 @@ export async function createPurchaseOrdersFromAward(companyId: string, awardId: 
   const [award] = await db.select().from(procAwards).where(and(eq(procAwards.id, awardId), eq(procAwards.companyId, companyId))).limit(1);
   if (!award) throw new ProcurementError('Ödül kaydı bulunamadı.');
   if (award.status !== 'APPROVED') throw new ProcurementError('Yalnızca onaylanmış (APPROVED) bir ödül için sipariş oluşturulabilir.');
-  // Faz 8B — Award'ın kaynağı RFQ VEYA Tender olabilir (schema.ts'teki
-  // genelleme). PO üretimini Tender kaynaklı bir ödül için de çalıştırmak
-  // Faz 8C'nin KENDİ kapsamı ("PO/Mal Kabul/3-Way Match'in tender'lar için
-  // de çalıştığının doğrulanması") — burada AÇIKÇA reddediliyor, sessizce
-  // yanlış/eksik bir PO üretmek yerine.
-  if (!award.rfqId) throw new ProcurementError('İhale kaynaklı ödüllerden sipariş oluşturma henüz desteklenmiyor.');
 
-  const [rfq] = await db.select({ deliveryLocation: procRfqs.deliveryLocation, paymentTerms: procRfqs.paymentTerms, warrantyRequirement: procRfqs.warrantyRequirement }).from(procRfqs).where(eq(procRfqs.id, award.rfqId)).limit(1);
+  // Faz 8C — Award'ın kaynağı RFQ VEYA Tender olabilir (Faz 8B'nin
+  // genellemesi). Teslimat/ödeme başlığı ve satır açıklaması/birimi İKİ
+  // AYRI küçük sorguyla alınıp JS'te birleştirilir — award.ts:getAward'ın
+  // AYNI "polymorphic JOIN yerine iki sorgu" tercihi (drizzle alias() bu
+  // kod tabanında hiç kullanılmıyor).
+  const header = award.rfqId
+    ? await db.select({ deliveryLocation: procRfqs.deliveryLocation, paymentTerms: procRfqs.paymentTerms, warrantyRequirement: procRfqs.warrantyRequirement }).from(procRfqs).where(eq(procRfqs.id, award.rfqId)).limit(1).then((r) => r[0])
+    : await db.select({ deliveryLocation: procTenders.deliveryLocation, paymentTerms: procTenders.paymentTerms, warrantyRequirement: procTenders.warrantyRequirement }).from(procTenders).where(eq(procTenders.id, award.tenderId!)).limit(1).then((r) => r[0]);
 
-  const awardLines = await db
-    .select({ id: procAwardLines.id, rfqLineId: procAwardLines.rfqLineId, supplierPartyId: procAwardLines.supplierPartyId, awardedQty: procAwardLines.awardedQty, awardedUnitPrice: procAwardLines.awardedUnitPrice, awardedTotal: procAwardLines.awardedTotal, description: procRfqLines.description, unitId: procRfqLines.unitId })
-    .from(procAwardLines)
-    .innerJoin(procRfqLines, eq(procRfqLines.id, procAwardLines.rfqLineId))
-    .where(eq(procAwardLines.awardId, awardId));
+  const rawAwardLines = await db.select().from(procAwardLines).where(eq(procAwardLines.awardId, awardId));
+  const rfqLineIds = [...new Set(rawAwardLines.filter((l) => l.rfqLineId).map((l) => l.rfqLineId!))];
+  const tenderLineIds = [...new Set(rawAwardLines.filter((l) => l.tenderLineId).map((l) => l.tenderLineId!))];
+  const [rfqLineRows, tenderLineRows] = await Promise.all([
+    rfqLineIds.length > 0 ? db.select({ id: procRfqLines.id, description: procRfqLines.description, unitId: procRfqLines.unitId }).from(procRfqLines).where(inArray(procRfqLines.id, rfqLineIds)) : [],
+    tenderLineIds.length > 0 ? db.select({ id: procTenderLines.id, description: procTenderLines.description, unitId: procTenderLines.unitId }).from(procTenderLines).where(inArray(procTenderLines.id, tenderLineIds)) : []
+  ]);
+  const rfqLineById = new Map(rfqLineRows.map((l) => [l.id, l]));
+  const tenderLineById = new Map(tenderLineRows.map((l) => [l.id, l]));
+
+  const awardLines = rawAwardLines.map((l) => {
+    const detail = l.rfqLineId ? rfqLineById.get(l.rfqLineId) : tenderLineById.get(l.tenderLineId!);
+    return { id: l.id, supplierPartyId: l.supplierPartyId, awardedQty: l.awardedQty, awardedUnitPrice: l.awardedUnitPrice, awardedTotal: l.awardedTotal, description: detail?.description ?? '—', unitId: detail?.unitId ?? '' };
+  });
 
   // Zaten bir PO satırına dönüşmüş award satırları HARİÇ (madde
   // proc_rfq_lines.srcRequestLineId ile AYNI "yalnızca bir kez" ilkesi —
@@ -63,7 +73,7 @@ export async function createPurchaseOrdersFromAward(companyId: string, awardId: 
       const poNo = await nextDocumentNo(tx, companyId, 'PO', 'PO', new Date().getFullYear(), 6);
       await tx.insert(procPos).values({
         id, companyId, awardId, supplierPartyId, poNo, status: 'DRAFT', currencyCode,
-        deliveryLocation: rfq?.deliveryLocation ?? '', paymentTerms: rfq?.paymentTerms ?? '', warrantyRequirement: rfq?.warrantyRequirement ?? '',
+        deliveryLocation: header?.deliveryLocation ?? '', paymentTerms: header?.paymentTerms ?? '', warrantyRequirement: header?.warrantyRequirement ?? '',
         createdByUserId
       });
       for (const line of lines) {

@@ -2092,28 +2092,36 @@ export const PROC_TECH_COMPLIANCE_STATUSES = ['COMPLIANT', 'PARTIALLY_COMPLIANT'
 // 117; bir değerlendirme her zaman BELİRLİ bir teklif VERSİYONUNA aittir,
 // tedarikçi yeni versiyon gönderirse o versiyonun satırları YENİDEN
 // değerlendirilmeyi bekler, boş kalır).
+// Faz 8C — quotationLineId/tenderBidLineId İKİSİ de opsiyonel, procAwards'ın
+// Faz 8B'de aldığı AYNI opsiyonel-ikili genelleme (schema.ts'teki o yorum).
+// MySQL'in tekil (unique) index'i NULL değerleri BİRBİRİNDEN FARKLI sayar
+// (NULL != NULL), bu yüzden İKİ ayrı tekil index (biri quotationLineId,
+// biri tenderBidLineId üzerinde) doğru davranışı verir — bir satırın ikisi
+// de dolu olmadığı için çakışma riski YOK.
 export const procTechEvals = mysqlTable('proc_tech_evals', {
   id: char('id', { length: 36 }).primaryKey(),
-  quotationLineId: char('quotation_line_id', { length: 36 }).notNull().references(() => procQuotationLines.id, { onDelete: 'cascade' }),
+  quotationLineId: char('quotation_line_id', { length: 36 }).references(() => procQuotationLines.id, { onDelete: 'cascade' }),
+  tenderBidLineId: char('tender_bid_line_id', { length: 36 }).references(() => procTenderBidLines.id, { onDelete: 'cascade' }),
   complianceStatus: mysqlEnum('compliance_status', PROC_TECH_COMPLIANCE_STATUSES).notNull(),
   // madde 73 — NON_COMPLIANT/REJECTED ise zorunlu (uygulama katmanında
   // doğrulanır, DB seviyesinde CHECK yok — projenin genel disiplini).
   reason: text('reason'),
   evaluatedByUserId: char('evaluated_by_user_id', { length: 36 }).notNull().references(() => users.id),
   evaluatedAt: timestamp('evaluated_at').notNull().defaultNow()
-}, (table) => [uniqueIndex('udx_proc_tech_eval_line').on(table.quotationLineId)]);
+}, (table) => [uniqueIndex('udx_proc_tech_eval_line').on(table.quotationLineId), uniqueIndex('udx_proc_tech_eval_tbid_line').on(table.tenderBidLineId)]);
 
 // madde 74 — fiyat/indirim/ödeme/teslimat/tedarikçi geçmişi hepsi TEK bir
 // niteliksel puana (0-100) giriyor, teklifin TAMAMI için (satır başına
 // değil — ödeme koşulu/tedarikçi geçmişi zaten satıra özgü değil).
 export const procCommEvals = mysqlTable('proc_comm_evals', {
   id: char('id', { length: 36 }).primaryKey(),
-  quotationId: char('quotation_id', { length: 36 }).notNull().references(() => procQuotations.id, { onDelete: 'cascade' }),
+  quotationId: char('quotation_id', { length: 36 }).references(() => procQuotations.id),
+  tenderBidId: char('tender_bid_id', { length: 36 }).references(() => procTenderBids.id),
   score: decimal('score', { precision: 5, scale: 2 }).notNull(),
   notes: text('notes'),
   evaluatedByUserId: char('evaluated_by_user_id', { length: 36 }).notNull().references(() => users.id),
   evaluatedAt: timestamp('evaluated_at').notNull().defaultNow()
-}, (table) => [uniqueIndex('udx_proc_comm_eval_quotation').on(table.quotationId)]);
+}, (table) => [uniqueIndex('udx_proc_comm_eval_quotation').on(table.quotationId), uniqueIndex('udx_proc_comm_eval_tbid').on(table.tenderBidId)]);
 
 // --- Satınalma Faz 4 — Award (madde 75-82). Faz 3'ün değerlendirmesini
 // TÜKETİR — hangi satır hangi tedarikçiye/hangi teklif satırına gidiyor,

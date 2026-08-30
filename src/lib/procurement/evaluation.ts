@@ -1,10 +1,11 @@
 import 'server-only';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { procScoringWeights, procTechEvals, procCommEvals, procQuotationLines, procQuotations, procRfqs } from '@/db/schema';
+import { procScoringWeights, procTechEvals, procCommEvals, procQuotationLines, procQuotations, procRfqs, procTenderBidLines, procTenderBids, procTenders } from '@/db/schema';
 import { newId } from '@/lib/id';
 import { money, toDb } from '@/lib/money';
 import { getRfqComparison } from './rfq';
+import { getTenderBidComparison } from './tender';
 import { ProcurementError } from './errors';
 
 // Satınalma Faz 3 — Teknik/Ticari Değerlendirme + Ağırlıklı Skorlama
@@ -198,6 +199,146 @@ export async function getRfqEvaluation(companyId: string, rfqId: string): Promis
 
       cells.sort((a, b) => (b.weightedTotal ?? -1) - (a.weightedTotal ?? -1));
       return { rfqLineId: compRow.rfqLineId, description: compRow.description, cells };
+    })
+  };
+}
+
+// --- Faz 8C — İhale (Tender) değerlendirmesi. getRfqEvaluation İLE BİREBİR
+// AYNI ağırlıklı-skorlama mantığı (aynı procScoringWeights — İhale
+// Kapsamı raporunda karar verildiği gibi ayrı bir ağırlık seti YOK),
+// yalnızca kaynak procRfqComparison/procQuotationLines yerine
+// getTenderBidComparison/procTenderBidLines. submitTechnicalEvaluation/
+// submitCommercialEvaluation (RFQ) HİÇ DEĞİŞMEDİ — award.ts'teki
+// createAward/createAwardFromTender İLE AYNI "küçük, gerekçeli tekrar"
+// deseni burada da uygulandı. ---
+
+async function requireTenderBidLineInCompany(companyId: string, tenderBidLineId: string): Promise<void> {
+  const [row] = await db
+    .select({ tenderCompanyId: procTenders.companyId })
+    .from(procTenderBidLines)
+    .innerJoin(procTenderBids, eq(procTenderBids.id, procTenderBidLines.bidId))
+    .innerJoin(procTenders, eq(procTenders.id, procTenderBids.tenderId))
+    .where(eq(procTenderBidLines.id, tenderBidLineId))
+    .limit(1);
+  if (!row || row.tenderCompanyId !== companyId) throw new ProcurementError('Teklif satırı bulunamadı.');
+}
+
+export async function submitTenderTechnicalEvaluation(companyId: string, tenderBidLineId: string, evaluatedByUserId: string, input: SubmitTechnicalEvaluationInput): Promise<void> {
+  await requireTenderBidLineInCompany(companyId, tenderBidLineId);
+  if ((input.complianceStatus === 'NON_COMPLIANT' || input.complianceStatus === 'REJECTED') && !input.reason?.trim()) {
+    throw new ProcurementError('Uygun olmayan/reddedilen bir değerlendirme için gerekçe zorunlu.');
+  }
+
+  const values = { id: newId(), tenderBidLineId, complianceStatus: input.complianceStatus, reason: input.reason, evaluatedByUserId, evaluatedAt: new Date() };
+  await db.insert(procTechEvals).values(values).onDuplicateKeyUpdate({ set: { complianceStatus: input.complianceStatus, reason: input.reason, evaluatedByUserId, evaluatedAt: new Date() } });
+}
+
+async function requireTenderBidInCompany(companyId: string, tenderBidId: string): Promise<void> {
+  const [row] = await db.select({ tenderCompanyId: procTenders.companyId }).from(procTenderBids).innerJoin(procTenders, eq(procTenders.id, procTenderBids.tenderId)).where(eq(procTenderBids.id, tenderBidId)).limit(1);
+  if (!row || row.tenderCompanyId !== companyId) throw new ProcurementError('Teklif bulunamadı.');
+}
+
+export async function submitTenderCommercialEvaluation(companyId: string, tenderBidId: string, evaluatedByUserId: string, input: SubmitCommercialEvaluationInput): Promise<void> {
+  await requireTenderBidInCompany(companyId, tenderBidId);
+  const score = money(input.score);
+  if (score.lessThan(0) || score.greaterThan(100)) throw new ProcurementError('Puan 0-100 aralığında olmalı.');
+
+  const values = { id: newId(), tenderBidId, score: toDb(score), notes: input.notes, evaluatedByUserId, evaluatedAt: new Date() };
+  await db.insert(procCommEvals).values(values).onDuplicateKeyUpdate({ set: { score: toDb(score), notes: input.notes, evaluatedByUserId, evaluatedAt: new Date() } });
+}
+
+export interface TenderEvaluationCell {
+  supplierPartyId: string;
+  supplierName: string;
+  tenderBidLineId: string | null;
+  tenderBidId: string | null;
+  priceScore: number | null;
+  technicalScore: number | null;
+  technicalStatus: string | null;
+  technicalReason: string | null;
+  deliveryScore: number | null;
+  commercialScore: number | null;
+  commercialNotes: string | null;
+  weightedTotal: number | null;
+}
+
+export interface TenderEvaluationRow {
+  tenderLineId: string;
+  description: string;
+  cells: TenderEvaluationCell[];
+}
+
+export async function getTenderEvaluation(companyId: string, tenderId: string): Promise<{ rows: TenderEvaluationRow[]; weights: ScoringWeights }> {
+  const [comparison, weights] = await Promise.all([getTenderBidComparison(companyId, tenderId), getScoringWeights(companyId)]);
+
+  const bidLines = await db
+    .select({ id: procTenderBidLines.id, tenderLineId: procTenderBidLines.tenderLineId, bidId: procTenderBidLines.bidId, supplierPartyId: procTenderBids.supplierPartyId, version: procTenderBids.version, deliveryDaysLine: procTenderBidLines.deliveryDays, deliveryDaysHeader: procTenderBids.deliveryDays })
+    .from(procTenderBidLines)
+    .innerJoin(procTenderBids, eq(procTenderBids.id, procTenderBidLines.bidId))
+    .where(eq(procTenderBids.tenderId, tenderId));
+
+  const latestVersionBySupplier = new Map<string, number>();
+  for (const bl of bidLines) {
+    const current = latestVersionBySupplier.get(bl.supplierPartyId);
+    if (current === undefined || bl.version > current) latestVersionBySupplier.set(bl.supplierPartyId, bl.version);
+  }
+  const latestBidLines = bidLines.filter((bl) => latestVersionBySupplier.get(bl.supplierPartyId) === bl.version);
+
+  const allTechEvals = await db.select().from(procTechEvals);
+  const techEvalByLineId = new Map(allTechEvals.filter((e) => e.tenderBidLineId).map((e) => [e.tenderBidLineId, e]));
+
+  const allCommEvals = await db.select().from(procCommEvals);
+  const commEvalByBidId = new Map(allCommEvals.filter((e) => e.tenderBidId).map((e) => [e.tenderBidId, e]));
+
+  const W = { price: money(weights.priceWeight), technical: money(weights.technicalWeight), delivery: money(weights.deliveryWeight), commercial: money(weights.commercialWeight) };
+
+  return {
+    weights,
+    rows: comparison.map((compRow) => {
+      const lineBidLines = latestBidLines.filter((bl) => bl.tenderLineId === compRow.tenderLineId);
+      const deliveryDaysBySupplier = new Map<string, number | null>();
+      for (const bl of lineBidLines) {
+        const days = bl.deliveryDaysLine ?? bl.deliveryDaysHeader ?? null;
+        deliveryDaysBySupplier.set(bl.supplierPartyId, days);
+      }
+      const knownDeliveryDays = [...deliveryDaysBySupplier.values()].filter((d): d is number => d !== null);
+      const fastestDays = knownDeliveryDays.length > 0 ? Math.min(...knownDeliveryDays) : null;
+
+      const cells: TenderEvaluationCell[] = compRow.cells.map((cell) => {
+        const bl = lineBidLines.find((b) => b.supplierPartyId === cell.supplierPartyId);
+        const priceScore = Number(cell.netUnitPrice) > 0 ? Number(compRow.cells.reduce((min, c) => Math.min(min, Number(c.netUnitPrice)), Infinity)) / Number(cell.netUnitPrice) * 100 : null;
+
+        const techEval = bl ? techEvalByLineId.get(bl.id) : undefined;
+        const technicalScore = techEval ? COMPLIANCE_SCORE[techEval.complianceStatus] : null;
+
+        const days = bl ? (deliveryDaysBySupplier.get(bl.supplierPartyId) ?? null) : null;
+        const deliveryScore = days !== null && fastestDays !== null ? (fastestDays / days) * 100 : null;
+
+        const commEval = bl ? commEvalByBidId.get(bl.bidId) : undefined;
+        const commercialScore = commEval ? Number(commEval.score) : null;
+
+        const components: { score: number; weight: ReturnType<typeof money> }[] = [];
+        if (priceScore !== null) components.push({ score: priceScore, weight: W.price });
+        if (technicalScore !== null) components.push({ score: technicalScore, weight: W.technical });
+        if (deliveryScore !== null) components.push({ score: deliveryScore, weight: W.delivery });
+        if (commercialScore !== null) components.push({ score: commercialScore, weight: W.commercial });
+        const totalWeight = components.reduce((acc, c) => acc.plus(c.weight), money(0));
+        const weightedTotal = totalWeight.greaterThan(0)
+          ? components.reduce((acc, c) => acc.plus(money(c.score).times(c.weight)), money(0)).dividedBy(totalWeight).toDecimalPlaces(1).toNumber()
+          : null;
+
+        return {
+          supplierPartyId: cell.supplierPartyId, supplierName: cell.supplierName, tenderBidLineId: bl?.id ?? null, tenderBidId: bl?.bidId ?? null,
+          priceScore: priceScore !== null ? Math.round(priceScore * 10) / 10 : null,
+          technicalScore, technicalStatus: techEval?.complianceStatus ?? null, technicalReason: techEval?.reason ?? null,
+          deliveryScore: deliveryScore !== null ? Math.round(deliveryScore * 10) / 10 : null,
+          commercialScore, commercialNotes: commEval?.notes ?? null,
+          weightedTotal
+        };
+      });
+
+      cells.sort((a, b) => (b.weightedTotal ?? -1) - (a.weightedTotal ?? -1));
+      return { tenderLineId: compRow.tenderLineId, description: compRow.description, cells };
     })
   };
 }

@@ -5,6 +5,7 @@ import * as z from 'zod';
 import { requireSession } from '@/lib/dal';
 import { createTender, publishTender, cancelTender, submitTenderBid, openTenderBidding } from '@/lib/procurement/tender';
 import { createAwardFromTender } from '@/lib/procurement/award';
+import { submitTenderTechnicalEvaluation, submitTenderCommercialEvaluation } from '@/lib/procurement/evaluation';
 import { ProcurementError } from '@/lib/procurement/errors';
 import { optionalField } from '@/lib/form';
 
@@ -203,4 +204,52 @@ export async function createTenderAwardAction(_prevState: FormState, formData: F
   revalidatePath(`/dashboard/procurement/tenders/${parsed.data.tenderId}`);
   revalidatePath(`/dashboard/procurement/awards/${awardId}`);
   return { success: 'Ödül taslağı oluşturuldu.' };
+}
+
+const TenderTechEvalSchema = z.object({
+  tenderBidLineId: z.string().trim().min(1),
+  tenderId: z.string().trim().min(1),
+  complianceStatus: z.enum(['COMPLIANT', 'PARTIALLY_COMPLIANT', 'NON_COMPLIANT', 'ALTERNATIVE_ACCEPTED', 'REJECTED']),
+  reason: z.string().trim().optional()
+});
+
+export async function submitTenderTechnicalEvaluationAction(_prevState: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireSession();
+  const parsed = TenderTechEvalSchema.safeParse({
+    tenderBidLineId: formData.get('tenderBidLineId'), tenderId: formData.get('tenderId'),
+    complianceStatus: formData.get('complianceStatus'), reason: optionalField(formData, 'reason')
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
+
+  try {
+    await submitTenderTechnicalEvaluation(session.companyId, parsed.data.tenderBidLineId, session.id, { complianceStatus: parsed.data.complianceStatus, reason: parsed.data.reason });
+  } catch (err) {
+    return { error: toErrorMessage(err, 'Değerlendirme kaydedilemedi.') };
+  }
+  revalidatePath(`/dashboard/procurement/tenders/${parsed.data.tenderId}/evaluate`);
+  return { success: 'Teknik değerlendirme kaydedildi.' };
+}
+
+const TenderCommEvalSchema = z.object({
+  tenderBidId: z.string().trim().min(1),
+  tenderId: z.string().trim().min(1),
+  score: z.string().trim().min(1),
+  notes: z.string().trim().optional()
+});
+
+export async function submitTenderCommercialEvaluationAction(_prevState: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireSession();
+  const parsed = TenderCommEvalSchema.safeParse({
+    tenderBidId: formData.get('tenderBidId'), tenderId: formData.get('tenderId'),
+    score: formData.get('score'), notes: optionalField(formData, 'notes')
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
+
+  try {
+    await submitTenderCommercialEvaluation(session.companyId, parsed.data.tenderBidId, session.id, { score: parsed.data.score, notes: parsed.data.notes });
+  } catch (err) {
+    return { error: toErrorMessage(err, 'Değerlendirme kaydedilemedi.') };
+  }
+  revalidatePath(`/dashboard/procurement/tenders/${parsed.data.tenderId}/evaluate`);
+  return { success: 'Ticari değerlendirme kaydedildi.' };
 }
