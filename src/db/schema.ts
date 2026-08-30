@@ -2280,3 +2280,87 @@ export const procVinvoiceLines = mysqlTable('proc_vinvoice_lines', {
   lineTotal: decimal('line_total', { precision: 20, scale: 6 }).notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
+
+// --- Satınalma Faz 8A — İhale (Tender), platform temeli. RFQ'dan (Faz 2)
+// TEK gerçek farkı: teklif İÇERİĞİ, planlı bir açılış anına kadar hiçbir
+// ekran/sorgudan görünmez (proc_tender_bids/proc_tender_bid_lines, Faz 8B
+// — henüz YOK). Bu faz yalnızca ihale BAŞLIĞI/kalemleri/davetli tedarikçi
+// yaşam döngüsünü kurar — proc_rfqs/proc_rfq_lines/proc_rfq_suppliers'ın
+// (Faz 2) neredeyse BİREBİR aynı şekli, kasıtlı olarak (İhale Kapsamı
+// raporu §2 — "yeniden kullanılan/yeni olan" tablosu).
+//
+// proc_awards'ın kaynağını (rfqId) hem RFQ hem Tender'a genellemek Faz 8B'ye
+// BIRAKILDI — o genelleme, ancak İhale'den gerçek bir Award üretilebildiği
+// ANDA (yani teklifler var olduğunda) bir tüketiciye kavuşuyor; şimdiden
+// eklemek, kullanılmayan bir yarı-durum (procAwards.tenderId dolu ama
+// procAwardLines'ın işaret edeceği tender-bid-line kavramı henüz yok)
+// yaratırdı — "infrastructure before consumer" ilkesinin kendisi bile bu
+// projede hep GERÇEKTEN yakın bir tüketici için uygulandı (idempotency_keys,
+// inv_reservations), bir fazın YARISI için değil.
+export const PROC_TENDER_STATUSES = ['DRAFT', 'PUBLISHED', 'CANCELLED'] as const;
+// BID_OPENING/EVALUATION/AWARDED Faz 8B/8C'de proc_rfqs.status'a AWARDED'ın
+// Faz 4'te EKLENDİĞİ desenle (additive) eklenecek — o geçişler henüz
+// UYGULANMADIĞI için şimdiden enum'a koymak yanıltıcı olurdu.
+
+export const procTenders = mysqlTable('proc_tenders', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  tenderNo: varchar('tender_no', { length: 32 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  status: mysqlEnum('status', PROC_TENDER_STATUSES).notNull().default('DRAFT'),
+  bidSubmissionDeadline: timestamp('bid_submission_deadline'),
+  // Faz 8B'nin "ifşa kapısı" bu ANA göre karar verecek — teklif içeriği
+  // ancak status='PUBLISHED'İ AŞIP açılış GERÇEKLEŞTİKTEN sonra görünür
+  // (açılışın kendisi Faz 8B'de bir aksiyon, bu alan yalnızca PLANLANAN anı
+  // tutar, gerçek açılışı işaretleyen bir openedAt Faz 8B'de eklenecek).
+  bidOpeningAt: timestamp('bid_opening_at'),
+  deliveryLocation: varchar('delivery_location', { length: 255 }).notNull().default(''),
+  paymentTerms: varchar('payment_terms', { length: 255 }).notNull().default(''),
+  warrantyRequirement: varchar('warranty_requirement', { length: 255 }).notNull().default(''),
+  // madde (İhale Kapsamı raporu §5) — banka entegrasyonu YOK, yalnızca
+  // beklenen teminatın kaydı; tedarikçinin GERÇEKTEN sağladığı teminat
+  // mektubu bir ek dosya (document_attachments, entityType='PROC_TENDER')
+  // olarak yüklenir.
+  bidBondRequired: boolean('bid_bond_required').notNull().default(false),
+  bidBondPercent: decimal('bid_bond_percent', { precision: 5, scale: 2 }),
+  bidBondAmount: decimal('bid_bond_amount', { precision: 20, scale: 6 }),
+  // false: yalnızca proc_tender_suppliers'a eklenmiş (davet edilmiş)
+  // tedarikçiler teklif verebilir (Faz 8B). true: herhangi bir SUPPLIER
+  // rollü party kendi teklifini vererek KATILABİLİR (Faz 8B'nin kapsamı,
+  // burada yalnızca niyet alanı olarak tutuluyor).
+  openParticipation: boolean('open_participation').notNull().default(false),
+  notes: text('notes'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  publishedAt: timestamp('published_at'),
+  cancelledAt: timestamp('cancelled_at')
+}, (table) => [uniqueIndex('udx_proc_tenders_company_no').on(table.companyId, table.tenderNo)]);
+
+// proc_rfq_lines İLE BİREBİR AYNI ŞEKİL — srcRequestLineId OPSİYONEL (Faz
+// 2'nin Procurement Queue mantığıyla aynı, bir talep satırı ya RFQ'ya ya
+// İhale'ye gidebilir, ikisine BİRDEN değil — bu kısıt Faz 8B'de, ilk
+// tüketici ortaya çıktığında uygulanacak).
+export const procTenderLines = mysqlTable('proc_tender_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  tenderId: char('tender_id', { length: 36 }).notNull().references(() => procTenders.id, { onDelete: 'cascade' }),
+  srcRequestLineId: char('src_request_line_id', { length: 36 }).references(() => procRequestLines.id),
+  productId: char('product_id', { length: 36 }).references(() => products.id),
+  description: varchar('description', { length: 255 }).notNull(),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitId: char('unit_id', { length: 36 }).notNull().references(() => units.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const PROC_TENDER_SUPPLIER_STATUSES = ['INVITED', 'RESPONDED', 'DECLINED'] as const;
+
+// proc_rfq_suppliers İLE BİREBİR AYNI ŞEKİL. openParticipation=true bir
+// ihalede, ilk teklifini veren tedarikçi kendini bu tabloya EKLER (Faz 8B) —
+// bu fazda yalnızca DAVET akışı var.
+export const procTenderSuppliers = mysqlTable('proc_tender_suppliers', {
+  id: char('id', { length: 36 }).primaryKey(),
+  tenderId: char('tender_id', { length: 36 }).notNull().references(() => procTenders.id, { onDelete: 'cascade' }),
+  supplierPartyId: char('supplier_party_id', { length: 36 }).notNull().references(() => parties.id),
+  status: mysqlEnum('status', PROC_TENDER_SUPPLIER_STATUSES).notNull().default('INVITED'),
+  invitedAt: timestamp('invited_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_proc_tender_supplier').on(table.tenderId, table.supplierPartyId)]);

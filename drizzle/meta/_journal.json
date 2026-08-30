@@ -190,6 +190,13 @@
       "when": 1788076941048,
       "tag": "0026_glorious_korvac",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "5",
+      "when": 1788080508445,
+      "tag": "0027_talented_prodigy",
+      "breakpoints": true
     }
   ]
 }
