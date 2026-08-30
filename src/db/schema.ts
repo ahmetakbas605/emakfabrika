@@ -2128,10 +2128,18 @@ export const procCommEvals = mysqlTable('proc_comm_evals', {
 // documentType='PROCUREMENT_AWARD'.
 export const PROC_AWARD_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'REVISION_REQUIRED', 'CANCELLED'] as const;
 
+// Faz 8B — kaynak RFQ VEYA Tender olabilir (İhale Kapsamı raporu §4,
+// seçenek A). rfqId/tenderId İKİSİ de OPSİYONEL, uygulama katmanında TAM
+// BİRİ dolu olmalı (DB constraint değil, bu projenin genel disiplini —
+// örn. workflow_rules.conditions'ın da DB seviyesinde doğrulanmaması gibi).
+// Faz 0-7'nin RFQ akışı (lib/procurement/award.ts:createAward) BU
+// GENELLEMEDEN SONRA DA hiç değişmeden çalışır — yalnızca tenderId/
+// tenderLineId/tenderBidLineId alanlarını hiç doldurmaz (NULL kalır).
 export const procAwards = mysqlTable('proc_awards', {
   id: char('id', { length: 36 }).primaryKey(),
   companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
-  rfqId: char('rfq_id', { length: 36 }).notNull().references(() => procRfqs.id),
+  rfqId: char('rfq_id', { length: 36 }).references(() => procRfqs.id),
+  tenderId: char('tender_id', { length: 36 }).references(() => procTenders.id),
   awardNo: varchar('award_no', { length: 32 }).notNull(),
   status: mysqlEnum('status', PROC_AWARD_STATUSES).notNull().default('DRAFT'),
   createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
@@ -2144,12 +2152,16 @@ export const procAwards = mysqlTable('proc_awards', {
 // KOPYALANIR, canlı referans değil (madde 116-117 immutable ilkesi — bir
 // tedarikçi ödülden SONRA yeni bir teklif versiyonu gönderirse, zaten
 // karara bağlanmış ödül fiyatı GEÇMİŞTE kalan bir kayıt olarak sabit kalmalı).
+// rfqLineId/tenderLineId VE quotationLineId/tenderBidLineId çiftleri de
+// procAwards İLE AYNI opsiyonel-ikili desende (yukarıdaki yorum).
 export const procAwardLines = mysqlTable('proc_award_lines', {
   id: char('id', { length: 36 }).primaryKey(),
   awardId: char('award_id', { length: 36 }).notNull().references(() => procAwards.id, { onDelete: 'cascade' }),
-  rfqLineId: char('rfq_line_id', { length: 36 }).notNull().references(() => procRfqLines.id),
+  rfqLineId: char('rfq_line_id', { length: 36 }).references(() => procRfqLines.id),
+  tenderLineId: char('tender_line_id', { length: 36 }).references(() => procTenderLines.id),
   supplierPartyId: char('supplier_party_id', { length: 36 }).notNull().references(() => parties.id),
-  quotationLineId: char('quotation_line_id', { length: 36 }).notNull().references(() => procQuotationLines.id),
+  quotationLineId: char('quotation_line_id', { length: 36 }).references(() => procQuotationLines.id),
+  tenderBidLineId: char('tender_bid_line_id', { length: 36 }).references(() => procTenderBidLines.id),
   awardedQty: decimal('awarded_qty', { precision: 20, scale: 6 }).notNull(),
   awardedUnitPrice: decimal('awarded_unit_price', { precision: 20, scale: 6 }).notNull(),
   awardedTotal: decimal('awarded_total', { precision: 20, scale: 6 }).notNull(),
@@ -2297,10 +2309,12 @@ export const procVinvoiceLines = mysqlTable('proc_vinvoice_lines', {
 // yaratırdı — "infrastructure before consumer" ilkesinin kendisi bile bu
 // projede hep GERÇEKTEN yakın bir tüketici için uygulandı (idempotency_keys,
 // inv_reservations), bir fazın YARISI için değil.
-export const PROC_TENDER_STATUSES = ['DRAFT', 'PUBLISHED', 'CANCELLED'] as const;
-// BID_OPENING/EVALUATION/AWARDED Faz 8B/8C'de proc_rfqs.status'a AWARDED'ın
-// Faz 4'te EKLENDİĞİ desenle (additive) eklenecek — o geçişler henüz
-// UYGULANMADIĞI için şimdiden enum'a koymak yanıltıcı olurdu.
+// OPENED/AWARDED Faz 8B'de EKLENDİ (additive — proc_rfqs.status'a AWARDED'ın
+// Faz 4'te eklendiği AYNI desen): OPENED, açılış aksiyonu GERÇEKTEN var
+// olduğu için; AWARDED, actOnAwardStep'in tender kaynaklı bir ödülü
+// onayladığında GERÇEKTEN bu duruma taşıdığı için. EVALUATION Faz 8C'ye
+// bırakıldı — o fazın kendi ağırlıklı skorlama akışı henüz yok.
+export const PROC_TENDER_STATUSES = ['DRAFT', 'PUBLISHED', 'OPENED', 'AWARDED', 'CANCELLED'] as const;
 
 export const procTenders = mysqlTable('proc_tenders', {
   id: char('id', { length: 36 }).primaryKey(),
@@ -2315,6 +2329,12 @@ export const procTenders = mysqlTable('proc_tenders', {
   // (açılışın kendisi Faz 8B'de bir aksiyon, bu alan yalnızca PLANLANAN anı
   // tutar, gerçek açılışı işaretleyen bir openedAt Faz 8B'de eklenecek).
   bidOpeningAt: timestamp('bid_opening_at'),
+  // Faz 8B — GERÇEK açılış anı (openTenderBidding çağrıldığında set edilir).
+  // bidOpeningAt yalnızca PLANLANAN anı tutar (açılış o andan ÖNCE
+  // yapılamaz, ama daha SONRA da yapılabilir — gerçek dünyada toplantı
+  // gecikebilir); openedAt GERÇEKTE ne zaman olduğunu kaydeder.
+  openedAt: timestamp('opened_at'),
+  openedByUserId: char('opened_by_user_id', { length: 36 }).references(() => users.id),
   deliveryLocation: varchar('delivery_location', { length: 255 }).notNull().default(''),
   paymentTerms: varchar('payment_terms', { length: 255 }).notNull().default(''),
   warrantyRequirement: varchar('warranty_requirement', { length: 255 }).notNull().default(''),
@@ -2364,3 +2384,43 @@ export const procTenderSuppliers = mysqlTable('proc_tender_suppliers', {
   status: mysqlEnum('status', PROC_TENDER_SUPPLIER_STATUSES).notNull().default('INVITED'),
   invitedAt: timestamp('invited_at').notNull().defaultNow()
 }, (table) => [uniqueIndex('udx_proc_tender_supplier').on(table.tenderId, table.supplierPartyId)]);
+
+// --- Satınalma Faz 8B — Kapalı Zarf Teklif + Açılış. proc_quotations/
+// proc_quotation_lines (Faz 2) İLE BİREBİR AYNI ŞEKİL (versiyonlu, madde
+// 116-117 immutable ilkesi) — TEK fark, İÇERİĞİN İfşa Kapısı: teklif
+// SATIRLARI (fiyat/miktar) tender.status='OPENED' olmadan hiçbir okuma
+// fonksiyonundan (lib/procurement/tender.ts:getTenderBidComparison)
+// DÖNMEZ. Bu GERÇEK bir kriptografik mühürleme DEĞİL — uygulama katmanında
+// bir kapı (İhale Kapsamı raporu §3'te AÇIKÇA belirtilen, gizlenmeyen bir
+// sınırlama): bir DB yöneticisi tabloyu doğrudan sorgulayabilir, ama
+// uygulamanın KENDİSİ açılıştan önce hiçbir ekranda/API'de fiyatı göstermez.
+export const procTenderBids = mysqlTable('proc_tender_bids', {
+  id: char('id', { length: 36 }).primaryKey(),
+  tenderId: char('tender_id', { length: 36 }).notNull().references(() => procTenders.id, { onDelete: 'cascade' }),
+  supplierPartyId: char('supplier_party_id', { length: 36 }).notNull().references(() => parties.id),
+  version: int('version').notNull(),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  validUntil: date('valid_until', { mode: 'string' }),
+  paymentTerms: varchar('payment_terms', { length: 255 }).notNull().default(''),
+  deliveryDays: int('delivery_days'),
+  // Serbest metin — teminat mektubu/dekont referansı. Banka doğrulaması
+  // YOK (İhale Kapsamı raporu §5); gerçek belge document_attachments'a
+  // (entityType='PROC_TENDER') ayrıca yüklenir.
+  bidBondReference: varchar('bid_bond_reference', { length: 255 }).notNull().default(''),
+  notes: text('notes'),
+  submittedByUserId: char('submitted_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  submittedAt: timestamp('submitted_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_proc_tender_bid_version').on(table.tenderId, table.supplierPartyId, table.version)]);
+
+export const procTenderBidLines = mysqlTable('proc_tender_bid_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  bidId: char('bid_id', { length: 36 }).notNull().references(() => procTenderBids.id, { onDelete: 'cascade' }),
+  tenderLineId: char('tender_line_id', { length: 36 }).notNull().references(() => procTenderLines.id),
+  unitPrice: decimal('unit_price', { precision: 20, scale: 6 }).notNull(),
+  discountPercent: decimal('discount_percent', { precision: 5, scale: 2 }),
+  taxPercent: decimal('tax_percent', { precision: 5, scale: 2 }),
+  deliveryDays: int('delivery_days'),
+  isAlternative: boolean('is_alternative').notNull().default(false),
+  alternativeDescription: varchar('alternative_description', { length: 255 }).notNull().default(''),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});

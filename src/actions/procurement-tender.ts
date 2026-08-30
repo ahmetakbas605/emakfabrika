@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import * as z from 'zod';
 import { requireSession } from '@/lib/dal';
-import { createTender, publishTender, cancelTender } from '@/lib/procurement/tender';
+import { createTender, publishTender, cancelTender, submitTenderBid, openTenderBidding } from '@/lib/procurement/tender';
+import { createAwardFromTender } from '@/lib/procurement/award';
 import { ProcurementError } from '@/lib/procurement/errors';
 import { optionalField } from '@/lib/form';
 
@@ -105,4 +106,101 @@ export async function cancelTenderAction(_prevState: FormState, formData: FormDa
   }
   revalidatePath(`/dashboard/procurement/tenders/${parsed.data.tenderId}`);
   return { success: 'İhale iptal edildi.' };
+}
+
+const TenderBidLineSchema = z.object({
+  tenderLineId: z.string().trim().min(1),
+  unitPrice: z.union([z.string(), z.number()]),
+  discountPercent: z.union([z.string(), z.number()]).optional(),
+  deliveryDays: z.union([z.string(), z.number()]).optional(),
+  isAlternative: z.string().trim().optional(),
+  alternativeDescription: z.string().trim().optional()
+});
+
+const SubmitTenderBidSchema = z.object({
+  tenderId: z.string().trim().min(1),
+  supplierPartyId: z.string().trim().min(1, 'Tedarikçi seçin.'),
+  currencyCode: z.string().trim().min(1),
+  validUntil: z.string().trim().optional(),
+  paymentTerms: z.string().trim().optional(),
+  deliveryDays: z.union([z.string(), z.number()]).optional(),
+  bidBondReference: z.string().trim().optional(),
+  lines: z.array(TenderBidLineSchema).min(1, 'En az bir teklif satırı gerekli.')
+});
+
+export async function submitTenderBidAction(_prevState: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireSession();
+  let linesRaw: unknown;
+  try {
+    linesRaw = JSON.parse(String(formData.get('linesJson') || '[]'));
+  } catch {
+    return { error: 'Geçersiz teklif satırı verisi.' };
+  }
+  const parsed = SubmitTenderBidSchema.safeParse({
+    tenderId: formData.get('tenderId'), supplierPartyId: formData.get('supplierPartyId'), currencyCode: formData.get('currencyCode'),
+    validUntil: optionalField(formData, 'validUntil'), paymentTerms: optionalField(formData, 'paymentTerms'), deliveryDays: optionalField(formData, 'deliveryDays'),
+    bidBondReference: optionalField(formData, 'bidBondReference'), lines: linesRaw
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
+
+  try {
+    await submitTenderBid(session.companyId, parsed.data.tenderId, parsed.data.supplierPartyId, session.id, {
+      currencyCode: parsed.data.currencyCode, validUntil: parsed.data.validUntil, paymentTerms: parsed.data.paymentTerms,
+      deliveryDays: parsed.data.deliveryDays === undefined ? undefined : Number(parsed.data.deliveryDays),
+      bidBondReference: parsed.data.bidBondReference,
+      lines: parsed.data.lines.map((l) => ({ ...l, isAlternative: l.isAlternative === 'on', deliveryDays: l.deliveryDays === undefined ? undefined : Number(l.deliveryDays) }))
+    });
+  } catch (err) {
+    return { error: toErrorMessage(err, 'Teklif kaydedilemedi.') };
+  }
+  revalidatePath(`/dashboard/procurement/tenders/${parsed.data.tenderId}`);
+  return { success: 'Teklif kaydedildi.' };
+}
+
+export async function openTenderBiddingAction(_prevState: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireSession();
+  const parsed = TenderIdSchema.safeParse({ tenderId: formData.get('tenderId') });
+  if (!parsed.success) return { error: 'Geçersiz form.' };
+
+  try {
+    await openTenderBidding(session.companyId, parsed.data.tenderId, session.id);
+  } catch (err) {
+    return { error: toErrorMessage(err, 'Teklifler açılamadı.') };
+  }
+  revalidatePath(`/dashboard/procurement/tenders/${parsed.data.tenderId}`);
+  return { success: 'Teklifler açıldı.' };
+}
+
+const TenderAwardLineSchema = z.object({
+  tenderLineId: z.string().trim().min(1),
+  supplierPartyId: z.string().trim().min(1),
+  tenderBidLineId: z.string().trim().min(1),
+  awardedQty: z.union([z.string(), z.number()])
+});
+
+const CreateTenderAwardSchema = z.object({
+  tenderId: z.string().trim().min(1),
+  lines: z.array(TenderAwardLineSchema).min(1, 'En az bir ödül satırı gerekli.')
+});
+
+export async function createTenderAwardAction(_prevState: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireSession();
+  let linesRaw: unknown;
+  try {
+    linesRaw = JSON.parse(String(formData.get('linesJson') || '[]'));
+  } catch {
+    return { error: 'Geçersiz ödül satırı verisi.' };
+  }
+  const parsed = CreateTenderAwardSchema.safeParse({ tenderId: formData.get('tenderId'), lines: linesRaw });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
+
+  let awardId: string;
+  try {
+    awardId = await createAwardFromTender(session.companyId, session.id, parsed.data.tenderId, { lines: parsed.data.lines });
+  } catch (err) {
+    return { error: toErrorMessage(err, 'Ödül oluşturulamadı.') };
+  }
+  revalidatePath(`/dashboard/procurement/tenders/${parsed.data.tenderId}`);
+  revalidatePath(`/dashboard/procurement/awards/${awardId}`);
+  return { success: 'Ödül taslağı oluşturuldu.' };
 }

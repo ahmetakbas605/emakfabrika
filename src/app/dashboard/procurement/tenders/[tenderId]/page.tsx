@@ -1,8 +1,13 @@
+import Link from 'next/link';
 import { requireSession } from '@/lib/dal';
-import { getTender } from '@/lib/procurement/tender';
+import { getTender, listTenderBidParticipation, getTenderBidComparison } from '@/lib/procurement/tender';
+import { getAwardByTender } from '@/lib/procurement/award';
+import { listParties } from '@/lib/master-data/parties';
 import { PublishTenderButton, CancelTenderButton } from '@/components/procurement/tender-form';
+import { TenderBidForm, OpenTenderBiddingButton } from '@/components/procurement/tender-bid-form';
+import { TenderAwardCreateForm, type TenderAwardLineOption } from '@/components/procurement/tender-award-form';
 
-const TENDER_STATUS_LABEL: Record<string, string> = { DRAFT: 'Taslak', PUBLISHED: 'Yayınlandı', CANCELLED: 'İptal' };
+const TENDER_STATUS_LABEL: Record<string, string> = { DRAFT: 'Taslak', PUBLISHED: 'Yayınlandı', OPENED: 'Teklifler Açıldı', AWARDED: 'Ödüllendirildi', CANCELLED: 'İptal' };
 const SUPPLIER_STATUS_LABEL: Record<string, string> = { INVITED: 'Davet Edildi', RESPONDED: 'Teklif Verdi', DECLINED: 'Reddetti' };
 
 export default async function TenderDetailPage({ params }: { params: Promise<{ tenderId: string }> }) {
@@ -10,13 +15,29 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
   const session = await requireSession();
   const { tender, lines, suppliers } = await getTender(session.companyId, tenderId);
 
+  const [participation, award] = await Promise.all([
+    listTenderBidParticipation(session.companyId, tenderId),
+    getAwardByTender(session.companyId, tenderId)
+  ]);
+  const canSeeComparison = tender.status === 'OPENED' || tender.status === 'AWARDED';
+  const comparison = canSeeComparison ? await getTenderBidComparison(session.companyId, tenderId) : [];
+
+  const bidSuppliers = tender.openParticipation ? await listParties(session.companyId, { role: 'SUPPLIER' }) : suppliers.map((s) => ({ id: s.supplierPartyId, legalName: s.supplierName }));
+
+  const awardLines: TenderAwardLineOption[] = comparison.map((row) => ({
+    tenderLineId: row.tenderLineId, description: row.description, quantity: row.quantity,
+    unitCode: lines.find((l) => l.id === row.tenderLineId)?.unitCode ?? '',
+    cells: row.cells.map((c) => ({ supplierPartyId: c.supplierPartyId, supplierName: c.supplierName, tenderBidLineId: c.tenderBidLineId, netUnitPrice: c.netUnitPrice }))
+  }));
+
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{tender.tenderNo} — {tender.title}</h1>
       <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>
         {TENDER_STATUS_LABEL[tender.status] ?? tender.status}
         {tender.bidSubmissionDeadline ? ` · Teklif son tarihi: ${new Date(tender.bidSubmissionDeadline).toLocaleString('tr-TR')}` : ''}
-        {tender.bidOpeningAt ? ` · Açılış: ${new Date(tender.bidOpeningAt).toLocaleString('tr-TR')}` : ''}
+        {tender.bidOpeningAt ? ` · Planlanan açılış: ${new Date(tender.bidOpeningAt).toLocaleString('tr-TR')}` : ''}
+        {tender.openedAt ? ` · Gerçek açılış: ${new Date(tender.openedAt).toLocaleString('tr-TR')}` : ''}
         {tender.deliveryLocation ? ` · Teslimat: ${tender.deliveryLocation}` : ''}
         {tender.openParticipation ? ' · Açık katılım' : ' · Davetli katılım'}
         {tender.bidBondRequired ? ` · Teminat: ${tender.bidBondPercent ? `%${tender.bidBondPercent}` : ''}${tender.bidBondAmount ? ` ${Number(tender.bidBondAmount).toLocaleString('tr-TR')}` : ''}` : ''}
@@ -24,7 +45,9 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
         {tender.status === 'DRAFT' ? <PublishTenderButton tenderId={tenderId} /> : null}
-        {tender.status !== 'CANCELLED' ? <CancelTenderButton tenderId={tenderId} /> : null}
+        {tender.status === 'PUBLISHED' ? <OpenTenderBiddingButton tenderId={tenderId} /> : null}
+        {tender.status !== 'CANCELLED' && tender.status !== 'AWARDED' ? <CancelTenderButton tenderId={tenderId} /> : null}
+        {award ? <Link href={`/dashboard/procurement/awards/${award.id}`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Ödülü Görüntüle</Link> : null}
       </div>
 
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Kalemler</h2>
@@ -47,7 +70,7 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
         </tbody>
       </table>
 
-      <h2 style={{ fontSize: 16, marginBottom: 8 }}>Davetli Tedarikçiler</h2>
+      <h2 style={{ fontSize: 16, marginBottom: 8 }}>{tender.openParticipation ? 'Katılımcılar' : 'Davetli Tedarikçiler'}</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
           <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
@@ -62,12 +85,68 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
               <td style={{ padding: '6px 8px', color: '#666' }}>{SUPPLIER_STATUS_LABEL[s.status] ?? s.status}</td>
             </tr>
           ))}
-          {suppliers.length === 0 && !tender.openParticipation ? <tr><td colSpan={2} style={{ padding: '8px', color: '#999' }}>Davetli tedarikçi yok.</td></tr> : null}
-          {tender.openParticipation ? <tr><td colSpan={2} style={{ padding: '8px', color: '#999' }}>Açık katılım — herhangi bir tedarikçi kendi teklifini vererek katılabilir (Faz 8B).</td></tr> : null}
+          {suppliers.length === 0 ? <tr><td colSpan={2} style={{ padding: '8px', color: '#999' }}>Henüz katılımcı yok.</td></tr> : null}
         </tbody>
       </table>
 
-      <p style={{ color: '#999', fontSize: 12 }}>Kapalı teklif toplama ve açılış (Faz 8B) henüz uygulanmadı.</p>
+      <h2 style={{ fontSize: 16, marginBottom: 8 }}>Teklif Katılımı</h2>
+      <p style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>Kim teklif verdi — içerik (fiyat/miktar) açılışa kadar gizlidir.</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
+        {participation.map((p) => (
+          <span key={p.supplierPartyId} style={{ fontSize: 12, border: '1px solid #eee', borderRadius: 4, padding: '4px 8px' }}>{p.supplierName} (v{p.version})</span>
+        ))}
+        {participation.length === 0 ? <span style={{ color: '#999', fontSize: 13 }}>Henüz teklif yok.</span> : null}
+      </div>
+
+      {tender.status === 'PUBLISHED' ? (
+        <div style={{ marginBottom: 24 }}>
+          <TenderBidForm tenderId={tenderId} tenderLines={lines.map((l) => ({ id: l.id, description: l.description }))} suppliers={bidSuppliers.map((s) => ({ id: s.id, legalName: s.legalName }))} />
+        </div>
+      ) : null}
+
+      {canSeeComparison ? (
+        <>
+          <h2 style={{ fontSize: 16, marginBottom: 8 }}>Teklif Karşılaştırması</h2>
+          <p style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>Her tedarikçinin EN SON teklif versiyonu kullanılır, en ucuzdan pahalıya sıralanır. Ağırlıklı değerlendirme (Faz 8C) henüz yok.</p>
+          {comparison.map((row) => (
+            <div key={row.tenderLineId} style={{ marginBottom: 16 }}>
+              <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{row.description} ({Number(row.quantity).toLocaleString('tr-TR')})</p>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid #ccc' }}>
+                    <th style={{ padding: '4px 8px' }}>Tedarikçi</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right' }}>Birim Fiyat</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right' }}>İndirim</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right' }}>Net Birim</th>
+                    <th style={{ padding: '4px 8px', textAlign: 'right' }}>Toplam</th>
+                    <th style={{ padding: '4px 8px' }}>Teslim</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {row.cells.map((c, i) => (
+                    <tr key={c.supplierPartyId} style={{ borderBottom: '1px solid #f0f0f0', background: i === 0 ? '#f4fbf4' : undefined }}>
+                      <td style={{ padding: '4px 8px' }}>{c.supplierName}{c.isAlternative ? ' (Alternatif)' : ''}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{c.unitPrice}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>%{c.discountPercent}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{c.netUnitPrice}</td>
+                      <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: i === 0 ? 600 : 400 }}>{c.lineTotal}</td>
+                      <td style={{ padding: '4px 8px', color: '#666' }}>{c.deliveryDays ?? '—'} gün</td>
+                    </tr>
+                  ))}
+                  {row.cells.length === 0 ? <tr><td colSpan={6} style={{ padding: '6px 8px', color: '#999' }}>Bu kalem için teklif yok.</td></tr> : null}
+                </tbody>
+              </table>
+            </div>
+          ))}
+
+          {tender.status === 'OPENED' && !award ? (
+            <>
+              <h2 style={{ fontSize: 16, marginBottom: 8 }}>Ödül Oluştur</h2>
+              <TenderAwardCreateForm tenderId={tenderId} lines={awardLines} />
+            </>
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }

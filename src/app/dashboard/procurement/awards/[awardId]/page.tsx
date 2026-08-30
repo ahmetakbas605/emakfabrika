@@ -21,8 +21,13 @@ export default async function AwardDetailPage({ params }: { params: Promise<{ aw
   const canSubmit = (award.status === 'DRAFT' || award.status === 'REVISION_REQUIRED') && award.createdByUserId === session.id;
   const canCancel = (award.status === 'DRAFT' || award.status === 'REVISION_REQUIRED') && award.createdByUserId === session.id;
 
-  const purchaseOrders = award.status === 'APPROVED' ? await listPurchaseOrdersForAward(session.companyId, awardId) : [];
-  const canCreatePos = award.status === 'APPROVED' && (await hasUnconvertedAwardLines(session.companyId, awardId));
+  // Faz 8B — sipariş üretimi henüz yalnızca RFQ kaynaklı ödüller için var
+  // (lib/procurement/purchaseOrder.ts:createPurchaseOrdersFromAward, Faz 8C'ye
+  // kadar). Tender kaynaklı bir ödül için bu bölümü hiç GÖSTERMEMEK, tıklanınca
+  // hata verecek bir buton göstermekten daha dürüst.
+  const showPoSection = award.status === 'APPROVED' && !award.tenderId;
+  const purchaseOrders = showPoSection ? await listPurchaseOrdersForAward(session.companyId, awardId) : [];
+  const canCreatePos = showPoSection && (await hasUnconvertedAwardLines(session.companyId, awardId));
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -75,7 +80,7 @@ export default async function AwardDetailPage({ params }: { params: Promise<{ aw
         </>
       ) : null}
 
-      {award.status === 'APPROVED' ? (
+      {showPoSection ? (
         <>
           <h2 style={{ fontSize: 16, marginBottom: 8 }}>Satınalma Siparişleri</h2>
           {canCreatePos ? <div style={{ marginBottom: 12 }}><CreatePurchaseOrdersButton awardId={awardId} /></div> : null}

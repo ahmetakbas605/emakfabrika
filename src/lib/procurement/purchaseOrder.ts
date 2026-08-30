@@ -23,6 +23,12 @@ export async function createPurchaseOrdersFromAward(companyId: string, awardId: 
   const [award] = await db.select().from(procAwards).where(and(eq(procAwards.id, awardId), eq(procAwards.companyId, companyId))).limit(1);
   if (!award) throw new ProcurementError('Ödül kaydı bulunamadı.');
   if (award.status !== 'APPROVED') throw new ProcurementError('Yalnızca onaylanmış (APPROVED) bir ödül için sipariş oluşturulabilir.');
+  // Faz 8B — Award'ın kaynağı RFQ VEYA Tender olabilir (schema.ts'teki
+  // genelleme). PO üretimini Tender kaynaklı bir ödül için de çalıştırmak
+  // Faz 8C'nin KENDİ kapsamı ("PO/Mal Kabul/3-Way Match'in tender'lar için
+  // de çalıştığının doğrulanması") — burada AÇIKÇA reddediliyor, sessizce
+  // yanlış/eksik bir PO üretmek yerine.
+  if (!award.rfqId) throw new ProcurementError('İhale kaynaklı ödüllerden sipariş oluşturma henüz desteklenmiyor.');
 
   const [rfq] = await db.select({ deliveryLocation: procRfqs.deliveryLocation, paymentTerms: procRfqs.paymentTerms, warrantyRequirement: procRfqs.warrantyRequirement }).from(procRfqs).where(eq(procRfqs.id, award.rfqId)).limit(1);
 
