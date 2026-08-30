@@ -79,11 +79,44 @@ gerçek DB üzerinde geçti (ondalık muhasebe matematiği dahil doğrulandı). 
 Playwright ile tüm yeni sayfalar + mevcut Onay Kutusu regresyonu doğrulandı.
 `tsc --noEmit` + `npm run build` temiz.
 
-## FAZ 2 — Üretim Çekirdeği (BOM + Routing + Production Order)
+## FAZ 2 — Üretim Çekirdeği (BOM + Routing + Production Order) ✅
 
 **Bağımlılık:** Faz 1 (talep), Depo (✅), Satın Alma (✅ — malzeme tedariki).
-BOM (revizyon/geçerlilik tarihli), Routing, İş Merkezi, Üretim Emri→İş Emri→
-Malzeme Çıkışı→Üretim→Mamul.
+
+Teslim edilenler: `work_centers`→`boms`(+lines, employee_contracts İLE AYNI
+immutable versiyon zinciri, fire%/alternatif bileşen destekli)→`routings`
+(+operations, opsiyonel)→`production_orders`(documentType='PRODUCTION_ORDER'
+jenerik onay motoruna bağlı, onay ANINDA BOM bileşenleri o emrin deposunda
+otomatik rezerve edilir + routing varsa her operasyon için bir
+`prod_operations` satırı otomatik üretilir)→Malzeme Çıkışı (TEK, TAM tüketim
+olayı — gerçek stok çıkışı + rezervasyonun GERÇEKTEN serbest bırakılması,
+Satış Sevkiyatı'nın kısmi-sevkiyat nedeniyle bırakmadığı bir şeyi burada tam
+tüketim olduğu için güvenle yapabildik)→İş Emri operasyonları (başlat/
+tamamla, iyi/fire kaydı)→Üretim Tamamlama (tüm operasyonlar bitmeden
+kilitli — mamul GERÇEK stok girişi + opsiyonel muhasebe fişi).
+
+Mimari notlar:
+- `prod_operations` tablo/sütun adları BİLİNÇLİ OLARAK kısa tutuldu — hem
+  IT'nin zaten var olan `work_orders`/`wo_checklists` (saha servis) ile isim
+  çakışmasın diye, hem de GERÇEK bir migration hatasıyla bulunan MySQL'in 64
+  karakterlik FK-adı sınırını aşmamak için (`production_work_orders` +
+  `production_order_id` + `production_orders` birleşince ER_TOO_LONG_IDENT
+  verdi — schema.ts'in kendi yorumunda kayıtlı).
+- Bir üretim emri her zaman ürünün O ANDA ACTIVE BOM/Routing'ini kullanır,
+  kullanıcı versiyon SEÇMEZ — ama emrin kendi `bomId`/`routingId` alanları o
+  ANKİ versiyona DONAR (geçmiş bir emrin reçetesi asla değişmez).
+- Onay eşiği (`amount`) için gerçek maliyetlendirme (standart/gerçek
+  maliyet) bu fazın kapsamı DIŞINDA — miktar kendisi eşik değeri olarak
+  kullanılıyor, TODO not edildi.
+
+Test: `tests/production.test.ts` (kalıcı) — tam İş Merkezi→BOM(%10 fire)→
+Routing(2 operasyon)→Üretim Emri→Onay(+stok rezervasyonu doğru miktarda)→
+Malzeme Çıkışı(+gerçek stok düşüşü +rezervasyon serbest bırakma +gerçek
+muhasebe fişi)→Operasyon başlat/tamamla→Üretim Tamamlama(+gerçek mamul stok
+girişi +gerçek muhasebe fişi) zinciri, 22/22 gerçek DB'de doğrulandı. Diğer
+üç kalıcı test paketiyle (accounting/holding/sales) birlikte toplam 65/65.
+Canlı Playwright ile tüm yeni sayfalar + mevcut modül regresyonu sıfır
+hatayla doğrulandı. `tsc --noEmit` + `npm run build` temiz.
 
 ## FAZ 3 — MRP
 

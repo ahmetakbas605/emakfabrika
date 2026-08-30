@@ -17,6 +17,7 @@ const NAV: NavGroup[] = [
 
 const QUICK_LINKS = [
   { href: '/dashboard/sales', label: 'Satış & CRM', icon: Landmark },
+  { href: '/dashboard/production', label: 'Üretim', icon: Boxes },
   { href: '/dashboard/procurement', label: 'Satınalma Talepleri', icon: Boxes },
   { href: '/dashboard/procurement/dashboard', label: 'Satınalma Kontrol Paneli', icon: Landmark },
   { href: '/dashboard/procurement/tenders', label: 'İhaleler', icon: Landmark },

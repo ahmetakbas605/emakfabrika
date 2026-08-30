@@ -12,11 +12,13 @@ import { actOnOvertimeStep } from '@/lib/hr/overtime';
 import { actOnBonusStep } from '@/lib/hr/bonus';
 import { actOnDsrStep } from '@/lib/security/dsr';
 import { actOnOrderStep } from '@/lib/sales/orders';
+import { actOnProductionOrderStep } from '@/lib/production/orders';
 import { CoreError } from '@/lib/core/errors';
 import { ProcurementError } from '@/lib/procurement/errors';
 import { HrError } from '@/lib/hr/errors';
 import { SecurityError } from '@/lib/security/errors';
 import { SalesError } from '@/lib/sales/errors';
+import { ProductionError } from '@/lib/production/errors';
 import { optionalField } from '@/lib/form';
 
 export type FormState = { error?: string; success?: string } | undefined;
@@ -128,11 +130,13 @@ export async function actOnStepAction(_prevState: FormState, formData: FormData)
       await actOnDsrStep(session.companyId, actionInput);
     } else if (documentType === 'SALES_ORDER') {
       await actOnOrderStep(session.companyId, { ...actionInput, warehouseId: parsed.data.warehouseId });
+    } else if (documentType === 'PRODUCTION_ORDER') {
+      await actOnProductionOrderStep(session.companyId, actionInput);
     } else {
       await actOnStep(session.companyId, actionInput);
     }
   } catch (err) {
-    return { error: err instanceof CoreError || err instanceof ProcurementError || err instanceof HrError || err instanceof SecurityError || err instanceof SalesError ? err.message : 'İşlem gerçekleştirilemedi.' };
+    return { error: err instanceof CoreError || err instanceof ProcurementError || err instanceof HrError || err instanceof SecurityError || err instanceof SalesError || err instanceof ProductionError ? err.message : 'İşlem gerçekleştirilemedi.' };
   }
   revalidatePath('/dashboard/approvals');
   revalidatePath('/dashboard/procurement');
@@ -141,5 +145,6 @@ export async function actOnStepAction(_prevState: FormState, formData: FormData)
   revalidatePath('/dashboard/hr/bonus');
   revalidatePath('/dashboard/security/requests');
   revalidatePath('/dashboard/sales/orders');
+  revalidatePath('/dashboard/production/orders');
   return { success: 'Karar kaydedildi.' };
 }

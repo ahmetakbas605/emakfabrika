@@ -288,6 +288,13 @@
       "when": 1788120629159,
       "tag": "0040_military_magma",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "5",
+      "when": 1788123469212,
+      "tag": "0041_organic_thaddeus_ross",
+      "breakpoints": true
     }
   ]
 }

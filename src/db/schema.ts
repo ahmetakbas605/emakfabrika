@@ -3350,3 +3350,166 @@ export const customerComplaints = mysqlTable('customer_complaints', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   resolvedAt: timestamp('resolved_at')
 }, (table) => [uniqueIndex('udx_customer_complaints_company_no').on(table.companyId, table.complaintNo)]);
+
+// --- Holding ERP Faz 2 — Üretim Çekirdeği (MASTER-ERP-ROADMAP.md).
+// Üretim operasyon kaydı BİLİNÇLİ OLARAK "prodOperations" (`prod_operations`)
+// adını taşıyor — hem IT domain'inin ZATEN VAR OLAN `workOrders`/
+// `wo_checklists` (saha servis iş emri) tablolarıyla İSİM ÇAKIŞMASI olmasın
+// diye (ikisi kavramsal olarak tamamen ayrı — biri üretim operasyonu,
+// diğeri IT/saha bakım işi), hem de MySQL'in 64 karakterlik FK-adı sınırını
+// aşmamak için (aşağıdaki tablo tanımının kendi yorumu — GERÇEK bir
+// migration hatasıyla bulundu).
+//
+// BOM/Routing, employee_contracts/emp_compensations İLE AYNI immutable
+// versiyon zinciri desenini kullanır (yeni versiyon → önceki ACTIVE
+// SUPERSEDED'e döner, SİLİNMEZ) — bir üretim emri her zaman "o anki ACTIVE
+// BOM/Routing"a göre planlanır, versiyon numarası donmuş olarak saklanır
+// (bomId/routingId doğrudan o versiyona işaret eder, "en güncel" sorgusuna
+// değil — geçmiş bir üretim emrinin hangi reçeteyle üretildiği asla
+// değişmemeli).
+
+// --- İş Merkezi (Work Center) ---
+
+export const workCenters = mysqlTable('work_centers', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  capacityPerHour: decimal('capacity_per_hour', { precision: 20, scale: 6 }),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_work_center_company_code').on(table.companyId, table.code)]);
+
+// --- BOM (Bill of Materials / Ürün Ağacı) ---
+
+export const BOM_STATUSES = ['ACTIVE', 'SUPERSEDED'] as const;
+
+export const boms = mysqlTable('boms', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  // Bu BOM'un ÜRETTİĞİ ürün (mamul/yarı mamul) — bileşenler bomLines'ta.
+  productId: char('product_id', { length: 36 }).notNull().references(() => products.id),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  version: int('version').notNull().default(1),
+  status: mysqlEnum('status', BOM_STATUSES).notNull().default('ACTIVE'),
+  // madde 25 — "1 birim baz miktar" varsayımı yerine parti/batch bazlı BOM
+  // desteği (ör. "bu reçete 1 değil 100 birim üretir" — kimya/gıda
+  // üretiminde yaygın). Üretim emri miktarı bu birime göre ölçeklenir.
+  baseQuantity: decimal('base_quantity', { precision: 20, scale: 6 }).notNull().default('1'),
+  unitId: char('unit_id', { length: 36 }).notNull().references(() => units.id),
+  effectiveFrom: date('effective_from', { mode: 'string' }),
+  effectiveTo: date('effective_to', { mode: 'string' }),
+  supersedesId: char('supersedes_id', { length: 36 }).references((): AnyMySqlColumn => boms.id),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_boms_company_code_version').on(table.companyId, table.code, table.version)]);
+
+export const bomLines = mysqlTable('bom_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  bomId: char('bom_id', { length: 36 }).notNull().references(() => boms.id, { onDelete: 'cascade' }),
+  lineOrder: int('line_order').notNull().default(0),
+  componentProductId: char('component_product_id', { length: 36 }).notNull().references(() => products.id),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitId: char('unit_id', { length: 36 }).notNull().references(() => units.id),
+  // madde 25 — "fire" (üretim kaybı yüzdesi, ör. kesim firesi). Gerekli
+  // miktar = quantity × (1 + scrapPercent/100).
+  scrapPercent: decimal('scrap_percent', { precision: 5, scale: 2 }),
+  // madde 25 — "alternatif malzeme". Tek bir alternatif YETERLİ (birden
+  // fazla alternatif zinciri gerçek bir ihtiyaç doğana kadar aşırı
+  // mühendislik olurdu, madde 67).
+  alternativeComponentProductId: char('alternative_component_product_id', { length: 36 }).references(() => products.id)
+});
+
+// --- Routing (Rota / Operasyon Sırası) ---
+
+export const ROUTING_STATUSES = ['ACTIVE', 'SUPERSEDED'] as const;
+
+export const routings = mysqlTable('routings', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  productId: char('product_id', { length: 36 }).notNull().references(() => products.id),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  version: int('version').notNull().default(1),
+  status: mysqlEnum('status', ROUTING_STATUSES).notNull().default('ACTIVE'),
+  supersedesId: char('supersedes_id', { length: 36 }).references((): AnyMySqlColumn => routings.id),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_routings_company_code_version').on(table.companyId, table.code, table.version)]);
+
+export const routingOperations = mysqlTable('routing_operations', {
+  id: char('id', { length: 36 }).primaryKey(),
+  routingId: char('routing_id', { length: 36 }).notNull().references(() => routings.id, { onDelete: 'cascade' }),
+  operationOrder: int('operation_order').notNull(),
+  workCenterId: char('work_center_id', { length: 36 }).notNull().references(() => workCenters.id),
+  name: varchar('name', { length: 255 }).notNull(),
+  setupTimeMinutes: decimal('setup_time_minutes', { precision: 10, scale: 2 }),
+  runTimeMinutesPerUnit: decimal('run_time_minutes_per_unit', { precision: 10, scale: 4 }),
+  description: text('description')
+});
+
+// --- Üretim Emri (Production Order) — documentType='PRODUCTION_ORDER'
+// jenerik onay motoruna bağlanır (sales_orders İLE AYNI create-draft→
+// submit→onay deseni).
+
+export const PRODUCTION_ORDER_STATUSES = ['DRAFT', 'SUBMITTED', 'REJECTED', 'REVISION_REQUIRED', 'RELEASED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
+
+export const productionOrders = mysqlTable('production_orders', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  orderNo: varchar('order_no', { length: 32 }).notNull(),
+  productId: char('product_id', { length: 36 }).notNull().references(() => products.id),
+  // O ANDA ACTIVE olan BOM/Routing'in DONMUŞ referansı (madde başındaki
+  // yorum — geçmişe dönük değişmezlik).
+  bomId: char('bom_id', { length: 36 }).notNull().references(() => boms.id),
+  routingId: char('routing_id', { length: 36 }).references(() => routings.id),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitId: char('unit_id', { length: 36 }).notNull().references(() => units.id),
+  warehouseId: char('warehouse_id', { length: 36 }).notNull().references(() => warehouses.id),
+  plannedStartDate: date('planned_start_date', { mode: 'string' }),
+  plannedEndDate: date('planned_end_date', { mode: 'string' }),
+  status: mysqlEnum('status', PRODUCTION_ORDER_STATUSES).notNull().default('DRAFT'),
+  // madde (Satış→MRP→Üretim zinciri) — Faz 1'in sales_orders'ına opsiyonel
+  // izlenebilirlik bağlantısı (bu üretim emri hangi satış siparişi İÇİN
+  // açıldı). MRP (Faz 3) bu alanı otomatik dolduracak, Faz 2'de ELLE
+  // seçilebilir bir alan.
+  salesOrderId: char('sales_order_id', { length: 36 }).references(() => salesOrders.id),
+  materialsIssuedAt: timestamp('materials_issued_at'),
+  goodQuantity: decimal('good_quantity', { precision: 20, scale: 6 }).notNull().default('0'),
+  scrapQuantity: decimal('scrap_quantity', { precision: 20, scale: 6 }).notNull().default('0'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  submittedAt: timestamp('submitted_at'),
+  releasedAt: timestamp('released_at'),
+  completedAt: timestamp('completed_at')
+}, (table) => [uniqueIndex('udx_production_orders_company_no').on(table.companyId, table.orderNo)]);
+
+// --- İş Emri (Work Order) — bir üretim emrinin, routing'inin HER operasyonu
+// için otomatik üretilen alt-kaydı (routing yoksa hiç üretilmez — üretim
+// emri iş emri OLMADAN da malzeme çıkışı/tamamlanabilir, madde başındaki
+// "opsiyonel entegrasyon" ilkesiyle tutarlı).
+
+export const PRODUCTION_WORK_ORDER_STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
+
+// GERÇEK bulgu (migrate.ts, 2026-08-30): "production_work_orders" tablo adı
+// + "production_order_id"/"production_orders" referansları birleşince
+// MySQL'in 64 karakterlik tanımlayıcı sınırını AŞAN bir FK constraint adı
+// üretiyordu (ER_TOO_LONG_IDENT) — tablo "prod_operations", sütun "order_id"
+// olarak kısaltıldı (kavramsal anlam DEĞİŞMEDİ, yalnızca isimler kısaldı).
+export const prodOperations = mysqlTable('prod_operations', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  orderId: char('order_id', { length: 36 }).notNull().references(() => productionOrders.id, { onDelete: 'cascade' }),
+  routingOpId: char('routing_op_id', { length: 36 }).references(() => routingOperations.id),
+  operationOrder: int('operation_order').notNull(),
+  workCenterId: char('work_center_id', { length: 36 }).references(() => workCenters.id),
+  name: varchar('name', { length: 255 }).notNull(),
+  status: mysqlEnum('status', PRODUCTION_WORK_ORDER_STATUSES).notNull().default('PENDING'),
+  assignedToUserId: char('assigned_to_user_id', { length: 36 }).references(() => users.id),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
+  goodQuantity: decimal('good_quantity', { precision: 20, scale: 6 }).notNull().default('0'),
+  scrapQuantity: decimal('scrap_quantity', { precision: 20, scale: 6 }).notNull().default('0'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
