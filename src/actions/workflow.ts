@@ -7,8 +7,11 @@ import { createWorkflowRule, actOnStep, getStepDocumentType, type ApprovalDecisi
 import type { WorkflowChainStep } from '@/lib/workflow/types';
 import { actOnRequisitionStep } from '@/lib/procurement/requisition';
 import { actOnAwardStep } from '@/lib/procurement/award';
+import { actOnLeaveStep } from '@/lib/hr/leave';
+import { actOnOvertimeStep } from '@/lib/hr/overtime';
 import { CoreError } from '@/lib/core/errors';
 import { ProcurementError } from '@/lib/procurement/errors';
+import { HrError } from '@/lib/hr/errors';
 import { optionalField } from '@/lib/form';
 
 export type FormState = { error?: string; success?: string } | undefined;
@@ -105,13 +108,19 @@ export async function actOnStepAction(_prevState: FormState, formData: FormData)
       await actOnRequisitionStep(session.companyId, actionInput);
     } else if (documentType === 'PROCUREMENT_AWARD') {
       await actOnAwardStep(session.companyId, actionInput);
+    } else if (documentType === 'LEAVE') {
+      await actOnLeaveStep(session.companyId, actionInput);
+    } else if (documentType === 'OVERTIME') {
+      await actOnOvertimeStep(session.companyId, actionInput);
     } else {
       await actOnStep(session.companyId, actionInput);
     }
   } catch (err) {
-    return { error: err instanceof CoreError || err instanceof ProcurementError ? err.message : 'İşlem gerçekleştirilemedi.' };
+    return { error: err instanceof CoreError || err instanceof ProcurementError || err instanceof HrError ? err.message : 'İşlem gerçekleştirilemedi.' };
   }
   revalidatePath('/dashboard/approvals');
   revalidatePath('/dashboard/procurement');
+  revalidatePath('/dashboard/hr/leave');
+  revalidatePath('/dashboard/hr/overtime');
   return { success: 'Karar kaydedildi.' };
 }

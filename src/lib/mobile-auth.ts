@@ -24,6 +24,7 @@ export interface MobileUser {
   companyId: string;
   companyName: string;
   isFactoryAdmin: boolean;
+  employeeId: string | null;
 }
 
 function encodeMobileToken(userId: string, rawToken: string): string {
@@ -64,7 +65,7 @@ export async function mobileLogin(email: string, password: string, rememberDays:
   return {
     ok: true,
     token: encodeMobileToken(found.user.id, rawToken),
-    user: { id: found.user.id, fullName: found.user.fullName, email: found.user.email, companyId: found.user.companyId, companyName: found.companyName, isFactoryAdmin: found.user.isFactoryAdmin }
+    user: { id: found.user.id, fullName: found.user.fullName, email: found.user.email, companyId: found.user.companyId, companyName: found.companyName, isFactoryAdmin: found.user.isFactoryAdmin, employeeId: found.user.employeeId }
   };
 }
 
@@ -85,7 +86,7 @@ export async function resolveMobileUser(authorizationHeader: string | null): Pro
   if (!user.mobileSessionExpiresAt || user.mobileSessionExpiresAt.getTime() < Date.now()) return null;
   if (!user.active) return null;
 
-  return { id: user.id, fullName: user.fullName, email: user.email, companyId: user.companyId, companyName, isFactoryAdmin: user.isFactoryAdmin };
+  return { id: user.id, fullName: user.fullName, email: user.email, companyId: user.companyId, companyName, isFactoryAdmin: user.isFactoryAdmin, employeeId: user.employeeId };
 }
 
 export async function mobileLogout(userId: string): Promise<void> {
@@ -95,7 +96,7 @@ export async function mobileLogout(userId: string): Promise<void> {
 // requireDepartmentAccess (lib/dal.ts, web) İLE AYNI ruh — mobil için
 // redirect() ETMEZ, JSON döner.
 export function toAuthedUser(mobileUser: MobileUser): AuthedUser {
-  return { id: mobileUser.id, companyId: mobileUser.companyId, companyName: mobileUser.companyName, fullName: mobileUser.fullName, email: mobileUser.email, isFactoryAdmin: mobileUser.isFactoryAdmin };
+  return { id: mobileUser.id, companyId: mobileUser.companyId, companyName: mobileUser.companyName, fullName: mobileUser.fullName, email: mobileUser.email, isFactoryAdmin: mobileUser.isFactoryAdmin, employeeId: mobileUser.employeeId };
 }
 
 // lib/dal.ts:requireDepartmentAccess'in fabrika-yöneticisi fallback'iyle AYNI

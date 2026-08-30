@@ -2679,3 +2679,68 @@ export const pdksAttendanceRecords = mysqlTable('pdks_attendance_records', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
 }, (table) => [uniqueIndex('udx_pdks_attendance_employee_date').on(table.employeeId, table.workDate)]);
+
+// --- İK Faz 3 — İzin + Fazla Mesai + Devamsızlık (İK Mimarisi raporu §09
+// Faz 3): jenerik workflow motoruna İKİ yeni documentType ('LEAVE',
+// 'OVERTIME') — motor kodu (workflow/engine.ts) SIFIR değişti, yalnızca
+// procAwards/procRequests'in submit/actOnXStep desenini birebir izleyen
+// yeni bir çift lib fonksiyonu (bkz. lib/hr/leave.ts). "Devamsızlık" ayrı
+// bir üçüncü documentType DEĞİL — rapor yalnızca LEAVE/OVERTIME diyor;
+// devamsızlık (plansız/mazeretsiz gaybubet) LEAVE_TYPES'a 'ABSENCE' olarak
+// eklendi, çünkü veri şekli (tarih aralığı+sebep+onay) izinle BİREBİR aynı,
+// yalnızca "önceden mi sonradan mı bildirildiği" anlamı farklı.
+
+export const LEAVE_TYPES = ['ANNUAL', 'SICK', 'UNPAID', 'ABSENCE', 'MATERNITY', 'PATERNITY', 'BEREAVEMENT', 'OTHER'] as const;
+// proc_awards/proc_requests İLE AYNI durum makinesi — generic workflow
+// motoruna devrediliyor (madde 174, 184-190).
+export const LEAVE_REQUEST_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'REVISION_REQUIRED', 'CANCELLED'] as const;
+
+export const leaveRequests = mysqlTable('leave_requests', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  leaveNo: varchar('leave_no', { length: 32 }).notNull(),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  leaveType: mysqlEnum('leave_type', LEAVE_TYPES).notNull(),
+  startDate: date('start_date', { mode: 'string' }).notNull(),
+  endDate: date('end_date', { mode: 'string' }).notNull(),
+  dayCount: decimal('day_count', { precision: 5, scale: 2 }).notNull(),
+  reason: text('reason'),
+  status: mysqlEnum('status', LEAVE_REQUEST_STATUSES).notNull().default('DRAFT'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  submittedAt: timestamp('submitted_at'),
+  completedAt: timestamp('completed_at')
+}, (table) => [uniqueIndex('udx_leave_requests_company_no').on(table.companyId, table.leaveNo)]);
+
+// Yasal/kıdem bazlı hak ediş hesaplaması BİLİNÇLİ OLARAK burada YOK
+// (madde 33/199'un "mevzuat kod içine yazılmaz" ilkesi, Bordro Motoru
+// fazına — Faz 6 — kadar aynı disiplin) — entitlementDays İK tarafından
+// doğrudan girilir, sistem yalnızca kullanılan/kalan bakiyeyi hesaplar
+// (bkz. lib/hr/leave.ts getLeaveBalance).
+export const leaveEntitlements = mysqlTable('leave_entitlements', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  year: int('year').notNull(),
+  leaveType: mysqlEnum('leave_type', LEAVE_TYPES).notNull(),
+  entitlementDays: decimal('entitlement_days', { precision: 5, scale: 2 }).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+}, (table) => [uniqueIndex('udx_leave_entitlements_employee_year_type').on(table.employeeId, table.year, table.leaveType)]);
+
+export const OVERTIME_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'REVISION_REQUIRED', 'CANCELLED'] as const;
+
+export const overtimeRequests = mysqlTable('overtime_requests', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  overtimeNo: varchar('overtime_no', { length: 32 }).notNull(),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  workDate: date('work_date', { mode: 'string' }).notNull(),
+  hours: decimal('hours', { precision: 5, scale: 2 }).notNull(),
+  reason: text('reason'),
+  status: mysqlEnum('status', OVERTIME_STATUSES).notNull().default('DRAFT'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  submittedAt: timestamp('submitted_at'),
+  completedAt: timestamp('completed_at')
+}, (table) => [uniqueIndex('udx_overtime_requests_company_no').on(table.companyId, table.overtimeNo)]);

@@ -15,6 +15,10 @@ export interface AuthedUser {
   fullName: string;
   email: string;
   isFactoryAdmin: boolean;
+  // İK Faz 0'ın users.employeeId köprüsü (schema.ts yorumu) — bu oturumun
+  // kendi özlük kaydı (İzin/Fazla Mesai gibi employeeId'ye bağlı öz-hizmet
+  // akışları için). Bağlı değilse null (örn. dış danışman/salt-admin hesap).
+  employeeId: string | null;
 }
 
 // emakerp/src/lib/dal.ts:getSession ile AYNI desen — cookie yalnızca bir
@@ -32,6 +36,7 @@ export const getSession = cache(async (): Promise<AuthedUser | null> => {
       fullName: users.fullName,
       email: users.email,
       isFactoryAdmin: users.isFactoryAdmin,
+      employeeId: users.employeeId,
       active: users.active,
       sessionToken: users.sessionToken,
       sessionExpiresAt: users.sessionExpiresAt
@@ -53,7 +58,8 @@ export const getSession = cache(async (): Promise<AuthedUser | null> => {
     companyName: row.companyName,
     fullName: row.fullName,
     email: row.email,
-    isFactoryAdmin: row.isFactoryAdmin
+    isFactoryAdmin: row.isFactoryAdmin,
+    employeeId: row.employeeId
   };
 });
 

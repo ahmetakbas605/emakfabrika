@@ -31,6 +31,8 @@ export default async function DashboardPage() {
         <Link href="/dashboard/procurement" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Satınalma Talepleri</Link>
         <Link href="/dashboard/procurement/dashboard" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Satınalma Kontrol Paneli</Link>
         <Link href="/dashboard/procurement/tenders" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>İhaleler</Link>
+        <Link href="/dashboard/hr/leave" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>İzin Taleplerim</Link>
+        <Link href="/dashboard/hr/overtime" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Fazla Mesai Taleplerim</Link>
         {session.isFactoryAdmin ? (
           <>
             <Link href="/dashboard/master-data/parties" style={{ display: 'inline-block', padding: '8px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Master Data (Cari/Ürün/Birim/Döviz)</Link>

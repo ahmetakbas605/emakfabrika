@@ -4,8 +4,11 @@ import { requireMobileUser } from '@/lib/mobile-auth';
 import { actOnStep, getStepDocumentType, type ApprovalDecision } from '@/lib/workflow/engine';
 import { actOnRequisitionStep } from '@/lib/procurement/requisition';
 import { actOnAwardStep } from '@/lib/procurement/award';
+import { actOnLeaveStep } from '@/lib/hr/leave';
+import { actOnOvertimeStep } from '@/lib/hr/overtime';
 import { CoreError } from '@/lib/core/errors';
 import { ProcurementError } from '@/lib/procurement/errors';
+import { HrError } from '@/lib/hr/errors';
 
 const BodySchema = z.object({
   decision: z.enum(['APPROVE', 'REJECT', 'REQUEST_CHANGES', 'DELEGATE']),
@@ -45,11 +48,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ ste
       await actOnRequisitionStep(auth.user.companyId, actionInput);
     } else if (documentType === 'PROCUREMENT_AWARD') {
       await actOnAwardStep(auth.user.companyId, actionInput);
+    } else if (documentType === 'LEAVE') {
+      await actOnLeaveStep(auth.user.companyId, actionInput);
+    } else if (documentType === 'OVERTIME') {
+      await actOnOvertimeStep(auth.user.companyId, actionInput);
     } else {
       await actOnStep(auth.user.companyId, actionInput);
     }
   } catch (e) {
-    if (e instanceof CoreError || e instanceof ProcurementError) return NextResponse.json({ error: e.message }, { status: 400 });
+    if (e instanceof CoreError || e instanceof ProcurementError || e instanceof HrError) return NextResponse.json({ error: e.message }, { status: 400 });
     throw e;
   }
   return NextResponse.json({ ok: true });
