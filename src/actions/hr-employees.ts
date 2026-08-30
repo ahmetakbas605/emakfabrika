@@ -6,6 +6,7 @@ import { requireDepartmentAccess } from '@/lib/dal';
 import { createEmployee, updateEmployeeOrganization, terminateEmployee, addEmployeeContact, addEmployeeAddress, addEmployeeEmergencyContact, linkEmployeeToUser } from '@/lib/hr/employees';
 import { HrError } from '@/lib/hr/errors';
 import { optionalField } from '@/lib/form';
+import { writeAuditLog } from '@/lib/security/audit';
 
 export type FormState = { error?: string; success?: string } | undefined;
 
@@ -42,8 +43,9 @@ export async function createEmployeeAction(departmentId: string, _prevState: For
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
 
+  let newEmployeeId: string;
   try {
-    await createEmployee(session.companyId, {
+    newEmployeeId = await createEmployee(session.companyId, {
       firstName: parsed.data.firstName, lastName: parsed.data.lastName, preferredName: parsed.data.preferredName,
       gender: parsed.data.gender, birthDate: parsed.data.birthDate, nationality: parsed.data.nationality,
       identityReference: parsed.data.identityReference, maritalStatus: parsed.data.maritalStatus,
@@ -53,6 +55,11 @@ export async function createEmployeeAction(departmentId: string, _prevState: For
   } catch (err) {
     return { error: toErrorMessage(err, 'Çalışan kaydedilemedi.') };
   }
+  await writeAuditLog({
+    companyId: session.companyId, userId: session.id, action: 'CREATE', entity: 'EMPLOYEE', entityId: newEmployeeId, module: 'HR',
+    riskLevel: parsed.data.identityReference ? 'MEDIUM' : 'LOW',
+    newValue: { firstName: parsed.data.firstName, lastName: parsed.data.lastName, hireDate: parsed.data.hireDate, departmentId: parsed.data.employeeDepartmentId, hasIdentityReference: Boolean(parsed.data.identityReference) }
+  });
   revalidatePath(`/dashboard/departments/${departmentId}/hr/employees`);
   return { success: 'Çalışan kaydedildi.' };
 }
@@ -99,6 +106,10 @@ export async function terminateEmployeeAction(departmentId: string, employeeId: 
   } catch (err) {
     return { error: toErrorMessage(err, 'İşlem gerçekleştirilemedi.') };
   }
+  await writeAuditLog({
+    companyId: session.companyId, userId: session.id, action: 'UPDATE', entity: 'EMPLOYEE', entityId: employeeId, module: 'HR',
+    riskLevel: 'MEDIUM', changedFields: { employmentStatus: 'TERMINATED' }, newValue: { terminationDate: parsed.data.terminationDate }
+  });
   revalidatePath(`/dashboard/departments/${departmentId}/hr/employees/${employeeId}`);
   return { success: 'Çalışan işten ayrılış olarak işaretlendi.' };
 }

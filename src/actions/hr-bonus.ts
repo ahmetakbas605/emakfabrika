@@ -3,13 +3,14 @@
 import { revalidatePath } from 'next/cache';
 import * as z from 'zod';
 import { requireDepartmentAccess } from '@/lib/dal';
-import { createBonusRequest, submitBonusRequest, cancelBonusRequest } from '@/lib/hr/bonus';
+import { createBonusRequest, submitBonusRequest, cancelBonusRequest, reviseApprovedBonus } from '@/lib/hr/bonus';
 import { HrError } from '@/lib/hr/errors';
+import { SecurityError } from '@/lib/security/errors';
 
 export type FormState = { error?: string; success?: string } | undefined;
 
 function toErrorMessage(err: unknown, fallback: string): string {
-  return err instanceof HrError ? err.message : fallback;
+  return err instanceof HrError || err instanceof SecurityError ? err.message : fallback;
 }
 
 // Leave/Overtime'ın aksine (çalışanın KENDİ talebi) bir ödül HR/yönetici
@@ -53,6 +54,29 @@ export async function submitBonusRequestAction(departmentId: string, employeeId:
   }
   revalidatePath(`/dashboard/departments/${departmentId}/hr/employees/${employeeId}`);
   return { success: 'Ödül talebi onaya gönderildi.' };
+}
+
+const ReviseBonusSchema = z.object({
+  bonusRequestId: z.string().trim().min(1),
+  newAmount: z.string().trim().min(1, 'Tutar gerekli.'),
+  reason: z.string().trim().min(1, 'Revize gerekçesi gerekli.')
+});
+
+// Core Security Faz 9 (madde 35) — bir ödül APPROVED olduktan sonra tutarı
+// değişirse önceki onay geçersiz kılınır (bkz. lib/hr/bonus.ts:reviseApprovedBonus),
+// talep REVISION_REQUIRED'a döner ve YENİDEN onaya gönderilmesi gerekir.
+export async function reviseApprovedBonusAction(departmentId: string, employeeId: string, _prevState: FormState, formData: FormData): Promise<FormState> {
+  const { session } = await requireDepartmentAccess(departmentId, 'update');
+  const parsed = ReviseBonusSchema.safeParse({ bonusRequestId: formData.get('bonusRequestId'), newAmount: formData.get('newAmount'), reason: formData.get('reason') });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
+
+  try {
+    await reviseApprovedBonus(session.companyId, parsed.data.bonusRequestId, session.id, { newAmount: Number(parsed.data.newAmount), reason: parsed.data.reason });
+  } catch (err) {
+    return { error: toErrorMessage(err, 'Revize edilemedi.') };
+  }
+  revalidatePath(`/dashboard/departments/${departmentId}/hr/employees/${employeeId}`);
+  return { success: 'Tutar revize edildi — önceki onay geçersiz kılındı, yeniden onaya gönderilmesi gerekiyor.' };
 }
 
 const CancelBonusSchema = z.object({ bonusRequestId: z.string().trim().min(1) });

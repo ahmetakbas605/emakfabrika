@@ -1,9 +1,11 @@
 import 'server-only';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { users, companies, departments } from '@/db/schema';
+import { users, companies, departments, userDevices } from '@/db/schema';
 import { verifyPassword, generateSessionToken, tokensMatch } from '@/lib/auth';
 import { getUserDepartmentAccess, listUserDepartmentAccess, PERMISSION_KEYS, type DepartmentAccess, type PermissionKey } from '@/lib/permissions';
+import { newId } from '@/lib/id';
+import { writeAuditLog } from '@/lib/security/audit';
 import type { AuthedUser } from '@/lib/dal';
 
 const FULL_PERMISSIONS: Record<PermissionKey, boolean> = Object.fromEntries(PERMISSION_KEYS.map((k) => [k, true])) as Record<PermissionKey, boolean>;
@@ -61,6 +63,19 @@ export async function mobileLogin(email: string, password: string, rememberDays:
   const days = Math.min(Math.max(Math.round(rememberDays) || 30, MOBILE_SESSION_MIN_DAYS), MOBILE_SESSION_MAX_DAYS);
   const mobileSessionExpiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
   await db.update(users).set({ mobileSessionToken: rawToken, mobileSessionExpiresAt, failedLoginAttempts: 0 }).where(eq(users.id, found.user.id));
+
+  // Core Security Faz 4 (mobil kısmı) — yalnızca GÖRÜNÜRLÜK/iptal listesi
+  // için (madde 16), gerçek doğrulama hâlâ users.mobileSessionToken'a
+  // karşı yapılıyor (yukarıdaki satır) — itandroid'in beklediği davranış
+  // DEĞİŞMEDİ. Tek-mobil-oturum modeliyle tutarlı: kullanıcı başına TEK
+  // MOBILE satırı (upsert), her yeni giriş öncekini "yeniden görülmüş" sayar.
+  const [existingDevice] = await db.select({ id: userDevices.id }).from(userDevices).where(and(eq(userDevices.userId, found.user.id), eq(userDevices.platform, 'MOBILE'))).limit(1);
+  if (existingDevice) {
+    await db.update(userDevices).set({ lastSeenAt: new Date(), revoked: false, revokedAt: null }).where(eq(userDevices.id, existingDevice.id));
+  } else {
+    await db.insert(userDevices).values({ id: newId(), companyId: found.user.companyId, userId: found.user.id, platform: 'MOBILE' });
+  }
+  await writeAuditLog({ companyId: found.user.companyId, userId: found.user.id, action: 'LOGIN', entity: 'USER', entityId: found.user.id, module: 'SECURITY', riskLevel: 'LOW', changedFields: { platform: 'MOBILE' } });
 
   return {
     ok: true,

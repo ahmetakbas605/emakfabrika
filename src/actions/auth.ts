@@ -1,14 +1,18 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { eq } from 'drizzle-orm';
 import * as z from 'zod';
 import { db } from '@/db/client';
 import { users } from '@/db/schema';
-import { verifyPassword, generateSessionToken } from '@/lib/auth';
-import { setSessionCookie, readSessionCookie, clearSessionCookie } from '@/lib/session';
+import { verifyPassword } from '@/lib/auth';
+import { setSessionCookie, readSessionCookie, clearSessionCookie, signMfaPendingToken, verifyMfaPendingToken } from '@/lib/session';
+import { createUserSession, revokeSession } from '@/lib/security/sessions';
+import { verifyMfaCode } from '@/lib/security/mfa';
+import { writeAuditLog } from '@/lib/security/audit';
 
-export type FormState = { error?: string } | undefined;
+export type FormState = { error?: string; mfaRequired?: boolean; mfaPendingToken?: string } | undefined;
 
 const LoginSchema = z.object({
   email: z.string().trim().email('Geçerli bir e-posta girin.'),
@@ -16,11 +20,27 @@ const LoginSchema = z.object({
 });
 
 const FAILED_LOGIN_LIMIT = 5;
-const SESSION_DAYS = 7;
+
+async function requestMeta() {
+  const h = await headers();
+  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || '';
+  const userAgent = h.get('user-agent') || '';
+  return { ip, userAgent };
+}
+
+async function finalizeLogin(userId: string, companyId: string): Promise<never> {
+  const { ip, userAgent } = await requestMeta();
+  const { sessionId, sessionToken } = await createUserSession({ companyId, userId, ip, userAgent });
+  await setSessionCookie({ sessionId, userId, companyId, sessionToken });
+  await writeAuditLog({ companyId, userId, action: 'LOGIN', entity: 'USER', entityId: userId, module: 'SECURITY', riskLevel: 'LOW', ip, device: userAgent });
+  redirect('/dashboard');
+}
 
 // emakerp/src/actions/auth.ts:login ile AYNI disiplin, tek-fabrika/tek-DB
-// sadeleştirmesiyle: e-posta zaten bu DB içinde benzersiz (users.email
-// UNIQUE) — emakerp'teki "hangi kiracı" belirsizliği burada YOK.
+// sadeleştirmesiyle. Core Security Faz 5 — MFA etkinse burada oturum
+// AÇILMAZ, yalnızca kısa ömürlü bir "mfaPendingToken" üretilir (bkz.
+// lib/session.ts:signMfaPendingToken) — gerçek oturum verifyMfaAndLogin'de
+// açılır.
 export async function login(_prevState: FormState, formData: FormData): Promise<FormState> {
   const parsed = LoginSchema.safeParse({ email: formData.get('email'), password: formData.get('password') });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
@@ -32,23 +52,54 @@ export async function login(_prevState: FormState, formData: FormData): Promise<
       const attempts = found.failedLoginAttempts + 1;
       const shouldLock = attempts >= FAILED_LOGIN_LIMIT && found.active;
       await db.update(users).set({ failedLoginAttempts: attempts, ...(shouldLock ? { active: false } : {}) }).where(eq(users.id, found.id));
+      const { ip, userAgent } = await requestMeta();
+      await writeAuditLog({ companyId: found.companyId, userId: found.id, action: 'LOGIN_FAILED', entity: 'USER', entityId: found.id, module: 'SECURITY', riskLevel: shouldLock ? 'HIGH' : 'MEDIUM', result: 'FAILURE', ip, device: userAgent });
     }
     return { error: 'E-posta veya şifre hatalı.' };
   }
   if (!found.active) return { error: 'Bu kullanıcı pasifleştirilmiş — giriş yapılamaz.' };
 
-  const sessionToken = generateSessionToken();
-  const sessionExpiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
-  await db.update(users).set({ sessionToken, sessionExpiresAt, failedLoginAttempts: 0 }).where(eq(users.id, found.id));
+  await db.update(users).set({ failedLoginAttempts: 0 }).where(eq(users.id, found.id));
 
-  await setSessionCookie({ userId: found.id, companyId: found.companyId, sessionToken });
-  redirect('/dashboard');
+  if (found.mfaEnabled) {
+    const mfaPendingToken = await signMfaPendingToken({ userId: found.id, companyId: found.companyId });
+    return { mfaRequired: true, mfaPendingToken };
+  }
+
+  await finalizeLogin(found.id, found.companyId);
+}
+
+const VerifyMfaSchema = z.object({ mfaPendingToken: z.string().trim().min(1), code: z.string().trim().min(1, 'Kod gerekli.') });
+
+export async function verifyMfaAndLogin(_prevState: FormState, formData: FormData): Promise<FormState> {
+  const parsed = VerifyMfaSchema.safeParse({ mfaPendingToken: formData.get('mfaPendingToken'), code: formData.get('code') });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
+
+  const pending = await verifyMfaPendingToken(parsed.data.mfaPendingToken);
+  if (!pending) return { error: 'Oturum süresi doldu — lütfen tekrar giriş yapın.' };
+
+  const [user] = await db.select({ id: users.id, active: users.active, failedLoginAttempts: users.failedLoginAttempts }).from(users).where(eq(users.id, pending.userId)).limit(1);
+  if (!user || !user.active) return { error: 'Bu kullanıcı pasifleştirilmiş — giriş yapılamaz.' };
+
+  const ok = await verifyMfaCode(pending.userId, parsed.data.code);
+  if (!ok) {
+    const attempts = user.failedLoginAttempts + 1;
+    const shouldLock = attempts >= FAILED_LOGIN_LIMIT;
+    await db.update(users).set({ failedLoginAttempts: attempts, ...(shouldLock ? { active: false } : {}) }).where(eq(users.id, pending.userId));
+    const { ip, userAgent } = await requestMeta();
+    await writeAuditLog({ companyId: pending.companyId, userId: pending.userId, action: 'LOGIN_FAILED', entity: 'USER', entityId: pending.userId, module: 'SECURITY', riskLevel: 'HIGH', result: 'FAILURE', ip, device: userAgent, changedFields: { reason: 'MFA_INVALID' } });
+    return { error: shouldLock ? 'Çok fazla hatalı deneme — hesap pasifleştirildi.' : 'Doğrulama kodu hatalı.', mfaRequired: true, mfaPendingToken: parsed.data.mfaPendingToken };
+  }
+
+  await db.update(users).set({ failedLoginAttempts: 0 }).where(eq(users.id, pending.userId));
+  await finalizeLogin(pending.userId, pending.companyId);
 }
 
 export async function logout(): Promise<void> {
   const pointer = await readSessionCookie();
   if (pointer) {
-    await db.update(users).set({ sessionToken: null, sessionExpiresAt: null }).where(eq(users.id, pointer.userId));
+    await revokeSession(pointer.companyId, pointer.sessionId, pointer.userId);
+    await writeAuditLog({ companyId: pointer.companyId, userId: pointer.userId, action: 'LOGOUT', entity: 'USER', entityId: pointer.userId, module: 'SECURITY', riskLevel: 'LOW' });
   }
   await clearSessionCookie();
   redirect('/login');

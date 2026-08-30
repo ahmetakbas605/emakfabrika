@@ -5,6 +5,9 @@ import { bonusRequests, employees, approvalSteps, approvalInstances } from '@/db
 import { newId } from '@/lib/id';
 import { nextDocumentNo } from '@/lib/numbering';
 import { startApprovalInTx, actOnStepInTx, type ApprovalDecision } from '@/lib/workflow/engine';
+import { assertNoConflict } from '@/lib/security/sod';
+import { invalidateApproval } from '@/lib/security/tamper';
+import { writeAuditLog } from '@/lib/security/audit';
 import { HrError } from './errors';
 
 // İK Faz 5 — documentType='BONUS'. lib/hr/leave.ts'in submitLeaveRequest/
@@ -65,6 +68,36 @@ export async function submitBonusRequest(companyId: string, bonusRequestId: stri
   });
 }
 
+export interface ReviseApprovedBonusInput {
+  newAmount: number;
+  reason: string;
+}
+
+// Core Security Faz 9 (rapor §09, madde 35 "Approval Tampering Protection")
+// — lib/security/tamper.ts:invalidateApproval'ın GERÇEK tüketicisi. Bir
+// ödül APPROVED olduktan SONRA tutarı değişirse, eski onay artık YENİ
+// tutar için geçerli DEĞİLDİR: onayı invalidated=true işaretleyip talebi
+// REVISION_REQUIRED'a çekiyoruz — submitBonusRequest zaten bu durumdan
+// yeniden gönderime izin veriyordu (satır 60), workflow/engine.ts'e HİÇ
+// dokunulmadı.
+export async function reviseApprovedBonus(companyId: string, bonusRequestId: string, userId: string, input: ReviseApprovedBonusInput): Promise<void> {
+  if (input.newAmount <= 0) throw new HrError('Tutar 0\'dan büyük olmalı.');
+
+  await db.transaction(async (tx) => {
+    const [row] = await tx.select().from(bonusRequests).where(and(eq(bonusRequests.id, bonusRequestId), eq(bonusRequests.companyId, companyId))).limit(1);
+    if (!row) throw new HrError('Ödül talebi bulunamadı.');
+    if (row.status !== 'APPROVED') throw new HrError('Yalnızca onaylanmış bir ödül talebinin tutarı bu şekilde revize edilebilir.');
+
+    const oldAmount = row.amount;
+    await tx.update(bonusRequests).set({ amount: String(input.newAmount), status: 'REVISION_REQUIRED', completedAt: null }).where(eq(bonusRequests.id, bonusRequestId));
+    await invalidateApproval(tx, companyId, 'BONUS', bonusRequestId, input.reason);
+    await writeAuditLog({
+      companyId, userId, action: 'UPDATE', entity: 'BONUS_REQUEST', entityId: bonusRequestId, module: 'HR', riskLevel: 'HIGH',
+      changedFields: { amount: true, approvalInvalidated: true }, oldValue: { amount: oldAmount, status: 'APPROVED' }, newValue: { amount: String(input.newAmount), status: 'REVISION_REQUIRED', reason: input.reason }
+    }, tx);
+  });
+}
+
 export interface ActOnBonusStepInput {
   stepId: string;
   actingUserId: string;
@@ -80,6 +113,13 @@ export async function actOnBonusStep(companyId: string, input: ActOnBonusStepInp
     const [instance] = await tx.select({ documentId: approvalInstances.documentId, documentType: approvalInstances.documentType }).from(approvalInstances).where(eq(approvalInstances.id, step.instanceId)).limit(1);
     if (!instance || instance.documentType !== 'BONUS') throw new HrError('Bu adım bir ödül talebine ait değil.');
     const bonusRequestId = instance.documentId;
+
+    // Core Security Faz 9 (madde 58) — bir ödül talebini oluşturan kişi
+    // (createdByUserId/submittedByUserId) aynı talebi onaylayamaz. Bonus,
+    // BAŞKASI adına oluşturulup onaylandığı için bu kuralın en anlamlı
+    // olduğu ilk gerçek tüketici — kural şirket bazında aktif DEĞİLSE
+    // (roleConflictRules'ta yoksa) assertNoConflict sessizce geçer.
+    await assertNoConflict(companyId, 'BONUS', bonusRequestId, input.actingUserId);
 
     const result = await actOnStepInTx(tx, companyId, input);
     if (result.instanceStatus === 'IN_PROGRESS') return;

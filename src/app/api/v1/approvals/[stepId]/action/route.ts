@@ -7,9 +7,11 @@ import { actOnAwardStep } from '@/lib/procurement/award';
 import { actOnLeaveStep } from '@/lib/hr/leave';
 import { actOnOvertimeStep } from '@/lib/hr/overtime';
 import { actOnBonusStep } from '@/lib/hr/bonus';
+import { actOnDsrStep } from '@/lib/security/dsr';
 import { CoreError } from '@/lib/core/errors';
 import { ProcurementError } from '@/lib/procurement/errors';
 import { HrError } from '@/lib/hr/errors';
+import { SecurityError } from '@/lib/security/errors';
 
 const BodySchema = z.object({
   decision: z.enum(['APPROVE', 'REJECT', 'REQUEST_CHANGES', 'DELEGATE']),
@@ -55,11 +57,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ ste
       await actOnOvertimeStep(auth.user.companyId, actionInput);
     } else if (documentType === 'BONUS') {
       await actOnBonusStep(auth.user.companyId, actionInput);
+    } else if (documentType === 'DATA_SUBJECT_REQUEST') {
+      await actOnDsrStep(auth.user.companyId, actionInput);
     } else {
       await actOnStep(auth.user.companyId, actionInput);
     }
   } catch (e) {
-    if (e instanceof CoreError || e instanceof ProcurementError || e instanceof HrError) return NextResponse.json({ error: e.message }, { status: 400 });
+    if (e instanceof CoreError || e instanceof ProcurementError || e instanceof HrError || e instanceof SecurityError) return NextResponse.json({ error: e.message }, { status: 400 });
     throw e;
   }
   return NextResponse.json({ ok: true });

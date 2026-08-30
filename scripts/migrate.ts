@@ -70,7 +70,9 @@ async function main() {
     { code: 'monitor', name: 'İzle' },
     { code: 'manage_credentials', name: 'Kimlik Bilgisi Yönet' },
     { code: 'manage_assets', name: 'Varlık Yönet' },
-    { code: 'manage_network', name: 'Ağ Yönet' }
+    { code: 'manage_network', name: 'Ağ Yönet' },
+    // Core Security Faz 3 — alan-seviyesi güvenlik (maaş/TC kimlik).
+    { code: 'view_sensitive', name: 'Hassas Alanları Görüntüle' }
   ];
   const DEPARTMENT_TYPE_SEED: { code: string; name: string }[] = [
     { code: 'ACCOUNTING', name: 'Muhasebe' },
@@ -181,8 +183,11 @@ async function main() {
   // EKLENMEDİ — henüz bir bordro modülü yok, kullanılmayan bir rol
   // tanımlamak bu projenin "önce gerçek tüketici, sonra altyapı" ilkesine
   // aykırı olurdu.
+  // Core Security Faz 3, Karar 3 — view_sensitive YALNIZCA HR_MANAGER'a
+  // (factory admin zaten koşulsuz tam yetkili). HR_SPECIALIST maaş/TC
+  // kimlik gibi alanları artık MASKELENMİŞ görür (lib/security/masking.ts).
   const HR_ROLE_PERMISSIONS: Record<string, string[]> = {
-    HR_MANAGER: ['view', 'create', 'update', 'delete', 'approve', 'export', 'print'],
+    HR_MANAGER: ['view', 'create', 'update', 'delete', 'approve', 'export', 'print', 'view_sensitive'],
     HR_SPECIALIST: ['view', 'create', 'update', 'export', 'print']
   };
 

@@ -10,9 +10,11 @@ import { actOnAwardStep } from '@/lib/procurement/award';
 import { actOnLeaveStep } from '@/lib/hr/leave';
 import { actOnOvertimeStep } from '@/lib/hr/overtime';
 import { actOnBonusStep } from '@/lib/hr/bonus';
+import { actOnDsrStep } from '@/lib/security/dsr';
 import { CoreError } from '@/lib/core/errors';
 import { ProcurementError } from '@/lib/procurement/errors';
 import { HrError } from '@/lib/hr/errors';
+import { SecurityError } from '@/lib/security/errors';
 import { optionalField } from '@/lib/form';
 
 export type FormState = { error?: string; success?: string } | undefined;
@@ -115,16 +117,19 @@ export async function actOnStepAction(_prevState: FormState, formData: FormData)
       await actOnOvertimeStep(session.companyId, actionInput);
     } else if (documentType === 'BONUS') {
       await actOnBonusStep(session.companyId, actionInput);
+    } else if (documentType === 'DATA_SUBJECT_REQUEST') {
+      await actOnDsrStep(session.companyId, actionInput);
     } else {
       await actOnStep(session.companyId, actionInput);
     }
   } catch (err) {
-    return { error: err instanceof CoreError || err instanceof ProcurementError || err instanceof HrError ? err.message : 'İşlem gerçekleştirilemedi.' };
+    return { error: err instanceof CoreError || err instanceof ProcurementError || err instanceof HrError || err instanceof SecurityError ? err.message : 'İşlem gerçekleştirilemedi.' };
   }
   revalidatePath('/dashboard/approvals');
   revalidatePath('/dashboard/procurement');
   revalidatePath('/dashboard/hr/leave');
   revalidatePath('/dashboard/hr/overtime');
   revalidatePath('/dashboard/hr/bonus');
+  revalidatePath('/dashboard/security/requests');
   return { success: 'Karar kaydedildi.' };
 }

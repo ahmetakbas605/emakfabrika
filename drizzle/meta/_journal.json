@@ -260,6 +260,20 @@
       "when": 1788094369925,
       "tag": "0036_goofy_toad",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "5",
+      "when": 1788103899457,
+      "tag": "0037_lazy_grim_reaper",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "5",
+      "when": 1788103947421,
+      "tag": "0038_numerous_mach_iv",
+      "breakpoints": true
     }
   ]
 }

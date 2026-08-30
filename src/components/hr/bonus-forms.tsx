@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
-import { createBonusRequestAction, submitBonusRequestAction, cancelBonusRequestAction, type FormState } from '@/actions/hr-bonus';
+import { createBonusRequestAction, submitBonusRequestAction, cancelBonusRequestAction, reviseApprovedBonusAction, type FormState } from '@/actions/hr-bonus';
 
 const BONUS_TYPE_LABELS: Record<string, string> = { PERFORMANCE: 'Performans', HOLIDAY: 'Bayram/Tatil', REFERRAL: 'Referans', RETENTION: 'Elde Tutma', OTHER: 'Diğer' };
 
@@ -47,6 +47,21 @@ export function CancelBonusButton({ departmentId, employeeId, bonusRequestId }: 
       <input type="hidden" name="bonusRequestId" value={bonusRequestId} />
       <button type="submit" disabled={pending} style={{ padding: '2px 8px', fontSize: 12, cursor: 'pointer', color: '#b00' }}>{pending ? '...' : 'İptal Et'}</button>
       {state?.error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 6 }}>{state.error}</span> : null}
+    </form>
+  );
+}
+
+export function ReviseBonusForm({ departmentId, employeeId, bonusRequestId }: { departmentId: string; employeeId: string; bonusRequestId: string }) {
+  const action = reviseApprovedBonusAction.bind(null, departmentId, employeeId);
+  const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
+  return (
+    <form action={formAction} style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+      <input type="hidden" name="bonusRequestId" value={bonusRequestId} />
+      <input name="newAmount" type="number" step="0.01" min={0} placeholder="Yeni tutar" required style={{ padding: '2px 6px', width: 90, fontSize: 12 }} />
+      <input name="reason" placeholder="Revize gerekçesi" required style={{ padding: '2px 6px', width: 130, fontSize: 12 }} />
+      <button type="submit" disabled={pending} title="Onaylanmış tutarı değiştir — önceki onay geçersiz kılınır, yeniden onaya gider" style={{ padding: '2px 8px', fontSize: 12, cursor: 'pointer' }}>{pending ? '...' : 'Revize Et'}</button>
+      {state?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{state.error}</span> : null}
+      {state?.success ? <span style={{ color: '#080', fontSize: 11 }}>{state.success}</span> : null}
     </form>
   );
 }

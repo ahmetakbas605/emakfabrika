@@ -90,12 +90,17 @@ export const users = mysqlTable('users', {
   // rolüyle aynı fikir, platform-geneli bir SUPER_ADMIN kavramı YOK (bkz.
   // TENANT-ARCHITECTURE.md — platform seviyesi emakerp'te yaşıyor).
   isFactoryAdmin: boolean('is_factory_admin').notNull().default(false),
-  // Web oturumu — emakerp'in "database session" deseniyle AYNI: JWT çerezi
-  // yalnızca bir İŞARETÇİ taşır, gerçek doğrulama HER İSTEKTE bu sütunlara
-  // karşı yapılır (bkz. lib/dal.ts:getSession) — bu sayede yeni bir girişte
-  // eski oturum geçersiz kılınabilir (yalnızca JWT süresine güvenmiyoruz).
-  sessionToken: varchar('session_token', { length: 128 }),
-  sessionExpiresAt: timestamp('session_expires_at'),
+  // Core Security Faz 4 — web oturumu artık user_sessions tablosunda
+  // (çoklu eşzamanlı oturum + tek tek iptal desteği, madde 15). Eski tekil
+  // sessionToken/sessionExpiresAt kolonları KALDIRILDI (kullanılmayan kod
+  // bırakılmadı) — lib/dal.ts:getSession artık user_sessions'a bakıyor.
+  // Core Security Faz 5 — MFA (TOTP, RFC 6238). totpSecretEncrypted
+  // lib/crypto.ts'in AYNI AES-256-GCM yardımcı fonksiyonuyla şifrelenir
+  // (ayrı env-var anahtarı: MFA_ENC_KEY).
+  totpSecretEncrypted: text('totp_secret_encrypted'),
+  mfaEnabled: boolean('mfa_enabled').notNull().default(false),
+  mfaRecoveryCodesHash: json('mfa_recovery_codes_hash'),
+  mfaEnabledAt: timestamp('mfa_enabled_at'),
   // Mobil oturum — emakerp'in requireMobileUser deseniyle AYNI (opak Bearer
   // <userId>.<token>), ayrı bir "sessions" tablosu YOK (SECURITY-ARCHITECTURE.md §1).
   mobileSessionToken: varchar('mobile_session_token', { length: 128 }),
@@ -130,6 +135,15 @@ export const userDepartmentAccess = mysqlTable('user_department_access', {
 }, (table) => [uniqueIndex('udx_user_dept_role').on(table.userId, table.departmentId, table.roleId)]);
 
 // PDF madde 38 — SECURITY-ARCHITECTURE.md §7: kritik-yol (best-effort DEĞİL).
+export const AUDIT_RISK_LEVELS = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
+export const AUDIT_RESULTS = ['SUCCESS', 'FAILURE'] as const;
+
+// Core Security Faz 1-2 (KVKK+Güvenlik+Audit raporu §06) — bu tablo
+// tanımlandığı günden bu yana yalnızca lib/accounting.ts'te kullanılmıştı
+// (grep-doğrulanmış, 2 INSERT). Bu genişletme + lib/security/audit.ts'in
+// merkezi writeAuditLog yardımcı fonksiyonu, raporun "en kritik bulgusu"
+// olan bu boşluğu kapatıyor. Yeni alanların TAMAMI opsiyonel/varsayılanlı
+// — accounting.ts'in mevcut 2 INSERT'i DOKUNULMADI, davranışları değişmedi.
 export const auditLogs = mysqlTable('audit_logs', {
   id: char('id', { length: 36 }).primaryKey(),
   companyId: char('company_id', { length: 36 }).references(() => companies.id, { onDelete: 'cascade' }),
@@ -142,6 +156,17 @@ export const auditLogs = mysqlTable('audit_logs', {
   ip: varchar('ip', { length: 64 }),
   device: varchar('device', { length: 255 }),
   correlationId: char('correlation_id', { length: 36 }),
+  module: varchar('module', { length: 64 }),
+  sessionId: char('session_id', { length: 36 }),
+  changedFields: json('changed_fields'),
+  riskLevel: mysqlEnum('risk_level', AUDIT_RISK_LEVELS).notNull().default('LOW'),
+  result: mysqlEnum('result', AUDIT_RESULTS).notNull().default('SUCCESS'),
+  // madde 13 — hash zinciri. SHA-256(previousHash + bu satırın kanonik
+  // JSON'u), previousHash şirketin bir önceki audit satırına işaret eder.
+  // Blockchain DEĞİL (madde 13'ün kendi notu) — amaç yalnızca sonradan
+  // müdahalenin matematiksel tespiti (bkz. lib/security/audit.ts).
+  previousHash: varchar('previous_hash', { length: 64 }),
+  currentHash: varchar('current_hash', { length: 64 }),
   createdAt: timestamp('created_at').notNull().defaultNow()
 }, (table) => [index('idx_audit_company_entity').on(table.companyId, table.entity, table.entityId)]);
 
@@ -1811,7 +1836,18 @@ export const approvalInstances = mysqlTable('approval_instances', {
   status: mysqlEnum('status', APPROVAL_INSTANCE_STATUSES).notNull().default('IN_PROGRESS'),
   submittedByUserId: char('submitted_by_user_id', { length: 36 }).notNull().references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-  completedAt: timestamp('completed_at')
+  completedAt: timestamp('completed_at'),
+  // Core Security Faz 9 (madde 35, "Approval Tampering Protection") —
+  // status enum'unu DEĞİŞTİRMEK (yeni bir 'INVALIDATED' üyesi eklemek) bu
+  // oturumda 10+ documentType'ın ZATEN kanıtlanmış status-tabanlı
+  // mantığını riske atardı; bunun yerine SAF EKLEME bir bayrak. "Bu onay
+  // hâlâ geçerli mi" sorusu artık status==='APPROVED' && !invalidated
+  // olmalı (bkz. lib/security/tamper.ts:isApprovalValid) — mevcut
+  // kontroller GERİYE DÖNÜK güncellenmedi (kapsam dışı, bu oturumun
+  // riskini artırırdı), yalnızca YENİ tüketiciler bu bayrağı kontrol eder.
+  invalidated: boolean('invalidated').notNull().default(false),
+  invalidatedAt: timestamp('invalidated_at'),
+  invalidatedReason: varchar('invalidated_reason', { length: 255 })
 }, (table) => [index('idx_approval_instance_document').on(table.documentType, table.documentId)]);
 
 export const APPROVAL_STEP_STATUSES = ['PENDING', 'IN_PROGRESS', 'APPROVED', 'REJECTED'] as const;
@@ -1841,12 +1877,20 @@ export const APPROVAL_DECISIONS = ['APPROVE', 'REJECT', 'REQUEST_CHANGES', 'DELE
 
 // madde 46 — tam onay geçmişi. Immutable (madde 116-117 ilkesiyle AYNI —
 // kayıt asla güncellenmez/silinmez).
+// Core Security §09 (madde 31-32) — bugünkü "Onayla" butonu ile 5070
+// sayılı Kanun anlamında NİTELİKLİ elektronik imza AYNI ŞEY DEĞİL. Bu
+// alan yalnızca AYRIMI kod seviyesinde netleştirir — QUALIFIED_ESIGNATURE
+// akışının kendisi (gerçek bir e-imza sağlayıcı entegrasyonu) bu oturumun
+// kapsamı DIŞINDA, varsayılan her zaman ACKNOWLEDGEMENT.
+export const SIGNATURE_TYPES = ['ACKNOWLEDGEMENT', 'QUALIFIED_ESIGNATURE'] as const;
+
 export const approvalActions = mysqlTable('approval_actions', {
   id: char('id', { length: 36 }).primaryKey(),
   stepId: char('step_id', { length: 36 }).notNull().references(() => approvalSteps.id, { onDelete: 'cascade' }),
   actedByUserId: char('acted_by_user_id', { length: 36 }).notNull().references(() => users.id),
   decision: mysqlEnum('decision', APPROVAL_DECISIONS).notNull(),
   comment: text('comment'),
+  signatureType: mysqlEnum('signature_type', SIGNATURE_TYPES).notNull().default('ACKNOWLEDGEMENT'),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
 
@@ -2876,3 +2920,187 @@ export const bonusRequests = mysqlTable('bonus_requests', {
   submittedAt: timestamp('submitted_at'),
   completedAt: timestamp('completed_at')
 }, (table) => [uniqueIndex('udx_bonus_requests_company_no').on(table.companyId, table.bonusNo)]);
+
+// --- Core Security Platform (KVKK + Güvenlik + Audit Platformu Mimarisi
+// raporu) — Faz 1-10, TÜMÜ tek migration'da (schema tasarımı bir bütün,
+// kullanıcının "hiçbirşeyi atlama" talebiyle). Yalnızca Dashboard +
+// /dashboard/security altındaki YENİ sayfalar bu altyapıyı kullanır;
+// mevcut IT/Muhasebe/Satınalma/Depo/İK sayfaları bilinçli olarak
+// DOKUNULMADI (kullanıcı onayı, tasarım kapsamı ayrı bir karardı). ---
+
+// Faz 4 — Oturum Yönetimi (madde 15). users.sessionToken'ın YERİNİ alır:
+// çoklu eşzamanlı web oturumu + tek tek uzaktan iptal artık gerçek (eski
+// model: yeni giriş eskiyi ezerdi, TEK aktif oturum). Mobil kendi
+// users.mobileSessionToken modelini KORUYOR (itandroid'in beklediği
+// davranış değişmedi) — user_devices (aşağıda) yalnızca mobil için
+// GÖRÜNÜRLÜK/iptal ekliyor, doğrulama mantığını değiştirmiyor.
+export const userSessions = mysqlTable('user_sessions', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  userId: char('user_id', { length: 36 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  sessionToken: varchar('session_token', { length: 128 }).notNull(),
+  ip: varchar('ip', { length: 64 }),
+  userAgent: varchar('user_agent', { length: 255 }).notNull().default(''),
+  deviceLabel: varchar('device_label', { length: 150 }).notNull().default(''),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  lastActivityAt: timestamp('last_activity_at').notNull().defaultNow(),
+  expiresAt: timestamp('expires_at').notNull(),
+  revoked: boolean('revoked').notNull().default(false),
+  revokedAt: timestamp('revoked_at'),
+  revokedByUserId: char('revoked_by_user_id', { length: 36 }).references(() => users.id)
+}, (table) => [index('idx_user_sessions_user').on(table.userId)]);
+
+// Faz 4 (mobil kısmı) — madde 16. Gerçek doğrulama HÂLÂ
+// users.mobileSessionToken'a karşı yapılıyor (mobile-auth.ts değişmedi);
+// bu tablo yalnızca "hangi cihazlar bağlı, hangisi kaybolduysa iptal et"
+// görünürlüğünü sağlıyor — her mobil girişte bir satır YAZILIR (henüz
+// OKUNMUYOR/zorunlu kılınmıyor, admin panelinden "revoked" işaretlemek
+// gelecekte gerçek bir mobileSessionToken temizlemesine BAĞLANABİLİR).
+export const userDevices = mysqlTable('user_devices', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  userId: char('user_id', { length: 36 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  platform: varchar('platform', { length: 32 }).notNull().default('MOBILE'),
+  appVersion: varchar('app_version', { length: 32 }).notNull().default(''),
+  osVersion: varchar('os_version', { length: 32 }).notNull().default(''),
+  lastSeenAt: timestamp('last_seen_at').notNull().defaultNow(),
+  trusted: boolean('trusted').notNull().default(true),
+  revoked: boolean('revoked').notNull().default(false),
+  revokedAt: timestamp('revoked_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// Faz 6 — Güvenlik Olayı / Risk Motoru (madde 27-29).
+export const SECURITY_EVENT_TYPES = ['MASS_EXPORT', 'OFF_HOURS_ACCESS', 'REPEATED_FAILED_LOGIN', 'SENSITIVE_DATA_BURST', 'PRIVILEGE_ESCALATION', 'MANUAL_FLAG', 'OTHER'] as const;
+export const SECURITY_EVENT_STATUSES = ['DETECTED', 'INVESTIGATING', 'RESOLVED', 'FALSE_POSITIVE'] as const;
+
+export const securityEvents = mysqlTable('security_events', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  eventType: mysqlEnum('event_type', SECURITY_EVENT_TYPES).notNull(),
+  riskLevel: mysqlEnum('risk_level', AUDIT_RISK_LEVELS).notNull(),
+  actedByUserId: char('acted_by_user_id', { length: 36 }).references(() => users.id),
+  description: text('description').notNull(),
+  metadata: json('metadata'),
+  status: mysqlEnum('status', SECURITY_EVENT_STATUSES).notNull().default('DETECTED'),
+  resolvedByUserId: char('resolved_by_user_id', { length: 36 }).references(() => users.id),
+  resolvedAt: timestamp('resolved_at'),
+  resolutionNote: text('resolution_note'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [index('idx_security_events_company_status').on(table.companyId, table.status)]);
+
+// Faz 7 — Saklama / Silme / Anonimleştirme (madde 23-26). Süre değerleri
+// KOD İÇİNE GÖMÜLMEDİ — bu tablo İK Mimarisi raporlarının "mevzuat motoru"
+// ilkesiyle AYNI disiplin, gerçek süreleri hukuki doğrulama sonrası İK/
+// Muhasebe girer (rapor §02'nin disclaimer'ı).
+export const RETENTION_DELETE_METHODS = ['HARD_DELETE', 'ANONYMIZE', 'ARCHIVE'] as const;
+
+export const retentionPolicies = mysqlTable('retention_policies', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  dataType: varchar('data_type', { length: 100 }).notNull(),
+  legalBasis: varchar('legal_basis', { length: 255 }).notNull().default(''),
+  retentionYears: int('retention_years').notNull(),
+  startEvent: varchar('start_event', { length: 100 }).notNull().default(''),
+  deleteMethod: mysqlEnum('delete_method', RETENTION_DELETE_METHODS).notNull().default('ANONYMIZE'),
+  legalHoldSupported: boolean('legal_hold_supported').notNull().default(true),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow()
+}, (table) => [uniqueIndex('udx_retention_policies_company_type').on(table.companyId, table.dataType)]);
+
+// madde 24 — bir kayıt üzerinde dava/denetim/inceleme varsa silmeyi
+// engeller. entityType/entityId polimorfik (document_attachments İLE AYNI
+// desen) — herhangi bir tabloya bağlanabilir.
+export const legalHolds = mysqlTable('legal_holds', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  entityType: varchar('entity_type', { length: 64 }).notNull(),
+  entityId: char('entity_id', { length: 36 }).notNull(),
+  reason: text('reason').notNull(),
+  active: boolean('active').notNull().default(true),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  releasedAt: timestamp('released_at')
+}, (table) => [index('idx_legal_holds_entity').on(table.entityType, table.entityId)]);
+
+// Faz 8 — KVKK Veri Sahibi Talepleri (madde 22). leave_requests/
+// bonus_requests İLE AYNI durum makinesi, jenerik workflow motoruna
+// documentType='DATA_SUBJECT_REQUEST' ile bağlanabilir.
+export const DSR_TYPES = ['ACCESS', 'CORRECTION', 'DELETION', 'RESTRICTION', 'OBJECTION', 'PORTABILITY', 'OTHER'] as const;
+export const DSR_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'REVISION_REQUIRED', 'CANCELLED'] as const;
+
+export const dataSubjectRequests = mysqlTable('data_subject_requests', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  requestNo: varchar('request_no', { length: 32 }).notNull(),
+  requestType: mysqlEnum('request_type', DSR_TYPES).notNull(),
+  subjectName: varchar('subject_name', { length: 255 }).notNull(),
+  subjectIdentifier: varchar('subject_identifier', { length: 100 }).notNull().default(''),
+  relatedEmployeeId: char('related_employee_id', { length: 36 }).references(() => employees.id),
+  description: text('description').notNull(),
+  status: mysqlEnum('status', DSR_STATUSES).notNull().default('DRAFT'),
+  resolutionNote: text('resolution_note'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  submittedAt: timestamp('submitted_at'),
+  completedAt: timestamp('completed_at')
+}, (table) => [uniqueIndex('udx_data_subject_requests_company_no').on(table.companyId, table.requestNo)]);
+
+// Faz 3 — Veri Sınıflandırma / Kişisel Veri Envanteri (madde 3-4). Bu bir
+// ÇALIŞMA ZAMANI kontrolü DEĞİL — bir REHBER/envanter; gerçek alan-
+// seviyesi maskeleme lib/security/masking.ts'te KOD İÇİNDE ayrıca
+// uygulanır (bu tablo o kodun DAYANDIĞI dokümantasyon, tersi değil).
+export const DATA_CLASSIFICATIONS = ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL', 'PERSONAL', 'SPECIAL_CATEGORY', 'FINANCIAL', 'HIGHLY_CONFIDENTIAL', 'SYSTEM_SECURITY'] as const;
+
+export const personalDataInventory = mysqlTable('personal_data_inventory', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  tableName: varchar('table_name', { length: 100 }).notNull(),
+  columnName: varchar('column_name', { length: 100 }).notNull(),
+  dataCategory: varchar('data_category', { length: 100 }).notNull().default(''),
+  classification: mysqlEnum('classification', DATA_CLASSIFICATIONS).notNull(),
+  purpose: varchar('purpose', { length: 255 }).notNull().default(''),
+  legalBasis: varchar('legal_basis', { length: 255 }).notNull().default(''),
+  encryptionRequired: boolean('encryption_required').notNull().default(false),
+  maskingRequired: boolean('masking_required').notNull().default(false),
+  exportAllowed: boolean('export_allowed').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_personal_data_inventory_table_column').on(table.companyId, table.tableName, table.columnName)]);
+
+// Faz 9 — Segregation of Duties (madde 58). Şimdilik tek, genel bir kural
+// türü uygulanıyor: CREATOR_CANNOT_APPROVE (bir belgeyi oluşturan kişi
+// aynı belgeyi onaylayamaz) — lib/security/sod.ts bu tabloyu documentType
+// bazında aktif/pasif yapmak için okur, workflow/engine.ts'in kendisi
+// DEĞİŞMEDİ (actOnStepInTx'in ÇAĞRILDIĞI noktada ek bir kontrol).
+export const roleConflictRules = mysqlTable('role_conflict_rules', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  documentType: varchar('document_type', { length: 64 }).notNull(),
+  rule: varchar('rule', { length: 64 }).notNull(),
+  description: varchar('description', { length: 255 }).notNull().default(''),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_role_conflict_company_doctype_rule').on(table.companyId, table.documentType, table.rule)]);
+
+// Faz 10 — Break-Glass Erişim (madde 38-39). Tek-fabrika kurulumda
+// isFactoryAdmin ZATEN koşulsuz tam yetki taşıyor (requireDepartmentAccess
+// fallback'i) — bu tablo o yetkiyi KISITLAMIYOR, yalnızca "normal iş akışı
+// dışında, gerekçeli bir erişim" senaryosunu LOGLANABİLİR kılıyor (örn.
+// destek personeli senaryosu, madde 39). start/end otomatik sona erme
+// alanları taşır, gerçek zorlayıcı (enforcement) bağlanması ileri bir faz.
+export const BREAK_GLASS_STATUSES = ['PENDING', 'ACTIVE', 'EXPIRED', 'REVOKED'] as const;
+
+export const breakGlassAccess = mysqlTable('break_glass_access', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  requestedByUserId: char('requested_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  reason: text('reason').notNull(),
+  ticketReference: varchar('ticket_reference', { length: 100 }).notNull().default(''),
+  scope: varchar('scope', { length: 255 }).notNull().default(''),
+  status: mysqlEnum('status', BREAK_GLASS_STATUSES).notNull().default('PENDING'),
+  approvedByUserId: char('approved_by_user_id', { length: 36 }).references(() => users.id),
+  startAt: timestamp('start_at'),
+  endAt: timestamp('end_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});

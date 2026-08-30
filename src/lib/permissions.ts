@@ -7,7 +7,12 @@ import { userDepartmentAccess, rolePermissions, roles, departments } from '@/db/
 // manage_assets/manage_network IT modülü için eklendi (madde 95).
 export const PERMISSION_KEYS = [
   'view', 'create', 'update', 'delete', 'approve', 'cancel', 'export', 'print', 'post', 'close_period', 'reopen_period',
-  'assign', 'configure', 'monitor', 'manage_credentials', 'manage_assets', 'manage_network'
+  'assign', 'configure', 'monitor', 'manage_credentials', 'manage_assets', 'manage_network',
+  // Core Security Faz 3 (KVKK+Güvenlik+Audit raporu §05, Karar 3) — maaş/
+  // TC kimlik gibi FINANCIAL/SPECIAL_CATEGORY alanları görebilmek için
+  // 'view'in ÜSTÜNDE ayrı bir izin. Yalnızca HR_MANAGER + factory admin'e
+  // seed edildi (scripts/migrate.ts) — HR_SPECIALIST bu alanları maskelenmiş görür.
+  'view_sensitive'
 ] as const;
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
 

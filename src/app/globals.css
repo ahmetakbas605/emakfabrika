@@ -1,1 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   Aurora Command Center — emakfabrika Core Security tasarım sistemi.
+   Sadece Dashboard + Security modülü bu token setini kullanır (bilinçli
+   kapsam, kullanıcı onayı) — IT/Muhasebe/Satınalma/Depo/İK'nın mevcut
+   sade/animasyonsuz stili (PDF madde 8, 70) KASITLI OLARAK dokunulmadı,
+   bu iki dünya route seviyesinde ayrışıyor.
+   ------------------------------------------------------------------ */
+:root {
+  --aurora-bg: #05070c;
+  --aurora-bg-2: #0a0e17;
+  --aurora-surface: rgba(255, 255, 255, 0.045);
+  --aurora-surface-hover: rgba(255, 255, 255, 0.08);
+  --aurora-border: rgba(255, 255, 255, 0.09);
+  --aurora-border-strong: rgba(255, 255, 255, 0.18);
+  --aurora-text: #eef1f7;
+  --aurora-text-dim: #8b93a7;
+  --aurora-text-faint: #565f76;
+
+  --aurora-violet: #8b5cf6;
+  --aurora-cyan: #22d3ee;
+  --aurora-emerald: #34d399;
+  --aurora-gradient: linear-gradient(120deg, var(--aurora-violet), var(--aurora-cyan) 55%, var(--aurora-emerald));
+
+  --aurora-ok: #34d399;
+  --aurora-warn: #f5a524;
+  --aurora-danger: #fb5a6e;
+  --aurora-critical: #ff3d71;
+
+  --font-display: 'Sora', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+.aurora-scope {
+  background: var(--aurora-bg);
+  color: var(--aurora-text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  position: relative;
+  isolation: isolate;
+}
+
+.aurora-field {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: var(--aurora-bg);
+}
+.aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.22;
+  will-change: transform;
+}
+.aurora-blob-1 { width: 46rem; height: 46rem; background: var(--aurora-violet); top: -14rem; left: -10rem; animation: aurora-drift-1 26s ease-in-out infinite; }
+.aurora-blob-2 { width: 40rem; height: 40rem; background: var(--aurora-cyan); bottom: -16rem; right: -8rem; animation: aurora-drift-2 32s ease-in-out infinite; }
+.aurora-blob-3 { width: 34rem; height: 34rem; background: var(--aurora-emerald); top: 30%; right: 18%; animation: aurora-drift-3 22s ease-in-out infinite; opacity: 0.14; }
+
+@keyframes aurora-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(6rem, 4rem) scale(1.08); }
+}
+@keyframes aurora-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-5rem, -3rem) scale(1.05); }
+}
+@keyframes aurora-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-3rem, 5rem) scale(0.95); }
+}
+
+.aurora-noise {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.025;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.glass-card {
+  background: var(--aurora-surface);
+  border: 1px solid var(--aurora-border);
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+}
+.glass-card:hover {
+  border-color: var(--aurora-border-strong);
+  background: var(--aurora-surface-hover);
+}
+
+.aurora-gradient-text {
+  background: var(--aurora-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.aurora-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+.aurora-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.aurora-scrollbar::-webkit-scrollbar-thumb { background: var(--aurora-border-strong); border-radius: 8px; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fade-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, var(--aurora-surface) 25%, var(--aurora-surface-hover) 50%, var(--aurora-surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob, .animate-fade-up, .animate-shimmer { animation: none !important; }
+}

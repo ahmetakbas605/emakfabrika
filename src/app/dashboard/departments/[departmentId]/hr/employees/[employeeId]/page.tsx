@@ -14,7 +14,8 @@ import { ContactForm, AddressForm, EmergencyContactForm, TerminateForm, LinkUser
 import { ContractForm } from '@/components/hr/contract-form';
 import { QualificationForm, RevokeQualificationButton } from '@/components/hr/qualification-form';
 import { CompensationForm } from '@/components/hr/compensation-forms';
-import { BonusForm, SubmitBonusButton, CancelBonusButton, BONUS_TYPE_LABELS } from '@/components/hr/bonus-forms';
+import { BonusForm, SubmitBonusButton, CancelBonusButton, ReviseBonusForm, BONUS_TYPE_LABELS } from '@/components/hr/bonus-forms';
+import { maskSalary, maskIdentityReference, maskPhone } from '@/lib/security/masking';
 
 const STATUS_LABELS: Record<string, string> = { ACTIVE: 'Aktif', ON_LEAVE: 'İzinde', SUSPENDED: 'Askıda', TERMINATED: 'İşten Ayrıldı' };
 const CONTACT_TYPE_LABELS: Record<string, string> = { PHONE_MOBILE: 'Cep Telefonu', PHONE_HOME: 'Ev Telefonu', PHONE_WORK: 'İş Telefonu', EMAIL_PERSONAL: 'Kişisel E-posta', EMAIL_WORK: 'İş E-postası', OTHER: 'Diğer' };
@@ -59,6 +60,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Genel Bilgiler</h2>
       <table style={{ fontSize: 13, marginBottom: 24, borderCollapse: 'collapse' }}>
         <tbody>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>TC Kimlik No</td><td>{maskIdentityReference(employee.identityReference, access.permissions.view_sensitive) ?? '—'}</td></tr>
           <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Doğum Tarihi</td><td>{employee.birthDate ?? '—'}</td></tr>
           <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Uyruk</td><td>{employee.nationality ?? '—'}</td></tr>
           <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Cinsiyet</td><td>{employee.gender ?? '—'}</td></tr>
@@ -108,7 +110,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>v{c.version}</td>
               <td style={{ padding: '6px 8px', color: '#666' }}>{c.effectiveDate}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right' }}>{c.baseSalary} {c.currencyCode}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right' }}>{maskSalary(c.baseSalary, access.permissions.view_sensitive)} {access.permissions.view_sensitive ? c.currencyCode : ''}</td>
               <td style={{ padding: '6px 8px', color: '#666' }}>{c.changeReason || '—'}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{COMPENSATION_STATUS_LABELS[c.status] ?? c.status}</td>
             </tr>
@@ -139,6 +141,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                     <CancelBonusButton departmentId={departmentId} employeeId={employeeId} bonusRequestId={b.id} />
                   </>
                 ) : null}
+                {b.status === 'APPROVED' && access.permissions.update ? <ReviseBonusForm departmentId={departmentId} employeeId={employeeId} bonusRequestId={b.id} /> : null}
               </td>
             </tr>
           ))}
@@ -207,7 +210,11 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>İletişim</h2>
       <ul style={{ fontSize: 13, marginBottom: 8, paddingLeft: 18 }}>
-        {contacts.map((c) => <li key={c.id}>{CONTACT_TYPE_LABELS[c.contactType] ?? c.contactType}: {c.value}{c.isPrimary ? ' (birincil)' : ''}</li>)}
+        {contacts.map((c) => {
+          const isPhone = c.contactType === 'PHONE_MOBILE' || c.contactType === 'PHONE_HOME' || c.contactType === 'PHONE_WORK';
+          const displayValue = isPhone ? maskPhone(c.value, access.permissions.view_sensitive) : c.value;
+          return <li key={c.id}>{CONTACT_TYPE_LABELS[c.contactType] ?? c.contactType}: {displayValue}{c.isPrimary ? ' (birincil)' : ''}</li>;
+        })}
         {contacts.length === 0 ? <li style={{ color: '#999', listStyle: 'none', marginLeft: -18 }}>Henüz iletişim bilgisi yok.</li> : null}
       </ul>
       {access.permissions.update ? <div style={{ marginBottom: 24 }}><ContactForm departmentId={departmentId} employeeId={employeeId} /></div> : null}

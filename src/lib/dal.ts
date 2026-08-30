@@ -5,7 +5,7 @@ import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { users, companies, departments } from '@/db/schema';
 import { readSessionCookie } from '@/lib/session';
-import { tokensMatch } from '@/lib/auth';
+import { validateUserSession, touchSessionActivity } from '@/lib/security/sessions';
 import { getUserDepartmentAccess, PERMISSION_KEYS, type DepartmentAccess, type PermissionKey } from '@/lib/permissions';
 
 export interface AuthedUser {
@@ -28,6 +28,13 @@ export const getSession = cache(async (): Promise<AuthedUser | null> => {
   const pointer = await readSessionCookie();
   if (!pointer) return null;
 
+  // Core Security Faz 4 — doğrulama artık user_sessions'a karşı (çoklu
+  // eşzamanlı oturum + tek tek iptal). "Database session" ilkesi AYNI
+  // kaldı: JWT yalnızca bir işaretçi, gerçek doğrulama her istekte DB'ye
+  // karşı yapılıyor.
+  const sessionRow = await validateUserSession(pointer.sessionId, pointer.sessionToken);
+  if (!sessionRow) return null;
+
   const rows = await db
     .select({
       id: users.id,
@@ -37,9 +44,7 @@ export const getSession = cache(async (): Promise<AuthedUser | null> => {
       email: users.email,
       isFactoryAdmin: users.isFactoryAdmin,
       employeeId: users.employeeId,
-      active: users.active,
-      sessionToken: users.sessionToken,
-      sessionExpiresAt: users.sessionExpiresAt
+      active: users.active
     })
     .from(users)
     .innerJoin(companies, eq(companies.id, users.companyId))
@@ -47,10 +52,10 @@ export const getSession = cache(async (): Promise<AuthedUser | null> => {
     .limit(1);
 
   const row = rows[0];
-  if (!row || !row.sessionToken) return null;
+  if (!row) return null;
   if (!row.active) return null;
-  if (!tokensMatch(pointer.sessionToken, row.sessionToken)) return null;
-  if (!row.sessionExpiresAt || row.sessionExpiresAt.getTime() < Date.now()) return null;
+
+  touchSessionActivity(sessionRow.id);
 
   return {
     id: row.id,
