@@ -337,6 +337,13 @@
       "when": 1788154856748,
       "tag": "0047_glorious_network",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "5",
+      "when": 1788155831343,
+      "tag": "0048_real_true_believers",
+      "breakpoints": true
     }
   ]
 }

@@ -417,10 +417,49 @@ birlikte toplam 174/174. `tsc --noEmit` + `npm run build` temiz. Bu
 oturumda da canlı tarayıcı aracı erişilebilir DEĞİLDİ (Faz 4-7'deki AYNI
 durum).
 
-## FAZ 9 — Hukuk + Risk Yönetimi
+## FAZ 9 — Hukuk + Risk Yönetimi ✅
 
 **Bağımlılık:** Doküman Yönetimi (✅ `documentAttachments`). Sözleşme/dava/
 teminat + risk kaydı (probability×impact×score×owner×mitigation).
+
+Teslim edilenler: `legal_contracts`(tedarikçi/müşteri/kira/gizlilik/
+hizmet)→`legal_lawsuits`(davacı/davalı, opsiyonel sözleşme bağlantısı)→
+`legal_collaterals`(teminat mektubu/nakit/çek/senet)→
+`risk_register_entries`(probability×impact→score, owner, mitigation).
+Sözleşme/dava belgeleri, YENİ bir dosya-depolama kodu YAZILMADAN,
+`document_attachments`'ın mevcut entityType/entityId desenine
+(`'LEGAL_CONTRACT'`/`'LEGAL_LAWSUIT'`) bağlandı — İK'nın
+`employee_contracts` dosya yükleme akışıyla BİREBİR aynı çağrı deseni.
+
+Mimari notlar:
+- `CONTRACT_TYPES`'a BİLİNÇLİ OLARAK "EMPLOYMENT" (iş sözleşmesi)
+  EKLENMEDİ — İK Faz 1'in `employee_contracts`'ı ZATEN bu veriyi tutuyor
+  (§150 Single Source of Truth). Bu modülün sözleşmeleri TİCARİ/HUKUKİ
+  olanlar.
+- Risk kaydının `score`'u, bu oturumun diğer "saklanan alan değil
+  hesaplanan rapor" örneklerinin (OEE, tedarikçi kalite, enerji-başı-
+  ürün, yakıt verimliliği, proje bütçesi) AKSİNE, GERÇEK bir kolon olarak
+  saklandı — ama AYNI "kullanıcı elle giremez, lib katmanı her zaman
+  yeniden hesaplar" disiplinini korudu. Fark: score = probability×impact
+  basit bir çarpım, birden fazla kaynaktan dönemsel toplama İÇERMİYOR,
+  tutarsızlık riski yok — DB'de sorgulanabilir/sıralanabilir kalması
+  pratik bir avantaj.
+- Teminat, Satın Alma'nın `proc_tenders.bidBondRequired`/
+  `bidBondPercent`/`bidBondAmount`'ından (yalnızca bir ihalenin BEKLENEN
+  teminatı) AYRI ve haklı bir varlık — bir sözleşmenin TÜM ömrü boyunca
+  izlenen genel bir teminat kaydı.
+
+Test: `tests/legal.test.ts` (kalıcı) — sona-erme raporunun yalnızca
+ACTIVE+30-gün-içindeki sözleşmeyi yakaladığı (taslak ve uzak-tarihli
+sözleşmeler hariç); sonuçlanmış bir davanın ve serbest bırakılmış bir
+teminatın tekrar değiştirilemediği; risk skorunun HER değerlendirme
+güncellemesinde YENİDEN hesaplandığı (4×5=20'den 2×3=6'ya, durum
+MITIGATING'de sabit kalarak) ve kapatılmış bir riskin güncellenemediği;
+`document_attachments`'ın hiçbir yeni kod olmadan gerçekten çalıştığı —
+20/20 gerçek DB'de geçti. On bir kalıcı test paketi (accounting/holding/
+sales/production/mrp/mes/quality/eam/fleet/projects/legal) birlikte
+toplam 194/194. `tsc --noEmit` + `npm run build` temiz. Bu oturumda da
+canlı tarayıcı aracı erişilebilir DEĞİLDİ (Faz 4-8'deki AYNI durum).
 
 ## FAZ 10 — Çevre/İSG (HR dışı) + Ar-Ge
 

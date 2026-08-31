@@ -4003,3 +4003,120 @@ export const projProgressPayments = mysqlTable('proj_progress_payments', {
   createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow()
 }, (table) => [uniqueIndex('udx_proj_pp_company_no').on(table.companyId, table.paymentNo)]);
+
+// --- Holding ERP Faz 9 (Hukuk + Risk Yönetimi) — Sözleşme/dava/teminat +
+// risk kaydı. Bağımlılık: Doküman Yönetimi (✅ document_attachments) —
+// sözleşme/dava dosyaları (imzalı PDF vb.) buraya YENİ bir dosya-depolama
+// altyapısı KURULMADAN, mevcut entityType/entityId polimorfik desenle
+// ('LEGAL_CONTRACT'/'LEGAL_LAWSUIT') bağlanır; lib/documents/attachments.ts
+// DOĞRUDAN yeniden kullanılır.
+//
+// CONTRACT_TYPES'a BİLİNÇLİ OLARAK "EMPLOYMENT" (iş sözleşmesi) EKLENMEDİ
+// — İK Faz 1'in employee_contracts'ı ZATEN bu veriyi tutuyor (§150 Single
+// Source of Truth, aynı veri iki modülde tutulmaz). Bu modülün sözleşmeleri
+// TİCARİ/HUKUKİ olanlar (tedarikçi/müşteri/kira/hizmet/gizlilik).
+export const LEGAL_CONTRACT_TYPES = ['SUPPLIER', 'CUSTOMER', 'LEASE', 'NDA', 'SERVICE', 'OTHER'] as const;
+export const LEGAL_CONTRACT_STATUSES = ['DRAFT', 'ACTIVE', 'EXPIRED', 'TERMINATED'] as const;
+
+export const legalContracts = mysqlTable('legal_contracts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  contractNo: varchar('contract_no', { length: 32 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  contractType: mysqlEnum('contract_type', LEGAL_CONTRACT_TYPES).notNull(),
+  status: mysqlEnum('status', LEGAL_CONTRACT_STATUSES).notNull().default('DRAFT'),
+  // OPSİYONEL — karşı taraf zaten var olan bir parti (tedarikçi/müşteri)
+  // ise buraya bağlanır (§150), değilse (ör. bir kamu kurumu, ayrı bir cari
+  // kartı açmaya değmeyen tek seferlik bir taraf) yalnızca serbest metin.
+  counterpartyPartyId: char('counterparty_party_id', { length: 36 }).references(() => parties.id),
+  counterpartyName: varchar('counterparty_name', { length: 255 }).notNull().default(''),
+  startDate: date('start_date', { mode: 'string' }),
+  endDate: date('end_date', { mode: 'string' }),
+  value: decimal('value', { precision: 20, scale: 6 }),
+  currencyCode: char('currency_code', { length: 3 }).references(() => currencies.code),
+  ownerUserId: char('owner_user_id', { length: 36 }).references(() => users.id),
+  notes: text('notes'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_legal_contract_company_no').on(table.companyId, table.contractNo)]);
+
+export const LEGAL_LAWSUIT_STATUSES = ['OPEN', 'IN_PROGRESS', 'SETTLED', 'WON', 'LOST', 'CLOSED'] as const;
+export const LEGAL_COMPANY_ROLES = ['PLAINTIFF', 'DEFENDANT'] as const;
+
+export const legalLawsuits = mysqlTable('legal_lawsuits', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  caseNo: varchar('case_no', { length: 32 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  companyRole: mysqlEnum('company_role', LEGAL_COMPANY_ROLES).notNull(),
+  counterpartyPartyId: char('counterparty_party_id', { length: 36 }).references(() => parties.id),
+  counterpartyName: varchar('counterparty_name', { length: 255 }).notNull().default(''),
+  // OPSİYONEL — bir dava GENELLİKLE bir sözleşme uyuşmazlığından doğar,
+  // ama her zaman değil (ör. haksız fiil).
+  contractId: char('contract_id', { length: 36 }).references(() => legalContracts.id),
+  status: mysqlEnum('status', LEGAL_LAWSUIT_STATUSES).notNull().default('OPEN'),
+  claimAmount: decimal('claim_amount', { precision: 20, scale: 6 }),
+  currencyCode: char('currency_code', { length: 3 }).references(() => currencies.code),
+  courtName: varchar('court_name', { length: 255 }).notNull().default(''),
+  filedDate: date('filed_date', { mode: 'string' }),
+  ownerUserId: char('owner_user_id', { length: 36 }).references(() => users.id),
+  notes: text('notes'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  closedAt: timestamp('closed_at')
+}, (table) => [uniqueIndex('udx_legal_lawsuit_company_no').on(table.companyId, table.caseNo)]);
+
+// Teminat (Letter of Guarantee/Cash Deposit/Check/Promissory Note) —
+// Satın Alma'nın proc_tenders.bidBondRequired/bidBondPercent/bidBondAmount
+// alanlarıyla AYNI kavram, ama İHALE'ye özgü DEĞİL — bir sözleşmenin
+// (kira, hizmet vb.) TÜM ömrü boyunca izlenen genel bir teminat kaydı,
+// burada AYRI ve haklı bir varlık (proc_tenders'ın alanları yalnızca bir
+// ihalenin "beklenen teminatı", GERÇEK teminat mektubunun kendisi zaten
+// document_attachments'a ekleniyordu).
+export const LEGAL_COLLATERAL_TYPES = ['LETTER_OF_GUARANTEE', 'CASH_DEPOSIT', 'CHECK', 'PROMISSORY_NOTE', 'OTHER'] as const;
+export const LEGAL_COLLATERAL_STATUSES = ['ACTIVE', 'RELEASED', 'EXPIRED'] as const;
+
+export const legalCollaterals = mysqlTable('legal_collaterals', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  contractId: char('contract_id', { length: 36 }).references(() => legalContracts.id),
+  collateralType: mysqlEnum('collateral_type', LEGAL_COLLATERAL_TYPES).notNull(),
+  amount: decimal('amount', { precision: 20, scale: 6 }).notNull(),
+  currencyCode: char('currency_code', { length: 3 }).references(() => currencies.code),
+  provider: varchar('provider', { length: 255 }).notNull().default(''),
+  issueDate: date('issue_date', { mode: 'string' }),
+  expiryDate: date('expiry_date', { mode: 'string' }),
+  status: mysqlEnum('status', LEGAL_COLLATERAL_STATUSES).notNull().default('ACTIVE'),
+  notes: text('notes'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// Risk Kaydı — madde metninin KENDİ formülü: probability×impact×score×
+// owner×mitigation. score BİLİNÇLİ OLARAK GERÇEK bir kolon (bu oturumun
+// OEE/enerji-başı-ürün gibi "saklanan değil hesaplanan rapor" örneklerinin
+// AKSİNE) — score = probability×impact BASİT bir türetilmiş değer ve HER
+// ZAMAN lib katmanında yeniden hesaplanıp yazılır (kullanıcı ELLE
+// giremez, schema.ts'in kendi yorumu), DB'de sorgulanabilir/sıralanabilir
+// kalması İÇİN saklanıyor — OEE'nin aksine burada "kaynaklar arası talep
+// üzerine toplama" yok, tek bir çarpım, tutarsızlık riski YOK.
+export const RISK_CATEGORIES = ['LEGAL', 'FINANCIAL', 'OPERATIONAL', 'STRATEGIC', 'COMPLIANCE', 'OTHER'] as const;
+export const RISK_STATUSES = ['OPEN', 'MITIGATING', 'CLOSED'] as const;
+
+export const riskRegisterEntries = mysqlTable('risk_register_entries', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  riskNo: varchar('risk_no', { length: 32 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  category: mysqlEnum('category', RISK_CATEGORIES).notNull(),
+  description: text('description'),
+  probability: int('probability').notNull(),
+  impact: int('impact').notNull(),
+  score: int('score').notNull(),
+  ownerUserId: char('owner_user_id', { length: 36 }).references(() => users.id),
+  mitigation: text('mitigation'),
+  status: mysqlEnum('status', RISK_STATUSES).notNull().default('OPEN'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  closedAt: timestamp('closed_at')
+}, (table) => [uniqueIndex('udx_risk_company_no').on(table.companyId, table.riskNo)]);
