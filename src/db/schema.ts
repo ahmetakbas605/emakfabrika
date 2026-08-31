@@ -2036,6 +2036,12 @@ export const procRequests = mysqlTable('proc_requests', {
   // entegrasyon deseni.
   budgetItemId: char('budget_item_id', { length: 36 }).references(() => budgetItems.id),
   budgetCommitmentId: char('budget_commitment_id', { length: 36 }).references(() => budgetCommitments.id),
+  // Holding ERP Faz 8 (Proje Yönetimi) — dosyanın SONUNDA tanımlı
+  // `projects`'e OPSİYONEL ileri-referans (AynMySqlColumn lazy-ref, bu
+  // dosyada defalarca kullanılan teknik). Roadmap'in kendi "Satın Alma'nın
+  // proje-bazlı taleplerine bağlanabilir" isteğinin gerçek karşılığı —
+  // budgetItemId/costCenterId İLE AYNI opsiyonel-entegrasyon deseni.
+  projectId: char('project_id', { length: 36 }).references((): AnyMySqlColumn => projects.id),
   capexOpex: mysqlEnum('capex_opex', PROCUREMENT_CAPEX_OPEX),
   requestedDeliveryDate: date('requested_delivery_date', { mode: 'string' }),
   justification: text('justification'),
@@ -3909,3 +3915,91 @@ export const vehicleExpenses = mysqlTable('vehicle_expenses', {
   createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
+
+// --- Holding ERP Faz 8 (Proje Yönetimi) — Proje/görev/milestone/bütçe/
+// hakediş. Bağımlılık: Muhasebe (✅, bütçe/maliyet için — bu fazın kendi
+// bütçe alanı `budgets`/`budget_items`'ın dönemsel/hesap-bazlı modelini
+// TEKRARLAMADI, projenin KENDİ tek bir toplam `budgetAmount`'ı + gerçek
+// harcamaları (Satın Alma talepleri + hakediş ödemeleri) TALEP ÜZERİNE
+// toplayan bir rapor — bu oturumun ALTINCI "saklanan alan değil, hesaplanan
+// rapor" uygulaması, lib/projects/budget.ts:getProjectBudgetStatus).
+//
+// "Satın Alma'nın proje-bazlı taleplerine bağlanabilir" — proc_requests'e
+// (yukarıda) opsiyonel projectId eklendi, budgetItemId/costCenterId İLE
+// AYNI opsiyonel-entegrasyon deseni; Satın Alma'nın KENDİ akışı hiç
+// değişmedi.
+export const PROJECT_STATUSES = ['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'] as const;
+
+export const projects = mysqlTable('projects', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  status: mysqlEnum('status', PROJECT_STATUSES).notNull().default('PLANNING'),
+  startDate: date('start_date', { mode: 'string' }),
+  endDate: date('end_date', { mode: 'string' }),
+  budgetAmount: decimal('budget_amount', { precision: 20, scale: 6 }),
+  managerUserId: char('manager_user_id', { length: 36 }).references(() => users.id),
+  departmentId: char('department_id', { length: 36 }).references(() => departments.id),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_project_company_code').on(table.companyId, table.code)]);
+
+export const PROJECT_TASK_STATUSES = ['TODO', 'IN_PROGRESS', 'DONE', 'CANCELLED'] as const;
+
+// parentTaskId — kendi tablosuna self-referans, users.managerUserId İLE
+// AYNI AnyMySqlColumn lazy-ref tekniği (bu dosyada bu fazdan ÖNCE de
+// defalarca kullanıldı — burada gerçek bir ileri-referans GEREKMİYOR
+// çünkü tablo kendi kendini referans alıyor, ama teknik AYNI).
+export const projectTasks = mysqlTable('project_tasks', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  projectId: char('project_id', { length: 36 }).notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  parentTaskId: char('parent_task_id', { length: 36 }).references((): AnyMySqlColumn => projectTasks.id),
+  name: varchar('name', { length: 255 }).notNull(),
+  status: mysqlEnum('status', PROJECT_TASK_STATUSES).notNull().default('TODO'),
+  assignedToUserId: char('assigned_to_user_id', { length: 36 }).references(() => users.id),
+  startDate: date('start_date', { mode: 'string' }),
+  dueDate: date('due_date', { mode: 'string' }),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const PROJECT_MILESTONE_STATUSES = ['PENDING', 'COMPLETED'] as const;
+
+export const projectMilestones = mysqlTable('project_milestones', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  projectId: char('project_id', { length: 36 }).notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  targetDate: date('target_date', { mode: 'string' }).notNull(),
+  status: mysqlEnum('status', PROJECT_MILESTONE_STATUSES).notNull().default('PENDING'),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// Hakediş (progress payment) — bir projenin belirli bir dönem/aşamada
+// tamamlanan işi karşılığında GERÇEKLEŞEN ödeme kaydı. milestoneId
+// OPSİYONEL — bir hakediş bir milestone'a bağlı olabilir ama ZORUNLU
+// değil (bazı hakedişler dönemsel, milestone'dan bağımsız ilerler).
+// Tablo adı BİLİNÇLİ OLARAK "proj_" ile kısaltıldı — MySQL'in 64 karakter
+// FK-adı sınırı bu oturumda defalarca karşılaşılan gerçek bir hata,
+// migration üretilmeden ÖNCE proaktif kısaltıldı.
+export const PROGRESS_PAYMENT_STATUSES = ['DRAFT', 'APPROVED', 'PAID'] as const;
+
+export const projProgressPayments = mysqlTable('proj_progress_payments', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  projectId: char('project_id', { length: 36 }).notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  milestoneId: char('milestone_id', { length: 36 }).references(() => projectMilestones.id),
+  paymentNo: varchar('payment_no', { length: 32 }).notNull(),
+  periodStart: date('period_start', { mode: 'string' }).notNull(),
+  periodEnd: date('period_end', { mode: 'string' }).notNull(),
+  amount: decimal('amount', { precision: 20, scale: 6 }).notNull(),
+  status: mysqlEnum('status', PROGRESS_PAYMENT_STATUSES).notNull().default('DRAFT'),
+  paymentDate: date('payment_date', { mode: 'string' }),
+  notes: text('notes'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_proj_pp_company_no').on(table.companyId, table.paymentNo)]);

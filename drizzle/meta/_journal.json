@@ -330,6 +330,13 @@
       "when": 1788153173734,
       "tag": "0046_odd_thunderbolts",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "5",
+      "when": 1788154856748,
+      "tag": "0047_glorious_network",
+      "breakpoints": true
     }
   ]
 }

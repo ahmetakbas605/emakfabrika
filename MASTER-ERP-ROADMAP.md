@@ -372,10 +372,50 @@ holding/sales/production/mrp/mes/quality/eam/fleet) birlikte toplam
 159/159. `tsc --noEmit` + `npm run build` temiz. Bu oturumda da canlı
 tarayıcı aracı erişilebilir DEĞİLDİ (Faz 4-6'daki AYNI durum).
 
-## FAZ 8 — Proje Yönetimi
+## FAZ 8 — Proje Yönetimi ✅
 
 **Bağımlılık:** Muhasebe (✅, bütçe/maliyet için). Proje/görev/milestone/
 bütçe/hakediş — Satın Alma'nın proje-bazlı taleplerine bağlanabilir.
+
+Teslim edilenler: `projects`(kod/ad/bütçe/yönetici/departman)→
+`project_tasks`(üst-alt hiyerarşi, kendi tablosuna self-referans)→
+`project_milestones`→`proj_progress_payments`(hakediş, DRAFT→APPROVED→
+PAID, `lib/quality/ncr.ts` İLE AYNI isimlendirilmiş-fiil deseni)→
+`getProjectBudgetStatus` (bu oturumun ALTINCI "saklanan alan değil,
+talep üzerine hesaplanan rapor" uygulaması). `proc_requests`'e opsiyonel
+`projectId` eklendi — Satın Alma'nın kendi akışı (onay/mal kabul/3-way-
+match) HİÇ değişmedi, `budgetItemId`/`costCenterId` İLE AYNI opsiyonel-
+entegrasyon deseni.
+
+Mimari notlar:
+- Bu fazın "bütçe"si, Muhasebe'nin KENDİ dönemsel/hesap-bazlı bütçe
+  modelini (`budgets`/`budget_items`) TEKRARLAMADI — farklı bir soru
+  soruyor ("bu projede ne kadar bütçe kaldı", dönemsel değil, proje
+  ömrü boyunca tek bir toplam). `getProjectBudgetStatus`, projenin
+  `budgetAmount`'ından Satın Alma'nın o projeye bağlı GERÇEK taleplerinin
+  (`DRAFT`/`REJECTED`/`CANCELLED` HARİÇ) toplamını ve ÖDENMİŞ (yalnızca
+  `PAID`) hakedişleri düşer — taslak bir talep ya da henüz onaylanmamış
+  bir hakediş bütçeyi ETKİLEMEZ, dürüstçe hariç tutulur.
+- `project_tasks.parentTaskId` kendi tablosuna self-referans —
+  `mrp_planned_orders.parent_id`'de (Faz 3) karşılaşılan AYNI gerçek
+  test-temizliği sorunu tekrar uygulandı (tek bir `DELETE` satırlar
+  arası sırayı garanti etmez), bu kez self-referansı önce `NULL`'a
+  çekerek çözüldü.
+- Tablo adı `proj_progress_payments` olarak BİLİNÇLİ OLARAK kısaltıldı —
+  MySQL'in 64 karakter FK-adı sınırı migration üretilmeden önce proaktif
+  hesaplandı (en uzun constraint 60 karakter).
+
+Test: `tests/projects.test.ts` (kalıcı) — üst-alt görev hiyerarşisi ve
+sırasız tamamlama reddi; hakedişin DRAFT→APPROVED→PAID zincirinde her
+adımın atlanamayacağı, geçersiz dönemin ve başka bir projenin
+milestone'unun reddedildiği; bir satın alma talebinin projeye bağlandığı
+ve `getProjectBudgetStatus`'ün (100000 − 20000 taahhüt − 10000 ödenen =
+70000 kalan, DRAFT talep+hakediş dürüstçe hariç tutularak) TAM doğru
+hesaplandığı — 15/15 gerçek DB'de geçti. On kalıcı test paketi
+(accounting/holding/sales/production/mrp/mes/quality/eam/fleet/projects)
+birlikte toplam 174/174. `tsc --noEmit` + `npm run build` temiz. Bu
+oturumda da canlı tarayıcı aracı erişilebilir DEĞİLDİ (Faz 4-7'deki AYNI
+durum).
 
 ## FAZ 9 — Hukuk + Risk Yönetimi
 

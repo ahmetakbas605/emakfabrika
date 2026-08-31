@@ -36,6 +36,11 @@ export interface CreateProcRequestInput {
   priority?: (typeof procRequests.$inferInsert)['priority'];
   costCenterId?: string;
   budgetItemId?: string;
+  // Holding ERP Faz 8 (Proje Yönetimi) — costCenterId/budgetItemId İLE AYNI
+  // opsiyonel-entegrasyon deseni, MASTER-ERP-ROADMAP.md'nin "Satın Alma'nın
+  // proje-bazlı taleplerine bağlanabilir" kararının gerçek karşılığı.
+  // Satın Alma'nın KENDİ akışı (onay/mal kabul/3-way-match) HİÇ değişmedi.
+  projectId?: string;
   capexOpex?: 'CAPEX' | 'OPEX';
   requestedDeliveryDate?: string;
   justification?: string;
@@ -75,6 +80,7 @@ export async function createProcRequest(companyId: string, requestedByUserId: st
       requestedByUserId,
       costCenterId: input.costCenterId,
       budgetItemId: input.budgetItemId,
+      projectId: input.projectId,
       capexOpex: input.capexOpex,
       requestedDeliveryDate: input.requestedDeliveryDate,
       justification: input.justification,

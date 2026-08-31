@@ -25,6 +25,7 @@ const QUICK_LINKS = [
   { href: '/dashboard/eam/energy', label: 'Enerji Tüketimi', icon: Landmark },
   { href: '/dashboard/fleet', label: 'Filo / Araç Bakım', icon: Boxes },
   { href: '/dashboard/fleet/expenses', label: 'Araç Giderleri', icon: Landmark },
+  { href: '/dashboard/projects', label: 'Proje Yönetimi', icon: Boxes },
   { href: '/dashboard/procurement', label: 'Satınalma Talepleri', icon: Boxes },
   { href: '/dashboard/procurement/dashboard', label: 'Satınalma Kontrol Paneli', icon: Landmark },
   { href: '/dashboard/procurement/tenders', label: 'İhaleler', icon: Landmark },
