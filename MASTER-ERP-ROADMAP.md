@@ -461,10 +461,47 @@ sales/production/mrp/mes/quality/eam/fleet/projects/legal) birlikte
 toplam 194/194. `tsc --noEmit` + `npm run build` temiz. Bu oturumda da
 canlı tarayıcı aracı erişilebilir DEĞİLDİ (Faz 4-8'deki AYNI durum).
 
-## FAZ 10 — Çevre/İSG (HR dışı) + Ar-Ge
+## FAZ 10 — Çevre/İSG (HR dışı) + Ar-Ge ✅
 
 **Bağımlılık:** İK (✅, kısmi İSG zaten HR'da var — PDKS/eğitim). Emisyon/
 atık/çevre izni + Ar-Ge proje/prototip/laboratuvar.
+
+Teslim edilenler — üç ayrı alt-alan: **Çevre** (`env_permits`→
+`env_emission_records`/`env_waste_records`→`getEnvironmentalSummary`, bu
+oturumun kaçıncı olduğu artık sayılamayan "saklanan alan değil, dönem
+bazlı hesaplanan rapor" uygulaması), **İSG HR-dışı** (`safety_incidents`
+— OPEN→INVESTIGATING→CLOSED, `employees`'e opsiyonel referans), **Ar-Ge**
+(`rnd_prototypes`→`rnd_lab_tests`, ikisi de opsiyonel bağlanır).
+
+Mimari notlar:
+- Madde metninin kendi notu ("kısmi İSG zaten HR'da var — PDKS/eğitim")
+  doğrulandı ve UYGULANDI: `employeeQualifications`'ın TRAINING tipi
+  zaten eğitim kayıtlarını, PDKS zaten devam takibini tutuyor — İKİSİNE
+  de BURADA DOKUNULMADI. Bu fazın `safety_incidents`'ı, Faz 9'un
+  `risk_register_entries`'inden (POTANSİYEL risk) BİLİNÇLİ OLARAK AYRI —
+  GERÇEKLEŞMİŞ bir olayın kaydı, iki farklı kavram.
+- **"Ar-Ge proje/prototip/laboratuvar"'ın PROJE yarısı AYRI bir tablo
+  olarak KURULMADI** — Faz 8'in ZATEN var olan `projects` tablosu
+  DOĞRUDAN kullanılır (§150), yalnızca prototip/laboratuvar gerçekten
+  yeni kavramlar.
+- **tsc'nin Faz 9'da yakaladığı `$inferInsert`/default-kolon dersinin
+  BAŞTAN uygulanması**: `updatePrototypeStatus`/`updateLabTestStatus`'un
+  `status` parametreleri BAŞTAN `$inferSelect`'ten tiplendi
+  (`$inferInsert`'ten DEĞİL) — SELECT sonucunda default'lu bir kolon bile
+  her zaman dolu geldiğinden `string | undefined` sorunu hiç oluşmadı,
+  Faz 9'un commit mesajına yazılan dersin gerçek bir tekrarı.
+
+Test: `tests/environment-safety-rnd.test.ts` (kalıcı) — üç alt-alanı TEK
+dosyada test ediyor (Faz 6/9'un çoklu-alt-alanı tek dosyada test etme
+deseniyle AYNI). Sona-erme raporunun doğruluğu; dönem özetinin (CO2=150,
+NOX=20, HAZARDOUS=30, RECYCLABLE=10) aralık-dışı kayıtları dürüstçe hariç
+tuttuğu; olmayan bir çalışan/proje/prototiple kayıt oluşturulamadığı;
+olay/prototip/testin sırasız geçiş ve sonuçlanma-sonrası değişiklik
+denemelerinin reddedildiği — 18/18 gerçek DB'de geçti. On iki kalıcı test
+paketi (accounting/holding/sales/production/mrp/mes/quality/eam/fleet/
+projects/legal/environment) birlikte toplam 212/212. `tsc --noEmit` +
+`npm run build` temiz. Bu oturumda da canlı tarayıcı aracı erişilebilir
+DEĞİLDİ (Faz 4-9'daki AYNI durum).
 
 ## FAZ 11 — Hazine Genişletme
 

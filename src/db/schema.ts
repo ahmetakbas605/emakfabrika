@@ -4120,3 +4120,122 @@ export const riskRegisterEntries = mysqlTable('risk_register_entries', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   closedAt: timestamp('closed_at')
 }, (table) => [uniqueIndex('udx_risk_company_no').on(table.companyId, table.riskNo)]);
+
+// --- Holding ERP Faz 10 (Çevre/İSG HR-dışı + Ar-Ge) — Emisyon/atık/çevre
+// izni + iş kazası/olayı + Ar-Ge prototip/laboratuvar. Bağımlılık: İK
+// (✅) — madde metninin kendi notu: "kısmi İSG zaten HR'da var (PDKS/
+// eğitim)" — employeeQualifications'ın TRAINING tipi ZATEN eğitim
+// kayıtlarını tutuyor, work_time_logs (PDKS) ZATEN devam takibini
+// tutuyor, İKİSİNE de BURADA DOKUNULMADI/TEKRARLANMADI. Bu faz yalnızca
+// HR'ın KAPSAMADIĞI iki gerçekten yeni alanı ekler: (1) somut, GERÇEKLEŞMİŞ
+// iş kazası/olay kaydı (Faz 9'un risk_register_entries'i POTANSİYEL riski
+// tutuyor, GERÇEKLEŞEN bir olayı DEĞİL — iki farklı kavram, kategori
+// eklemek yerine ayrı bir tablo haklı), (2) çevre (emisyon/atık/izin).
+//
+// "Ar-Ge proje/prototip/laboratuvar" — PROJE yarısı AYRI bir "rnd_projects"
+// tablosu OLARAK KURULMADI, Faz 8'in ZATEN var olan `projects` tablosu
+// DOĞRUDAN kullanılır (§150) — yalnızca prototip/laboratuvar GERÇEKTEN
+// yeni kavramlar, ikisi de projects'e OPSİYONEL bağlanır (bir prototip
+// resmi bir projeye bağlı OLMAYABİLİR de).
+export const ENV_PERMIT_TYPES = ['EMISSION', 'WASTE', 'WATER', 'AIR', 'OTHER'] as const;
+export const ENV_PERMIT_STATUSES = ['ACTIVE', 'EXPIRED', 'RENEWAL_PENDING'] as const;
+
+export const envPermits = mysqlTable('env_permits', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  permitNo: varchar('permit_no', { length: 32 }).notNull(),
+  permitType: mysqlEnum('permit_type', ENV_PERMIT_TYPES).notNull(),
+  issuingAuthority: varchar('issuing_authority', { length: 255 }).notNull().default(''),
+  issueDate: date('issue_date', { mode: 'string' }),
+  expiryDate: date('expiry_date', { mode: 'string' }),
+  status: mysqlEnum('status', ENV_PERMIT_STATUSES).notNull().default('ACTIVE'),
+  notes: text('notes'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_env_permit_company_no').on(table.companyId, table.permitNo)]);
+
+export const ENV_EMISSION_TYPES = ['CO2', 'NOX', 'SOX', 'PARTICULATE', 'OTHER'] as const;
+
+export const envEmissionRecords = mysqlTable('env_emission_records', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  recordDate: date('record_date', { mode: 'string' }).notNull(),
+  emissionType: mysqlEnum('emission_type', ENV_EMISSION_TYPES).notNull(),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unit: varchar('unit', { length: 16 }).notNull(),
+  source: varchar('source', { length: 255 }).notNull().default(''),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const ENV_WASTE_TYPES = ['HAZARDOUS', 'NON_HAZARDOUS', 'RECYCLABLE'] as const;
+export const ENV_WASTE_DISPOSAL_METHODS = ['LANDFILL', 'INCINERATION', 'RECYCLING', 'OTHER'] as const;
+
+export const envWasteRecords = mysqlTable('env_waste_records', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  recordDate: date('record_date', { mode: 'string' }).notNull(),
+  wasteType: mysqlEnum('waste_type', ENV_WASTE_TYPES).notNull(),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unit: varchar('unit', { length: 16 }).notNull(),
+  disposalMethod: mysqlEnum('disposal_method', ENV_WASTE_DISPOSAL_METHODS).notNull(),
+  disposalCompany: varchar('disposal_company', { length: 255 }).notNull().default(''),
+  notes: text('notes'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+export const SAFETY_INCIDENT_TYPES = ['ACCIDENT', 'NEAR_MISS', 'OCCUPATIONAL_ILLNESS'] as const;
+export const SAFETY_INCIDENT_SEVERITIES = ['MINOR', 'MODERATE', 'SEVERE', 'FATAL'] as const;
+export const SAFETY_INCIDENT_STATUSES = ['OPEN', 'INVESTIGATING', 'CLOSED'] as const;
+
+export const safetyIncidents = mysqlTable('safety_incidents', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  incidentNo: varchar('incident_no', { length: 32 }).notNull(),
+  incidentType: mysqlEnum('incident_type', SAFETY_INCIDENT_TYPES).notNull(),
+  severity: mysqlEnum('severity', SAFETY_INCIDENT_SEVERITIES).notNull().default('MINOR'),
+  incidentDate: date('incident_date', { mode: 'string' }).notNull(),
+  location: varchar('location', { length: 255 }).notNull().default(''),
+  // OPSİYONEL — çalışan bilgisi ZATEN employees'te var (§150), burada
+  // TEKRARLANMADI, yalnızca referans verilir. Bir olay belirli bir
+  // çalışana bağlı OLMAYABİLİR de (ör. genel bir tesis olayı).
+  employeeId: char('employee_id', { length: 36 }).references(() => employees.id),
+  description: text('description').notNull(),
+  rootCause: text('root_cause'),
+  correctiveAction: text('corrective_action'),
+  status: mysqlEnum('status', SAFETY_INCIDENT_STATUSES).notNull().default('OPEN'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  closedAt: timestamp('closed_at')
+}, (table) => [uniqueIndex('udx_safety_incident_company_no').on(table.companyId, table.incidentNo)]);
+
+export const RND_PROTOTYPE_STATUSES = ['DESIGN', 'BUILDING', 'TESTING', 'APPROVED', 'REJECTED'] as const;
+
+export const rndPrototypes = mysqlTable('rnd_prototypes', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  projectId: char('project_id', { length: 36 }).references(() => projects.id),
+  prototypeNo: varchar('prototype_no', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  version: int('version').notNull().default(1),
+  status: mysqlEnum('status', RND_PROTOTYPE_STATUSES).notNull().default('DESIGN'),
+  description: text('description'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_rnd_prototype_company_no').on(table.companyId, table.prototypeNo)]);
+
+export const RND_LAB_TEST_STATUSES = ['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'FAILED'] as const;
+
+export const rndLabTests = mysqlTable('rnd_lab_tests', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  prototypeId: char('prototype_id', { length: 36 }).references(() => rndPrototypes.id),
+  testNo: varchar('test_no', { length: 32 }).notNull(),
+  testName: varchar('test_name', { length: 255 }).notNull(),
+  testDate: date('test_date', { mode: 'string' }),
+  status: mysqlEnum('status', RND_LAB_TEST_STATUSES).notNull().default('PLANNED'),
+  resultSummary: text('result_summary'),
+  performedByUserId: char('performed_by_user_id', { length: 36 }).references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_rnd_lab_test_company_no').on(table.companyId, table.testNo)]);
