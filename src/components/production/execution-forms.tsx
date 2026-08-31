@@ -17,11 +17,19 @@ export function IssueMaterialsForm({ orderId }: { orderId: string }) {
   );
 }
 
-export function StartOperationButton({ operationId }: { operationId: string }) {
+// Holding ERP Faz 4 (MES) — machines OPSİYONEL prop, boş geçilirse (Faz 2'nin
+// eski çağıranları hâlâ derlenir) makine seçici hiç render edilmez.
+export function StartOperationButton({ operationId, machines }: { operationId: string; machines?: { id: string; code: string; name: string }[] }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(startProdOperationAction, undefined);
   return (
-    <form action={formAction} style={{ display: 'inline-block', marginRight: 6 }}>
+    <form action={formAction} style={{ display: 'inline-flex', gap: 4, alignItems: 'center', marginRight: 6 }}>
       <input type="hidden" name="operationId" value={operationId} />
+      {machines && machines.length > 0 ? (
+        <select name="machineId" style={{ padding: '2px 4px', fontSize: 12 }}>
+          <option value="">— makine seçilmedi —</option>
+          {machines.map((m) => <option key={m.id} value={m.id}>{m.code} — {m.name}</option>)}
+        </select>
+      ) : null}
       <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 12, cursor: 'pointer' }}>{pending ? '...' : 'Başlat'}</button>
       {state?.error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 4 }}>{state.error}</span> : null}
     </form>

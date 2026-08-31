@@ -158,12 +158,59 @@ Beş kalıcı test paketi (accounting/holding/sales/production/mrp) birlikte
 (Sales/Production dahil) sıfır hatayla doğrulandı. `tsc --noEmit` +
 `npm run build` temiz.
 
-## FAZ 4 — MES
+## FAZ 4 — MES ✅
 
 **Bağımlılık:** Faz 2. Üretim emri/makine/operatör/duruş/arıza/OEE — PLC/
 SCADA/IoT entegrasyonuna hazır event/API iskeleti (gerçek donanım entegrasyonu
 KAPSAM DIŞI, master prompt §21 zaten "hazırlığa hazır ol" diyor, "entegre et"
 demiyor).
+
+**"Üzerine inşa et, çoğaltma" disiplini** (§150 Single Source of Truth):
+Faz 2'nin `work_centers`/`prod_operations`'ı BİLİNÇLİ OLARAK yeniden
+kullanıldı — operatör zaten `assignedToUserId`, iyi/fire zaten
+`goodQuantity`/`scrapQuantity` olarak duruyordu, paralel bir "üretim sayacı"
+tablosu AÇILMADI. Gerçekten yeni olan tek iki kavram: `machines` (work
+center'dan daha ince taneli — bir iş merkezinde birden fazla makine olabilir)
+ve `machine_downtimes` (Availability bileşenini besleyen, hiçbir mevcut
+tabloda karşılığı olmayan tek gerçek yeni veri).
+
+Teslim edilenler: `machines`(work_center'a bağlı, opsiyonel
+`idealCycleTimeSeconds`)→`downtime_reasons`(sabit TS enum DEĞİL, departmentTypes
+İLE AYNI desende seçilmiş/seed'lenmiş referans tablosu, 9 satır: 4 PLANNED +
+5 UNPLANNED)→`machine_downtimes`(makine+opsiyonel operasyon+neden+başlangıç/
+bitiş, `endedAt IS NULL`=hâlâ açık)→`startProdOperation`'a geriye uyumlu
+opsiyonel `machineId` parametresi→OEE = Availability×Performance×Quality
+(SAKLANAN bir tablo DEĞİL, `getOeeForOperation`/`getMachineOeeSummary` ile
+TALEP ÜZERİNE hesaplanan rapor).
+
+Mimari notlar:
+- **Dürüst null'lar**: makinenin `idealCycleTimeSeconds`'ı boşsa Performance
+  (dolayısıyla OEE) SESSİZCE %100 varsayılmaz — `null` döner, UI'da (hem
+  MES panelinde hem Üretim Emri detayındaki OEE tooltip'inde) AÇIKÇA "makine
+  ideal çevrim süresi tanımlı değil" olarak gösterilir.
+- MySQL'in 64 karakterlik FK-adı sınırı (Faz 2'de `ER_TOO_LONG_IDENT` ile
+  GERÇEKTEN bulunmuştu) bu kez migration ÜRETİLMEDEN ÖNCE tablo/kolon adları
+  bilinçli kısa tutularak (`machine_downtimes`, `prod_operations.operation_id`
+  değil `operation_id`) önlendi — `grep`+`awk` ile üretilen migration'daki
+  TÜM constraint adları uygulanmadan önce doğrulandı (en uzunu 54 karakter).
+- madde 21'in "entegrasyona hazır API" isteği ayrı bir event-bus soyutlaması
+  icat EDİLMEDEN karşılandı: `recordDowntimeStart`/`recordDowntimeEnd` bir
+  insanın UI'dan tıklamasıyla da, ileride bir PLC/OPC-UA köprüsünün
+  programatik çağrısıyla da AYNI şekilde çalışır.
+
+Test: `tests/mes.test.ts` (kalıcı) — makine+duruş+operasyon zinciri, kontrollü
+(elle ayarlanmış) zaman damgalarıyla OEE'nin TAM matematiksel doğruluğu
+(Availability=5/6, Quality=20/21, Performance=7/10, OEE=5/9) kanıtlandı;
+makine OEE özetinin tekil operasyonla eşleştiği, ideal çevrim süresi
+tanımsızken Performance/OEE=null döndüğü, aynı makinede ikinci açık duruşun
+ve zaten kapatılmış bir duruşun tekrar kapatılmasının reddedildiği, tamamlanmamış
+bir operasyon için OEE isteminin reddedildiği doğrulandı — 19/19 gerçek DB'de
+geçti. Altı kalıcı test paketi (accounting/holding/sales/production/mrp/mes)
+birlikte toplam 100/100. `tsc --noEmit` + `npm run build` temiz. Bu oturumda
+canlı tarayıcı (Playwright/MCP) aracı erişilebilir DEĞİLDİ — yeni `/dashboard/
+mes` ve `/dashboard/mes/machines/[machineId]` sayfaları yalnızca derleme/
+type-check seviyesinde doğrulandı, canlı tıklama testi YAPILMADI; dürüstçe
+not edilir, sonraki bir oturumda araç mevcutken tamamlanabilir.
 
 ## FAZ 5 — Kalite
 

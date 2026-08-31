@@ -8,7 +8,7 @@ import mysql from 'mysql2/promise';
 import { drizzle } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
 import { eq, isNull } from 'drizzle-orm';
-import { departmentTypes, roles, permissions, rolePermissions, itAssetTypes, currencies, holdings, companies } from '../src/db/schema';
+import { departmentTypes, roles, permissions, rolePermissions, itAssetTypes, currencies, holdings, companies, downtimeReasons } from '../src/db/schema';
 
 async function main() {
   const migrateUrl = process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL;
@@ -108,6 +108,24 @@ async function main() {
     { code: 'TABLET', name: 'Tablet' },
     { code: 'NETWORK_APPLIANCE', name: 'Ağ Cihazı' }
   ];
+
+  // Holding ERP Faz 4 (MES) — madde 3, kod içine sabit gömülmeyen duruş
+  // nedeni listesi. category, OEE'nin Availability hesabında PLANNED
+  // duruşu (mola/planlı bakım) UNPLANNED'dan (arıza/malzeme yokluğu) AYIRIR.
+  const DOWNTIME_REASON_SEED: { code: string; name: string; category: 'PLANNED' | 'UNPLANNED' }[] = [
+    { code: 'SETUP', name: 'Hazırlık/Ayar', category: 'PLANNED' },
+    { code: 'PLANNED_MAINTENANCE', name: 'Planlı Bakım', category: 'PLANNED' },
+    { code: 'BREAK', name: 'Mola', category: 'PLANNED' },
+    { code: 'SHIFT_CHANGE', name: 'Vardiya Değişimi', category: 'PLANNED' },
+    { code: 'BREAKDOWN', name: 'Arıza', category: 'UNPLANNED' },
+    { code: 'MATERIAL_SHORTAGE', name: 'Malzeme Yokluğu', category: 'UNPLANNED' },
+    { code: 'QUALITY_HOLD', name: 'Kalite Durdurması', category: 'UNPLANNED' },
+    { code: 'OPERATOR_UNAVAILABLE', name: 'Operatör Yokluğu', category: 'UNPLANNED' },
+    { code: 'OTHER', name: 'Diğer', category: 'UNPLANNED' }
+  ];
+  for (const row of DOWNTIME_REASON_SEED) {
+    await db.insert(downtimeReasons).values(row).onDuplicateKeyUpdate({ set: { name: row.name, category: row.category } });
+  }
 
   // ERP Genişletme Faz 1 — currencies company_id TAŞIMAZ (ISO 4217 kodları
   // evrensel, şirkete özgü değil — companies/roles/permissions İLE AYNI

@@ -60,11 +60,16 @@ export async function listProdOperations(companyId: string, orderId: string) {
   return db.select().from(prodOperations).where(and(eq(prodOperations.companyId, companyId), eq(prodOperations.orderId, orderId))).orderBy(prodOperations.operationOrder);
 }
 
-export async function startProdOperation(companyId: string, operationId: string, userId: string): Promise<void> {
+// Holding ERP Faz 4 (MES) — machineId OPSİYONEL, GERİYE UYUMLU eklendi
+// (Faz 2'nin imzasına yeni bir zorunlu alan EKLENMEDİ). Operatör hangi
+// makinede çalıştığını başlatma ANINDA seçer — OEE hesabı (lib/mes/oee.ts)
+// bu alan dolu olmadan çalışamaz, ama doldurulması ZORUNLU değil (makine
+// takibi istemeyen bir şirket Faz 2'nin eski davranışını aynen korur).
+export async function startProdOperation(companyId: string, operationId: string, userId: string, machineId?: string): Promise<void> {
   const [op] = await db.select().from(prodOperations).where(and(eq(prodOperations.id, operationId), eq(prodOperations.companyId, companyId))).limit(1);
   if (!op) throw new ProductionError('Operasyon bulunamadı.');
   if (op.status !== 'PENDING') throw new ProductionError('Yalnızca bekleyen (PENDING) bir operasyon başlatılabilir.');
-  await db.update(prodOperations).set({ status: 'IN_PROGRESS', startedAt: new Date(), assignedToUserId: userId }).where(eq(prodOperations.id, operationId));
+  await db.update(prodOperations).set({ status: 'IN_PROGRESS', startedAt: new Date(), assignedToUserId: userId, machineId }).where(eq(prodOperations.id, operationId));
 }
 
 export interface CompleteProdOperationInput {

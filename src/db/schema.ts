@@ -3509,6 +3509,11 @@ export const prodOperations = mysqlTable('prod_operations', {
   routingOpId: char('routing_op_id', { length: 36 }).references(() => routingOperations.id),
   operationOrder: int('operation_order').notNull(),
   workCenterId: char('work_center_id', { length: 36 }).references(() => workCenters.id),
+  // Holding ERP Faz 4 (MES) — OPSİYONEL, dosyanın SONUNDA tanımlı `machines`
+  // tablosuna ileri-referans (products/stockItems'ın AYNI AnyMySqlColumn
+  // lazy-ref tekniği). Boş kalabilir — her operasyon bir makineye bağlı
+  // OLMAK ZORUNDA değil (elle/işçilik operasyonları için).
+  machineId: char('machine_id', { length: 36 }).references((): AnyMySqlColumn => machines.id),
   name: varchar('name', { length: 255 }).notNull(),
   status: mysqlEnum('status', PRODUCTION_WORK_ORDER_STATUSES).notNull().default('PENDING'),
   assignedToUserId: char('assigned_to_user_id', { length: 36 }).references(() => users.id),
@@ -3569,5 +3574,71 @@ export const mrpPlannedOrders = mysqlTable('mrp_planned_orders', {
   parentId: char('parent_id', { length: 36 }).references((): AnyMySqlColumn => mrpPlannedOrders.id),
   convertedOrderType: varchar('converted_order_type', { length: 32 }),
   convertedOrderId: char('converted_order_id', { length: 36 }),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// --- Holding ERP Faz 4 — MES (Manufacturing Execution System,
+// MASTER-ERP-ROADMAP.md). madde 20'nin listesi (makine/operatör/duruş/
+// arıza/hurda/çevrim süresi/performans/OEE) — Faz 2'nin work_centers/
+// prod_operations'ının ÜZERİNE, onu TEKRARLAMADAN inşa edilir: "operatör"
+// zaten prod_operations.assignedToUserId, "üretim miktarı/hurda" zaten
+// prod_operations.goodQuantity/scrapQuantity (Faz 2). Bu fazın GERÇEK katkısı
+// yalnızca ikisi: (1) work_center'dan daha GRANÜLER bir `machines` varlığı
+// + operasyonun HANGİ makinede yapıldığı (prod_operations.machineId), (2)
+// Duruş (machine_downtimes) — OEE'nin Availability bileşeni bu OLMADAN
+// hesaplanamaz. OEE'nin kendisi (Availability × Performance × Quality) AYRI
+// bir tablo DEĞİL — tamamen mevcut veriden (prod_operations'ın started/
+// completedAt + good/scrapQuantity + machine_downtimes) TALEP ÜZERİNE
+// hesaplanan, saklanmayan bir rapor (lib/mes/oee.ts).
+//
+// madde 21 (PLC/SCADA/IoT/OPC-UA/MQTT) — GERÇEK donanım entegrasyonu bu
+// fazın KAPSAMI DIŞINDA (master prompt'un kendi sözü: "hazırlığa hazır ol",
+// "entegre et" DEMİYOR). "Hazır API" burada zaten VAR: recordDowntimeStart/
+// End gibi fonksiyonlar bir insanın UI'dan tıklamasıyla da, gelecekte bir
+// PLC/OPC-UA köprüsünün programatik çağrısıyla da AYNI şekilde çalışır —
+// ayrıca sahte bir "event bus" soyutlaması icat edilmedi (ARCHITECTURE-GAP-
+// REPORT.md'nin kendi bulgusu: gerçek bir tüketicisi olmayan altyapı bu
+// projenin ilkesine aykırı).
+
+export const machines = mysqlTable('machines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  workCenterId: char('work_center_id', { length: 36 }).notNull().references(() => workCenters.id),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  // OEE'nin Performance bileşeni İÇİN — boşsa Performance/OEE hesaplanamaz
+  // (Availability ve Quality yine de hesaplanabilir), lib/mes/oee.ts bunu
+  // açıkça `performance: null` olarak işaretler, SESSİZCE 1.0 varsaymaz.
+  idealCycleTimeSeconds: decimal('ideal_cycle_time_seconds', { precision: 10, scale: 2 }),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_machine_company_code').on(table.companyId, table.code)]);
+
+// madde 3 — kod içine sabit gömülmeyen duruş nedeni referans tablosu
+// (departmentTypes/itAssetTypes İLE AYNI desen). category, OEE'nin
+// Availability hesabında PLANNED duruşun (mola, planlı bakım) UNPLANNED'dan
+// (arıza, malzeme yokluğu) AYRI muamele görmesini sağlar.
+export const DOWNTIME_CATEGORIES = ['PLANNED', 'UNPLANNED'] as const;
+
+export const downtimeReasons = mysqlTable('downtime_reasons', {
+  code: varchar('code', { length: 32 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  category: mysqlEnum('category', DOWNTIME_CATEGORIES).notNull()
+});
+
+export const machineDowntimes = mysqlTable('machine_downtimes', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  machineId: char('machine_id', { length: 36 }).notNull().references(() => machines.id),
+  // OPSİYONEL izlenebilirlik — bu duruş HANGİ üretim operasyonu sırasında
+  // yaşandı (OEE hesabı bu alanı kullanır). Boş kalabilir (ör. vardiya
+  // arası, hiçbir operasyona bağlı olmayan bir duruş).
+  operationId: char('operation_id', { length: 36 }).references(() => prodOperations.id),
+  reasonCode: varchar('reason_code', { length: 32 }).notNull().references(() => downtimeReasons.code),
+  startedAt: timestamp('started_at').notNull(),
+  // NULL = duruş HÂLÂ devam ediyor (recordDowntimeEnd ile kapatılır).
+  endedAt: timestamp('ended_at'),
+  notes: text('notes'),
+  recordedByUserId: char('recorded_by_user_id', { length: 36 }).notNull().references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });

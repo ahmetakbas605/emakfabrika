@@ -1,6 +1,8 @@
 import { requireSession } from '@/lib/dal';
 import { getProductionOrder } from '@/lib/production/orders';
 import { getProduct } from '@/lib/master-data/products';
+import { listMachines } from '@/lib/mes/machines';
+import { getOeeForOperation } from '@/lib/mes/oee';
 import { SubmitProductionOrderButton, CancelProductionOrderButton } from '@/components/production/order-forms';
 import { IssueMaterialsForm, StartOperationButton, CompleteOperationForm, CompleteProductionOrderForm } from '@/components/production/execution-forms';
 
@@ -15,6 +17,17 @@ export default async function ProductionOrderDetailPage({ params }: { params: Pr
   const session = await requireSession();
   const { order, bom, routing, operations } = await getProductionOrder(session.companyId, orderId);
   const { product } = await getProduct(session.companyId, order.productId);
+  const machines = await listMachines(session.companyId);
+  const oeeByOperation = new Map<string, Awaited<ReturnType<typeof getOeeForOperation>>>();
+  for (const op of operations) {
+    if (op.status === 'COMPLETED' && op.machineId) {
+      try {
+        oeeByOperation.set(op.id, await getOeeForOperation(session.companyId, op.id));
+      } catch {
+        // makine silinmiş/erişilemez olabilir — OEE gösterilmeden devam
+      }
+    }
+  }
 
   const allOperationsDone = operations.length === 0 || operations.every((op) => op.status === 'COMPLETED');
   const canIssueMaterials = (order.status === 'RELEASED' || order.status === 'IN_PROGRESS') && !order.materialsIssuedAt;
@@ -42,23 +55,30 @@ export default async function ProductionOrderDetailPage({ params }: { params: Pr
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
                 <th style={{ padding: '6px 8px' }}>#</th><th style={{ padding: '6px 8px' }}>Operasyon</th><th style={{ padding: '6px 8px' }}>Durum</th>
-                <th style={{ padding: '6px 8px', textAlign: 'right' }}>İyi</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Fire</th><th style={{ padding: '6px 8px' }}>İşlem</th>
+                <th style={{ padding: '6px 8px', textAlign: 'right' }}>İyi</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Fire</th>
+                <th style={{ padding: '6px 8px', textAlign: 'right' }}>OEE</th><th style={{ padding: '6px 8px' }}>İşlem</th>
               </tr>
             </thead>
             <tbody>
-              {operations.map((op) => (
-                <tr key={op.id} style={{ borderBottom: '1px solid #eee' }}>
-                  <td style={{ padding: '6px 8px' }}>{op.operationOrder}</td>
-                  <td style={{ padding: '6px 8px' }}>{op.name}</td>
-                  <td style={{ padding: '6px 8px', fontWeight: 600 }}>{OP_STATUS_LABELS[op.status] ?? op.status}</td>
-                  <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{op.goodQuantity}</td>
-                  <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{op.scrapQuantity}</td>
-                  <td style={{ padding: '6px 8px' }}>
-                    {op.status === 'PENDING' ? <StartOperationButton operationId={op.id} /> : null}
-                    {op.status === 'IN_PROGRESS' ? <CompleteOperationForm operationId={op.id} /> : null}
-                  </td>
-                </tr>
-              ))}
+              {operations.map((op) => {
+                const oee = oeeByOperation.get(op.id);
+                return (
+                  <tr key={op.id} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: '6px 8px' }}>{op.operationOrder}</td>
+                    <td style={{ padding: '6px 8px' }}>{op.name}</td>
+                    <td style={{ padding: '6px 8px', fontWeight: 600 }}>{OP_STATUS_LABELS[op.status] ?? op.status}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{op.goodQuantity}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{op.scrapQuantity}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }} title={oee ? `Kullanılabilirlik: %${(oee.availability * 100).toFixed(0)} · Kalite: %${(oee.quality * 100).toFixed(0)}${oee.performance !== null ? ` · Performans: %${(oee.performance * 100).toFixed(0)}` : ' · Performans: makine ideal çevrim süresi tanımlı değil'}` : undefined}>
+                      {oee ? (oee.oee !== null ? `%${(oee.oee * 100).toFixed(0)}` : '—') : (op.machineId ? '' : '—')}
+                    </td>
+                    <td style={{ padding: '6px 8px' }}>
+                      {op.status === 'PENDING' ? <StartOperationButton operationId={op.id} machines={machines.map((m) => ({ id: m.id, code: m.code, name: m.name }))} /> : null}
+                      {op.status === 'IN_PROGRESS' ? <CompleteOperationForm operationId={op.id} /> : null}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </>

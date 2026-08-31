@@ -302,6 +302,13 @@
       "when": 1788125186717,
       "tag": "0042_purple_wind_dancer",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "5",
+      "when": 1788147271717,
+      "tag": "0043_amused_rhino",
+      "breakpoints": true
     }
   ]
 }

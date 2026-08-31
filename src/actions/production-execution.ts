@@ -29,15 +29,16 @@ export async function issueProductionMaterialsAction(_prevState: FormState, form
   return { success: 'Malzeme çıkışı yapıldı.' };
 }
 
-const OperationIdSchema = z.object({ operationId: z.string().trim().min(1) });
+// Holding ERP Faz 4 (MES) — machineId OPSİYONEL (optionalField boşsa Faz 2'nin eski davranışı aynen çalışır).
+const StartOperationSchema = z.object({ operationId: z.string().trim().min(1), machineId: z.string().trim().optional() });
 
 export async function startProdOperationAction(_prevState: FormState, formData: FormData): Promise<FormState> {
   const session = await requireSession();
-  const parsed = OperationIdSchema.safeParse({ operationId: formData.get('operationId') });
+  const parsed = StartOperationSchema.safeParse({ operationId: formData.get('operationId'), machineId: optionalField(formData, 'machineId') });
   if (!parsed.success) return { error: 'Geçersiz form.' };
 
   try {
-    await startProdOperation(session.companyId, parsed.data.operationId, session.id);
+    await startProdOperation(session.companyId, parsed.data.operationId, session.id, parsed.data.machineId);
   } catch (err) {
     return { error: toErrorMessage(err, 'Başlatılamadı.') };
   }
