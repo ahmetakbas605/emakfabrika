@@ -268,12 +268,60 @@ toplam 121/121. `tsc --noEmit` + `npm run build` temiz. Bu oturumda da canlı
 tarayıcı aracı erişilebilir DEĞİLDİ (Faz 4'teki AYNI durum) — yeni
 `/dashboard/quality` sayfaları yalnızca derleme seviyesinde doğrulandı.
 
-## FAZ 6 — EAM (Genel Bakım) + Enerji
+## FAZ 6 — EAM (Genel Bakım) + Enerji ✅
 
 **Bağımlılık:** yok (mevcut IT-scope'lu `maintenancePlans` genişletilir, yeni
 bir paralel tablo AÇILMAZ — Kural: "aynı veri iki modülde tutulmaz", master
 prompt §149). Genel fabrika ekipmanı/bina bakımı + enerji (elektrik/doğalgaz/
 su/buhar/basınçlı hava) tüketim takibi, ürün-başı enerji hesaplaması.
+
+Teslim edilenler: `maintenancePlans`'a GERİYE UYUMLU iki opsiyonel kolon
+(`eamAssetId`, `departmentId`) eklendi — plan/work-order/scheduler motoru
+(`lib/it/maintenance.ts`, `lib/scheduler.ts`) TEK, hem IT hem EAM
+planlarını AYNI `runDueMaintenanceGeneration` çağrısıyla işler.
+`eam_asset_types`(seed, 11 tip)→`eam_assets`(kompresör/jeneratör/HVAC/bina
+vb.) GERÇEKTEN yeni bir veri modeli — `it_assets` bilgisayar/ağ/yazılımı
+kapsıyor, fabrika ekipmanını KAPSAMIYOR. Enerji: `energy_meters`(opsiyonel
+`workCenterId`/`eamAssetId`)→`energy_readings`(dönem bazlı tüketim, bir
+fatura gibi)→`getEnergyPerUnit` (lib/mes/oee.ts + lib/quality/
+supplier-score.ts İLE AYNI ÜÇÜNCÜ "saklanan alan değil, talep üzerine
+hesaplanan rapor" uygulaması).
+
+Mimari notlar:
+- **GERÇEK bir latent routing hatası bulunup düzeltildi**: `lib/scheduler.ts`
+  bugüne kadar TÜM vadesi gelen planları KOŞULSUZ IT departmanının ticket
+  kuyruğuna yazıyordu (`runDueMaintenanceGeneration`'a hep IT departmanı
+  veriliyordu, fonksiyonun kendisi hiçbir planın KENDİ departmanını
+  SORMUYORDU). EAM planları eklenmeden önce bu hiç sorun yaratmıyordu
+  (tek tüketici IT'ydi) — EAM'in ilk GERÇEK ikinci tüketici olmasıyla
+  ortaya çıkan bir tasarım eksikliğiydi. Düzeltme: her plan artık KENDİ
+  `departmentId`'sini taşıyabilir (`plan.departmentId ?? fallbackDepartmentId`)
+  — departmanı BOŞ olan (bugüne kadarki TÜM IT planları) fallback'e düşmeye
+  devam eder, GERİYE UYUMLU; EAM planları kendi departmanına gider.
+  `tests/eam.test.ts` bu iki davranışı TEK bir `runDueMaintenanceGeneration`
+  çağrısıyla, aynı anda kanıtlıyor.
+- `it_locations`'ın RACK/DESK/DATA_CENTER tipleri IT'ye özgü olduğundan bu
+  hiyerarşiye ZORLANMADI — EAM varlıklarının konumu `branches` (zaten genel)
+  + serbest metin `locationNote` ile yeterli.
+- EAM varlık durumu için `it_asset_status_history`'nin tam karşılığı
+  (ayrı bir geçmiş tablosu) BİLİNÇLİ OLARAK kurulmadı — bu fazın kapsamı
+  (bakım + enerji) IT'nin CMDB/uyumluluk kaynaklı tam denetim izi ihtiyacını
+  taşımıyor, dürüstçe kapsam dışı bırakıldı.
+- Tedarikçi kaydı gibi burada da yeni bir "vendor/departman türü" İCAT
+  EDİLMEDİ — EAM planının sorumlu departmanı, şirketin ZATEN var olan
+  departman listesinden seçilir (ayrı bir "Bakım" department_type kodu
+  ZORUNLU kılınmadı).
+
+Test: `tests/eam.test.ts` (kalıcı) — bir eski-tarz IT planı (departmanı boş)
++ bir EAM planı (kendi departmanı dolu) TEK üretim çağrısıyla doğru
+departmanlara yönlendiği, EAM ekipmanının bakım tamamlandığında OTOMATİK
+IN_SERVICE'e döndüğü (gerçek ticket NEW→...→CLOSED zinciri üzerinden), ve
+ürün-başı enerjinin (500 kWh / 100 adet = 5, dönem-dışı bir okuma hariç
+tutularak) TAM doğru hesaplandığı — 17/17 gerçek DB'de geçti. Sekiz kalıcı
+test paketi (accounting/holding/sales/production/mrp/mes/quality/eam)
+birlikte toplam 138/138. `tsc --noEmit` + `npm run build` temiz. Bu
+oturumda da canlı tarayıcı aracı erişilebilir DEĞİLDİ (Faz 4-5'teki AYNI
+durum).
 
 ## FAZ 7 — Filo + Tesis Yönetimi
 

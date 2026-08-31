@@ -1068,6 +1068,21 @@ export const maintenancePlans = mysqlTable('maint_plans', {
   id: char('id', { length: 36 }).primaryKey(),
   companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
   assetId: char('asset_id', { length: 36 }).references(() => itAssets.id),
+  // Holding ERP Faz 6 (EAM) — dosyanın SONUNDA tanımlı `eamAssets`'e ileri-
+  // referans (prodOperations.machineId İLE AYNI AnyMySqlColumn lazy-ref
+  // tekniği). Bir plan `assetId` (IT) YA DA `eamAssetId` (fabrika ekipmanı/
+  // bina) taşır, ikisi BİRDEN değil — MASTER-ERP-ROADMAP.md'nin "mevcut
+  // maintenancePlans genişletilir, paralel bir tablo AÇILMAZ" kararının
+  // gerçek karşılığı: TEK plan/work-order/scheduler motoru, iki varlık
+  // evreni.
+  eamAssetId: char('eam_asset_id', { length: 36 }).references((): AnyMySqlColumn => eamAssets.id),
+  // OPSİYONEL — boşsa runDueMaintenanceGeneration'a VERİLEN (çağıranın
+  // sabit departmanı, bugüne kadar hep IT) departmana düşer, GERİYE UYUMLU
+  // (mevcut IT planları hiç dokunulmadan aynı davranışı korur). EAM
+  // planları KENDİ departmanını (ör. "Bakım") burada AÇIKÇA taşır — aksi
+  // halde fabrika ekipmanı bakım işleri yanlışlıkla IT'nin ticket
+  // kuyruğuna düşerdi.
+  departmentId: char('department_id', { length: 36 }).references(() => departments.id),
   title: varchar('title', { length: 255 }).notNull(),
   maintenanceType: mysqlEnum('maintenance_type', MAINTENANCE_TYPES).notNull(),
   frequency: mysqlEnum('frequency', MAINTENANCE_FREQUENCIES).notNull(),
@@ -3717,3 +3732,86 @@ export const ncrRecords = mysqlTable('ncr_records', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   closedAt: timestamp('closed_at')
 }, (table) => [uniqueIndex('udx_ncr_records_company_no').on(table.companyId, table.ncrNo)]);
+
+// --- Holding ERP Faz 6 (EAM + Enerji) — Genel fabrika ekipmanı/bina bakımı
+// + enerji tüketim takibi. Bağımlılık YOK. MASTER-ERP-ROADMAP.md'nin kendi
+// kararı: "mevcut IT-scope'lu maintenancePlans genişletilir, yeni bir
+// paralel tablo AÇILMAZ" (§149) — bu karar TAM OLARAK uygulandı: plan/
+// work-order/scheduler motoru (maintenancePlans/maintenanceWorkOrders/
+// lib/it/maintenance.ts) TEK, yalnızca YUKARIDA eklenen `eamAssetId`/
+// `departmentId` ile genişletildi. `eam_asset_types`/`eam_assets` GERÇEKTEN
+// YENİ bir veri modelidir (kod duplikasyonu değil) — it_assets bilgisayar/
+// ağ/yazılım varlıklarını modelliyor, kompresör/jeneratör/HVAC/bina gibi
+// fabrika ekipmanını KAPSAMIYOR.
+//
+// it_locations'ın RACK/DESK/DATA_CENTER tipleri IT'ye özgü olduğundan
+// (madde 3'ün "isme değil ihtiyaca göre modelle" ilkesi), fabrika
+// ekipmanının konumu o hiyerarşiye ZORLANMADI — yalnızca branches (zaten
+// genel bir kavram) + serbest metin `locationNote` yeterli, ayrı bir
+// hiyerarşi icat edilmedi.
+//
+// EAM varlık durumu İÇİN it_asset_status_history'nin TAM karşılığı
+// (ayrı bir geçmiş tablosu) BİLİNÇLİ OLARAK KURULMADI — IT'nin tam yaşam
+// döngüsü izleme ihtiyacı CMDB/uyumluluk kaynaklı, bu fazın kapsamı
+// (bakım + enerji) böyle bir denetim izi GEREKTİRMİYOR; durum doğrudan
+// güncellenir, dürüstçe kapsam dışı bırakılan bir kapsam kararı.
+export const eamAssetTypes = mysqlTable('eam_asset_types', {
+  code: varchar('code', { length: 32 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull()
+});
+
+export const EAM_ASSET_STATUSES = ['IN_SERVICE', 'UNDER_MAINTENANCE', 'OUT_OF_SERVICE', 'DECOMMISSIONED'] as const;
+
+export const eamAssets = mysqlTable('eam_assets', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  branchId: char('branch_id', { length: 36 }).references(() => branches.id),
+  locationNote: varchar('location_note', { length: 255 }).notNull().default(''),
+  assetTypeCode: varchar('asset_type_code', { length: 32 }).notNull().references(() => eamAssetTypes.code),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  manufacturer: varchar('manufacturer', { length: 255 }).notNull().default(''),
+  model: varchar('model', { length: 255 }).notNull().default(''),
+  serialNumber: varchar('serial_number', { length: 255 }).notNull().default(''),
+  status: mysqlEnum('status', EAM_ASSET_STATUSES).notNull().default('IN_SERVICE'),
+  responsibleUserId: char('responsible_user_id', { length: 36 }).references(() => users.id),
+  departmentId: char('department_id', { length: 36 }).references(() => departments.id),
+  purchaseDate: date('purchase_date', { mode: 'string' }),
+  purchaseCost: decimal('purchase_cost', { precision: 20, scale: 6 }),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_eam_asset_company_code').on(table.companyId, table.code)]);
+
+// Enerji — madde özeti: "elektrik/doğalgaz/su/buhar/basınçlı hava tüketim
+// takibi, ürün-başı enerji hesaplaması". lib/mes/oee.ts + lib/quality/
+// supplier-score.ts İLE AYNI ÜÇÜNCÜ uygulaması: "ürün-başı enerji" SAKLANAN
+// bir alan DEĞİL, energy_readings (dönem bazlı tüketim, bir fatura gibi) +
+// Faz 2'nin prod_operations'ından (workCenterId eşleşmesiyle) TALEP
+// ÜZERİNE hesaplanan bir rapor (lib/eam/energy.ts:getEnergyPerUnit).
+export const ENERGY_TYPES = ['ELECTRICITY', 'NATURAL_GAS', 'WATER', 'STEAM', 'COMPRESSED_AIR'] as const;
+
+export const energyMeters = mysqlTable('energy_meters', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  energyType: mysqlEnum('energy_type', ENERGY_TYPES).notNull(),
+  unit: varchar('unit', { length: 16 }).notNull(),
+  // OPSİYONEL — bu sayaç bir üretim iş merkezini besliyorsa "ürün-başı
+  // enerji" hesabına dahil edilir (boşsa yalnızca genel tüketim takibi).
+  workCenterId: char('work_center_id', { length: 36 }).references(() => workCenters.id),
+  eamAssetId: char('eam_asset_id', { length: 36 }).references(() => eamAssets.id),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_energy_meter_company_code').on(table.companyId, table.code)]);
+
+export const energyReadings = mysqlTable('energy_readings', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  meterId: char('meter_id', { length: 36 }).notNull().references(() => energyMeters.id),
+  periodStart: date('period_start', { mode: 'string' }).notNull(),
+  periodEnd: date('period_end', { mode: 'string' }).notNull(),
+  consumption: decimal('consumption', { precision: 20, scale: 6 }).notNull(),
+  cost: decimal('cost', { precision: 20, scale: 6 }),
+  recordedByUserId: char('recorded_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});

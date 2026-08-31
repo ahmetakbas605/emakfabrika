@@ -8,7 +8,7 @@ import mysql from 'mysql2/promise';
 import { drizzle } from 'drizzle-orm/mysql2';
 import { migrate } from 'drizzle-orm/mysql2/migrator';
 import { eq, isNull } from 'drizzle-orm';
-import { departmentTypes, roles, permissions, rolePermissions, itAssetTypes, currencies, holdings, companies, downtimeReasons } from '../src/db/schema';
+import { departmentTypes, roles, permissions, rolePermissions, itAssetTypes, currencies, holdings, companies, downtimeReasons, eamAssetTypes } from '../src/db/schema';
 
 async function main() {
   const migrateUrl = process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL;
@@ -125,6 +125,25 @@ async function main() {
   ];
   for (const row of DOWNTIME_REASON_SEED) {
     await db.insert(downtimeReasons).values(row).onDuplicateKeyUpdate({ set: { name: row.name, category: row.category } });
+  }
+
+  // Holding ERP Faz 6 (EAM) — madde 3, kod içine sabit gömülmeyen fabrika
+  // ekipmanı/bina tipi listesi (downtimeReasons/departmentTypes İLE AYNI desen).
+  const EAM_ASSET_TYPE_SEED: { code: string; name: string }[] = [
+    { code: 'COMPRESSOR', name: 'Kompresör' },
+    { code: 'GENERATOR', name: 'Jeneratör' },
+    { code: 'HVAC', name: 'İklimlendirme (HVAC)' },
+    { code: 'FORKLIFT', name: 'Forklift' },
+    { code: 'CONVEYOR', name: 'Konveyör' },
+    { code: 'BOILER', name: 'Kazan' },
+    { code: 'ELEVATOR', name: 'Asansör' },
+    { code: 'ELECTRICAL_PANEL', name: 'Elektrik Panosu' },
+    { code: 'WATER_PUMP', name: 'Su Pompası' },
+    { code: 'BUILDING', name: 'Bina/Tesis' },
+    { code: 'OTHER', name: 'Diğer' }
+  ];
+  for (const row of EAM_ASSET_TYPE_SEED) {
+    await db.insert(eamAssetTypes).values(row).onDuplicateKeyUpdate({ set: { name: row.name } });
   }
 
   // ERP Genişletme Faz 1 — currencies company_id TAŞIMAZ (ISO 4217 kodları

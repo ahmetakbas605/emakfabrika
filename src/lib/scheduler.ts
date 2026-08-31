@@ -49,9 +49,18 @@ async function runOnceForCompany(companyId: string): Promise<{ maintenanceGenera
   const [systemUser] = await db.select({ id: users.id }).from(users).where(and(eq(users.companyId, companyId), eq(users.isFactoryAdmin, true), eq(users.active, true))).limit(1);
 
   let maintenanceGenerated = 0;
-  if (itDept && systemUser) {
-    const result = await runDueMaintenanceGeneration(companyId, itDept.id, systemUser.id);
-    maintenanceGenerated = result.generatedCount;
+  if (systemUser) {
+    // Holding ERP Faz 6 (EAM) — itDept yalnızca FALLBACK'tir (departmanı
+    // BOŞ olan eski IT planları için, geriye uyumlu); IT departmanı
+    // olmayan bir şirkette bile EAM planları üretilebilsin diye herhangi
+    // bir aktif departman yeterli — gerçek EAM planları zaten KENDİ
+    // departmanını taşır (lib/it/maintenance.ts:runDueMaintenanceGeneration'ın
+    // kendi yorumu), bu fallback onlar için hiç kullanılmaz.
+    const [fallbackDept] = itDept ? [itDept] : await db.select({ id: departments.id }).from(departments).where(and(eq(departments.companyId, companyId), eq(departments.active, true))).limit(1);
+    if (fallbackDept) {
+      const result = await runDueMaintenanceGeneration(companyId, fallbackDept.id, systemUser.id);
+      maintenanceGenerated = result.generatedCount;
+    }
   }
   // Eskalasyon IT departmanından bağımsız — companyId yeterli.
   const escalationResult = await checkAndEscalateOverdueTickets(companyId);
