@@ -3642,3 +3642,78 @@ export const machineDowntimes = mysqlTable('machine_downtimes', {
   recordedByUserId: char('recorded_by_user_id', { length: 36 }).notNull().references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
+
+// --- Holding ERP Faz 5 (Kalite) — Giriş/Proses/Final muayene + NCR/CAPA +
+// Tedarikçi Kalite. Bağımlılık: Faz 2 (Üretim) + Satınalma (proc_receipts/
+// proc_pos, zaten var). Master prompt madde-özeti: "Giriş/proses/final
+// kalite, NCR/CAPA/8D, tedarikçi kalite (Satın Alma'nın tedarikçi kaydına
+// bağlanır)" — MASTER-ERP-ROADMAP.md Faz 5.
+//
+// sourceType/sourceId — accounting_journals/stock_movements/inv_reservations/
+// budget_commitments'ın ZATEN kullandığı AYNI polimorfik desen (3 farklı
+// muayene kaynağı için 3 ayrı FK kolonu AÇILMADI): 'PROC_RECEIPT_LINE'
+// (Giriş), 'PROD_OPERATION' (Proses), 'PRODUCTION_ORDER' (Final). `type`
+// alanı sourceType'tan AYRI tutuldu çünkü kalite panosunun tip bazlı
+// filtreleme/gruplama için her seferinde sourceType string'ini yorumlaması
+// yerine doğrudan sorgulanabilir bir kolona ihtiyacı var.
+export const QUALITY_INSPECTION_TYPES = ['INCOMING', 'IN_PROCESS', 'FINAL'] as const;
+export const QUALITY_INSPECTION_RESULTS = ['PASS', 'FAIL', 'CONDITIONAL'] as const;
+
+export const qualityInspections = mysqlTable('quality_inspections', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  inspectionNo: varchar('inspection_no', { length: 32 }).notNull(),
+  type: mysqlEnum('type', QUALITY_INSPECTION_TYPES).notNull(),
+  sourceType: varchar('source_type', { length: 64 }).notNull(),
+  sourceId: char('source_id', { length: 36 }).notNull(),
+  // OPSİYONEL — Giriş muayenesinde ürün kimliği proc_po_lines'ın kendi
+  // productId TAŞIMAMASI (yalnızca serbest metin `description`) yüzünden
+  // satınalma zincirinden GÜVENİLİR şekilde çözülemiyor; muayeneyi yapan
+  // kişi biliyorsa elle seçer, bilmiyorsa boş bırakılabilir (Faz 4'ün
+  // idealCycleTimeSeconds'ıyla AYNI "dürüst opsiyonellik" ilkesi).
+  productId: char('product_id', { length: 36 }).references(() => products.id),
+  inspectedQty: decimal('inspected_qty', { precision: 20, scale: 6 }).notNull(),
+  passedQty: decimal('passed_qty', { precision: 20, scale: 6 }).notNull(),
+  failedQty: decimal('failed_qty', { precision: 20, scale: 6 }).notNull(),
+  result: mysqlEnum('result', QUALITY_INSPECTION_RESULTS).notNull(),
+  notes: text('notes'),
+  inspectedByUserId: char('inspected_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  inspectedAt: timestamp('inspected_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_quality_inspections_company_no').on(table.companyId, table.inspectionNo)]);
+
+// NCR/CAPA/8D — customer_complaints'in KENDİ deseniyle (status alanı +
+// doğrudan aksiyon fonksiyonları, generic workflow motoruna BAĞLANMADI —
+// bilinçli kapsam kararı, complaints İLE AYNI gerekçe: bu bir onay zinciri
+// değil, bir soruşturma/düzeltme iş akışı) — ama "8D" burada 8 ayrı sabit
+// kolon olarak ZORLANMADI (metodolojinin ismi, literal 8 alan gerektirmiyor
+// — OEE'nin gerçek zamanlı her metriği saklamaması İLE AYNI "isme değil
+// ihtiyaca göre modelle" kararı): rootCause/correctiveAction/
+// preventiveAction üç metin alanı 8D'nin özünü (D4 kök neden, D5-D6
+// düzeltici, D7 önleyici) karşılıyor.
+export const NCR_SEVERITIES = ['MINOR', 'MAJOR', 'CRITICAL'] as const;
+export const NCR_STATUSES = ['OPEN', 'INVESTIGATING', 'CORRECTIVE_ACTION', 'VERIFICATION', 'CLOSED', 'REJECTED'] as const;
+
+export const ncrRecords = mysqlTable('ncr_records', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  ncrNo: varchar('ncr_no', { length: 32 }).notNull(),
+  // OPSİYONEL — bir NCR başarısız bir muayeneden DOĞABİLİR (en yaygın yol)
+  // ya da doğrudan (elle fark edilen bir uygunsuzluk) açılabilir.
+  inspectionId: char('inspection_id', { length: 36 }).references(() => qualityInspections.id),
+  // Tedarikçi Kalite'nin GERÇEK bağlantı noktası (madde: "Satın Alma'nın
+  // tedarikçi kaydına bağlanır") — parties'in ZATEN var olan SUPPLIER
+  // rolünü kullanır, ayrı bir "vendor" kaydı AÇILMADI (§150).
+  supplierPartyId: char('supplier_party_id', { length: 36 }).references(() => parties.id),
+  productId: char('product_id', { length: 36 }).references(() => products.id),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  severity: mysqlEnum('severity', NCR_SEVERITIES).notNull().default('MINOR'),
+  status: mysqlEnum('status', NCR_STATUSES).notNull().default('OPEN'),
+  rootCause: text('root_cause'),
+  correctiveAction: text('corrective_action'),
+  preventiveAction: text('preventive_action'),
+  assignedToUserId: char('assigned_to_user_id', { length: 36 }).references(() => users.id),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  closedAt: timestamp('closed_at')
+}, (table) => [uniqueIndex('udx_ncr_records_company_no').on(table.companyId, table.ncrNo)]);

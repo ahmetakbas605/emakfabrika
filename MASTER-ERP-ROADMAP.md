@@ -212,10 +212,61 @@ mes` ve `/dashboard/mes/machines/[machineId]` sayfaları yalnızca derleme/
 type-check seviyesinde doğrulandı, canlı tıklama testi YAPILMADI; dürüstçe
 not edilir, sonraki bir oturumda araç mevcutken tamamlanabilir.
 
-## FAZ 5 — Kalite
+## FAZ 5 — Kalite ✅
 
 **Bağımlılık:** Faz 2. Giriş/proses/final kalite, NCR/CAPA/8D, tedarikçi
 kalite (Satın Alma'nın tedarikçi kaydına bağlanır).
+
+Teslim edilenler: `quality_inspections`(Giriş/Proses/Final, TEK adımda
+kaydedilen bir gözlem — duruş kaydının başlat/bitir iki-adımlı deseninin
+AKSİNE, bir muayenenin süresi anlamlı bir veri değil)→`ncr_records`
+(NCR/CAPA, `customer_complaints`'in KENDİ deseniyle: status alanı + doğrudan
+isimlendirilmiş-fiil aksiyon fonksiyonları, jenerik onay motoruna
+BAĞLANMADI)→Tedarikçi Kalite (`getSupplierQualityScore`, `lib/mes/oee.ts`
+İLE AYNI felsefe: SAKLANAN bir skor tablosu DEĞİL, talep üzerine hesaplanan
+bir rapor).
+
+Mimari notlar:
+- `sourceType`/`sourceId` — `accounting_journals`/`stock_movements`/
+  `inv_reservations`/`budget_commitments`'ın ZATEN kullandığı AYNI
+  polimorfik desen, 3 farklı muayene kaynağı için 3 ayrı FK kolonu
+  AÇILMADI: `'PROC_RECEIPT_LINE'` (Giriş, Satınalma'nın mevcut mal kabul
+  satırı), `'PROD_OPERATION'` (Proses, Faz 2'nin operasyonu),
+  `'PRODUCTION_ORDER'` (Final, Faz 2'nin üretim emri) — Kalite kendi
+  paralel "üretim/mal kabul olayı" tablosunu AÇMADI (§150).
+- "8D" 8 ayrı sabit kolon olarak ZORLANMADI — metodolojinin ismi literal 8
+  alan gerektirmiyor (OEE'nin gerçek zamanlı her metriği saklamaması İLE
+  AYNI "isme değil ihtiyaca göre modelle" kararı); `rootCause`/
+  `correctiveAction`/`preventiveAction` üç metin alanı D4/D5-D6/D7'nin
+  özünü karşılıyor.
+- **Tedarikçi Kalite, ayrı bir "vendor" kaydı AÇMADAN** `parties`'in zaten
+  var olan SUPPLIER rolüne (`ncr_records.supplierPartyId`) ve Satınalma'nın
+  zaten var olan PO→Mal Kabul zincirine (Giriş muayenesi →
+  `proc_receipt_lines` → `proc_receipts` → `proc_pos.supplierPartyId`
+  JOIN zinciri) bağlanır — madde metninin "Satın Alma'nın tedarikçi
+  kaydına bağlanır" isteğinin gerçek karşılığı.
+- Giriş muayenesinde `productId` OPSİYONEL bırakıldı — `proc_po_lines`'ın
+  kendi `productId` TAŞIMAMASI (yalnızca serbest metin `description`)
+  yüzünden satınalma zincirinden güvenilir şekilde çözülemiyor, muayeneyi
+  yapan kişi biliyorsa elle seçer (Faz 4'ün `idealCycleTimeSeconds`'ıyla
+  AYNI "dürüst opsiyonellik" ilkesi).
+- MySQL'in 64 karakterlik FK-adı sınırı yine migration üretilmeden önce
+  proaktif doğrulandı (`grep`+`awk`, en uzunu 52 karakter) — bu fazda hiç
+  kısaltma gerekmedi (tablo/kolon adları zaten kısa).
+
+Test: `tests/quality.test.ts` (kalıcı) — gerçek bir Tedarikçi+PO+Mal Kabul
+zinciri (Satınalma'nın ÜST katmanları bu testte doğrudan sabitlendi, test
+edilen Satınalma değil Kalite) + gerçek bir üretim emri/operasyonu üzerinden
+Giriş/Proses/Final muayenesi, Geçen+Ret≠Muayene Edilen reddi, NCR'nin tam
+CAPA yaşam döngüsü (OPEN→INVESTIGATING→CORRECTIVE_ACTION→VERIFICATION→
+CLOSED, her adımın sırasız atlanamayacağı doğrulandı) + doğrudan ret
+senaryosu + kapatılmış/reddedilmiş bir NCR'nin tekrar işlenemediği, ve
+Tedarikçi Kalite raporunun (kabul oranı %50, NCR önem dağılımı, açık NCR
+sayısı) TAM doğru hesaplandığı — 21/21 gerçek DB'de geçti. Yedi kalıcı test
+paketi (accounting/holding/sales/production/mrp/mes/quality) birlikte
+toplam 121/121. `tsc --noEmit` + `npm run build` temiz. Bu oturumda da canlı
+tarayıcı aracı erişilebilir DEĞİLDİ (Faz 4'teki AYNI durum) — yeni
+`/dashboard/quality` sayfaları yalnızca derleme seviyesinde doğrulandı.
 
 ## FAZ 6 — EAM (Genel Bakım) + Enerji
 
