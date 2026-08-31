@@ -503,10 +503,59 @@ projects/legal/environment) birlikte toplam 212/212. `tsc --noEmit` +
 `npm run build` temiz. Bu oturumda da canlı tarayıcı aracı erişilebilir
 DEĞİLDİ (Faz 4-9'daki AYNI durum).
 
-## FAZ 11 — Hazine Genişletme
+## FAZ 11 — Hazine Genişletme ✅
 
 **Bağımlılık:** Muhasebe/Kasa-Banka (✅). Nakit akış tahmini, kur riski,
 teminat yönetimi — mevcut basit kasa/banka/çek'in üzerine.
+
+**Teminat yönetimi İÇİN YENİ bir tablo AÇILMADI** — Faz 9'un
+`legal_collaterals`ı ZATEN genel (`contractId` OPSİYONEL) — Hazine
+sayfası `contractId IS NULL` olan satırları gösterir, `lib/legal/
+collaterals.ts`'in create/list/release fonksiyonları + `CreateCollateralForm`
+/`ReleaseCollateralButton` bileşenleri DOĞRUDAN yeniden kullanıldı. Sıfır
+yeni kod — bu oturumdaki EN AÇIK §150 uygulaması.
+
+Nakit akış tahmini ve kur riski, YENİ bir muhasebe/kasa motoru KURMADI —
+madde metninin kendi notu ("mevcut basit kasa/banka/çek'in ÜZERİNE")
+harfiyen uygulandı: `getCashFlowForecast` mevcut banka bakiyesini
+(`lib/accounting.ts:getTrialBalance`'ın KENDİSİNDEN, `bank_transactions`'ı
+AYRICA toplamadan — iki kaynak, iki gerçek riski yok) + çekler + YENİ TEK
+tablo (`treasury_cash_flow_items`, manuel/bilinen büyük tahsilat-ödeme
+kalemleri) TALEP ÜZERİNE toplar. `getFxExposure`, yabancı para banka
+hesaplarının `accounting_journal_lines`'ın ZATEN taşıdığı native
+debit/credit + baseCurrencyDebit/baseCurrencyCredit'ten native bakiye +
+defter değeri (işlem anındaki kur) hesaplar, `exchange_rates`'in ZATEN var
+olan `getLatestExchangeRate`'iyle GÜNCEL değeri ve gerçekleşmemiş kâr/zararı
+türetir.
+
+Mimari notlar:
+- **Gerçek bir bulgu, dürüstçe not edildi (kapsam DIŞI bırakıldı)**:
+  `lib/bank.ts:recordBankTransaction` bugün yabancı para/kur parametresi
+  ALMIYOR — her zaman `currency='TRY'` varsayılanıyla `postJournal`'a
+  gider. Yani bugün UYGULAMADA bir USD banka hesabına
+  `recordBankTransaction` ile işlem girilirse, muhasebe kaydı YANLIŞ
+  şekilde TRY olarak defterleşir. Bu, Faz 11'in kapsamı DIŞINDA GERÇEK bir
+  gelecek iyileştirme — `getFxExposure`'ın KENDİSİ doğru çalışıyor (test,
+  `postJournal`'ı DOĞRUDAN, doğru para birimi/kurla çağırarak
+  doğrulandı), yalnızca banka modülünün GİRİŞ tarafı henüz çoklu-para
+  girişini desteklemiyor.
+- `getFxExposure`'ın `currentTryValue`/`unrealizedGainLoss`'u, o para
+  birimi için GÜNCEL bir kur BULUNAMAZSA dürüstçe `null` döner (Faz 4'ün
+  `idealCycleTimeSeconds` tanımsızsa Performance=null İLE AYNI ilke) —
+  `bookedTryValue` (defter değeri) yine de hesaplanır, yalnızca "bugünkü
+  değer" ve "kâr/zarar" boş kalır.
+
+Test: `tests/treasury.test.ts` (kalıcı) — mevcut nakidin GERÇEKTEN
+muhasebenin defter-i kebirinden okunduğu; tahsil edilmiş/aralık-dışı
+çeklerin ve iptal/gerçekleşmiş kalemlerin tahminden dürüstçe hariç
+tutulduğu (10000 mevcut + 5000 tahsilat − 2000 ödeme = 13000 projeksiyon);
+kur riskinin native (1000 USD)/defter (30000₺, işlem anı kuru)/güncel
+(32000₺, bugünkü kur)/gerçekleşmemiş kâr (2000₺) değerlerinin TAM doğru
+hesaplandığı — 13/13 gerçek DB'de geçti. On üç kalıcı test paketi
+(accounting/holding/sales/production/mrp/mes/quality/eam/fleet/projects/
+legal/environment/treasury) birlikte toplam 225/225. `tsc --noEmit` +
+`npm run build` temiz. Bu oturumda da canlı tarayıcı aracı erişilebilir
+DEĞİLDİ (Faz 4-10'daki AYNI durum).
 
 ## FAZ 12 — BI + Holding/CEO Dashboard
 

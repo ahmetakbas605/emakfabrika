@@ -351,6 +351,13 @@
       "when": 1788157710816,
       "tag": "0049_breezy_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "5",
+      "when": 1788169321762,
+      "tag": "0050_material_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

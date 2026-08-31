@@ -4239,3 +4239,41 @@ export const rndLabTests = mysqlTable('rnd_lab_tests', {
   performedByUserId: char('performed_by_user_id', { length: 36 }).references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow()
 }, (table) => [uniqueIndex('udx_rnd_lab_test_company_no').on(table.companyId, table.testNo)]);
+
+// --- Holding ERP Faz 11 (Hazine Genişletme) — Nakit akış tahmini, kur
+// riski, teminat yönetimi. Bağımlılık: Muhasebe/Kasa-Banka (✅). Madde
+// metninin kendi notu: "mevcut basit kasa/banka/çek'in ÜZERİNE" — bu YENİ
+// bir muhasebe/kasa motoru KURMADI, üç raporun İKİSİ (nakit akış tahmini,
+// kur riski) TAMAMEN var olan verilerden (accounting_journal_lines'ın
+// zaten TAŞIDIĞI baseCurrencyDebit/baseCurrencyCredit + native
+// debit/credit, checks, exchange_rates) TALEP ÜZERİNE hesaplanır —
+// lib/treasury/cashflow.ts:getCashFlowForecast, lib/treasury/fx.ts:
+// getFxExposure, YENİ bir tablo GEREKTİRMEZ.
+//
+// **Teminat yönetimi İÇİN YENİ bir tablo AÇILMADI** — Faz 9'un
+// `legal_collaterals`ı ZATEN genel (contractId OPSİYONEL, bir sözleşmeye
+// bağlı OLMAK ZORUNDA değil) — Hazine'nin banka kredi limiti/genel teminat
+// ihtiyacı `contractId IS NULL` olan KENDİ satırlarıyla karşılanır,
+// lib/legal/collaterals.ts'in create/list/release fonksiyonları DOĞRUDAN
+// yeniden kullanılır (§150 Single Source of Truth'un bu oturumdaki EN
+// AÇIK uygulaması — sıfır yeni kod).
+//
+// Tek GERÇEKTEN yeni kavram: manuel nakit akış kalemi — çek/banka
+// hareketi OLMAYAN ama treasurer'ın bildiği büyük bir tahsilat/ödeme
+// beklentisini (ör. "Müşteri X'ten gelecek hafta büyük bir havale
+// bekliyoruz") tahmine dahil edebilmesi için.
+export const TREASURY_ITEM_DIRECTIONS = ['INFLOW', 'OUTFLOW'] as const;
+export const TREASURY_ITEM_STATUSES = ['FORECAST', 'REALIZED', 'CANCELLED'] as const;
+
+export const treasuryCashFlowItems = mysqlTable('treasury_cash_flow_items', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  direction: mysqlEnum('direction', TREASURY_ITEM_DIRECTIONS).notNull(),
+  description: varchar('description', { length: 255 }).notNull(),
+  amount: decimal('amount', { precision: 20, scale: 6 }).notNull(),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  expectedDate: date('expected_date', { mode: 'string' }).notNull(),
+  status: mysqlEnum('status', TREASURY_ITEM_STATUSES).notNull().default('FORECAST'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});

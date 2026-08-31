@@ -31,6 +31,7 @@ const QUICK_LINKS = [
   { href: '/dashboard/environment', label: 'Çevre', icon: Landmark },
   { href: '/dashboard/safety', label: 'İSG (Olay/Kaza)', icon: ShieldCheck },
   { href: '/dashboard/rnd', label: 'Ar-Ge', icon: Boxes },
+  { href: '/dashboard/treasury', label: 'Hazine', icon: Landmark },
   { href: '/dashboard/procurement', label: 'Satınalma Talepleri', icon: Boxes },
   { href: '/dashboard/procurement/dashboard', label: 'Satınalma Kontrol Paneli', icon: Landmark },
   { href: '/dashboard/procurement/tenders', label: 'İhaleler', icon: Landmark },
