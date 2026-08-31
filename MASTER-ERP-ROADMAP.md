@@ -323,10 +323,54 @@ birlikte toplam 138/138. `tsc --noEmit` + `npm run build` temiz. Bu
 oturumda da canlı tarayıcı aracı erişilebilir DEĞİLDİ (Faz 4-5'teki AYNI
 durum).
 
-## FAZ 7 — Filo + Tesis Yönetimi
+## FAZ 7 — Filo + Tesis Yönetimi ✅
 
 **Bağımlılık:** yok. Araç/ruhsat/sigorta/bakım/yakıt/HGS + bina/kat/HVAC/
 jeneratör/kamera/geçiş sistemi.
+
+**"Tesis" yarısı AYRI bir modül OLARAK KURULMADI.** HVAC/jeneratör Faz
+6'nın `eam_asset_types`'ında zaten vardı; kamera/geçiş sistemi burada iki
+yeni satır olarak eklendi. "Bina/kat" ihtiyacı, Faz 4'ten beri şemada duran
+ama Faz 7'ye kadar HİÇBİR gerçek tüketicisi olmayan `it_locations`'a
+(`eam_assets.locationId`, yeni opsiyonel kolon) bağlanarak karşılandı —
+`lib/it/locations.ts` (createLocation/listLocations) bu tablonun İLK
+GERÇEK create/list fonksiyonları. "Geçiş sistemi" BİLİNÇLİ OLARAK yalnızca
+bir donanım envanteri (EAM varlık tipi) — gerçek bir rozet/giriş-çıkış log
+sistemi bu fazın KAPSAMI DIŞINDA, Core Security'nin (audit/RBAC) alanına
+taşardı.
+
+**"Filo" yarısı GERÇEKTEN yeni bir alan** — ne `it_assets` ne `eam_assets`
+bir aracı modelleyebilir. Teslim edilenler: `vehicles`(plaka/ruhsat bitiş
+tarihi/durum)→`vehicle_insurances`(poliçe)→`vehicle_expenses`(yakıt/HGS/
+toll/yıkama/otopark TEK tabloda, expenseType ile ayrışır)→
+`listExpiringVehicleDocuments`(ruhsat+poliçe için yaklaşan-sona-erme
+raporu)→`getVehicleFuelEfficiency`(km/litre, iki kilometre okuması arası
+farktan). Bakım, `maintenancePlans`/`maintenanceWorkOrders` motorunun
+(Faz 6'nın `eamAssetId`'siyle AYNI desende) ÜÇÜNCÜ tüketicisi
+(`vehicleId`) — motor artık IT + EAM + Filo'yu TEK yerden yönetiyor.
+
+Mimari notlar:
+- Bu oturumun BEŞİNCİ "saklanan alan değil, talep üzerine hesaplanan
+  rapor" uygulaması (OEE→Tedarikçi Kalite→Enerji→şimdi Yakıt Verimliliği,
+  ayrıca "Yaklaşan Sona Erme" raporu da aynı ailenin bir zaman-bazlı
+  varyasyonu) — `kmPerLiter` aralıkta EN AZ İKİ kilometre okuması yoksa
+  dürüstçe `null` döner, tek okumadan mesafe TÜRETİLEMEZ (Faz 4'ün
+  `idealCycleTimeSeconds` tanımsızsa Performance=null İLE AYNI ilke).
+- Yakıt/HGS/Toll/Yıkama/Otopark 5 AYRI tabloya AÇILMADI — NCR'nin 8D'yi 8
+  sabit kolona zorlamamasıyla AYNI "isme değil şekle göre modelle" kararı,
+  TEK `vehicle_expenses` tablosu + `expenseType` enum.
+
+Test: `tests/fleet.test.ts` (kalıcı) — `it_locations`'ın gerçek
+create/list'i + Bina→Kat hiyerarşisi + kamera'nın konuma doğru bağlandığı;
+2 araç + 1 poliçe + yaklaşan-sona-erme raporunun (ruhsat+poliçe=2, uzak
+tarihli 2. araç HARİÇ) doğruluğu; bir araç bakım planının KENDİ
+departmanına (fallback'e DEĞİL) yönlendiği ve gerçek ticket NEW→...→CLOSED
+zinciri üzerinden aracın otomatik ACTIVE'e döndüğü; yakıt verimliliğinin
+(600 km / 90 litre = 6.667, dönem-dışı bir kayıt hariç tutularak) TAM
+doğruluğu — 21/21 gerçek DB'de geçti. Dokuz kalıcı test paketi (accounting/
+holding/sales/production/mrp/mes/quality/eam/fleet) birlikte toplam
+159/159. `tsc --noEmit` + `npm run build` temiz. Bu oturumda da canlı
+tarayıcı aracı erişilebilir DEĞİLDİ (Faz 4-6'daki AYNI durum).
 
 ## FAZ 8 — Proje Yönetimi
 

@@ -6,6 +6,7 @@ import { requireSession } from '@/lib/dal';
 import { createEamAsset } from '@/lib/eam/assets';
 import { createEnergyMeter, recordEnergyReading } from '@/lib/eam/energy';
 import { createMaintenancePlan, runDueMaintenanceGeneration } from '@/lib/it/maintenance';
+import { createLocation } from '@/lib/it/locations';
 import { listCompanyDepartments } from '@/lib/departments';
 import { EamError } from '@/lib/eam/errors';
 import { optionalField } from '@/lib/form';
@@ -21,6 +22,7 @@ const CreateEamAssetSchema = z.object({
   code: z.string().trim().min(1, 'Kod gerekli.'),
   name: z.string().trim().min(1, 'Ad gerekli.'),
   branchId: z.string().trim().optional(),
+  locationId: z.string().trim().optional(),
   locationNote: z.string().trim().optional(),
   manufacturer: z.string().trim().optional(),
   model: z.string().trim().optional(),
@@ -32,7 +34,7 @@ export async function createEamAssetAction(_prevState: FormState, formData: Form
   const session = await requireSession();
   const parsed = CreateEamAssetSchema.safeParse({
     assetTypeCode: formData.get('assetTypeCode'), code: formData.get('code'), name: formData.get('name'), branchId: optionalField(formData, 'branchId'),
-    locationNote: optionalField(formData, 'locationNote'), manufacturer: optionalField(formData, 'manufacturer'), model: optionalField(formData, 'model'),
+    locationId: optionalField(formData, 'locationId'), locationNote: optionalField(formData, 'locationNote'), manufacturer: optionalField(formData, 'manufacturer'), model: optionalField(formData, 'model'),
     serialNumber: optionalField(formData, 'serialNumber'), departmentId: optionalField(formData, 'departmentId')
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
@@ -44,6 +46,27 @@ export async function createEamAssetAction(_prevState: FormState, formData: Form
   }
   revalidatePath('/dashboard/eam');
   return { success: 'Ekipman/varlık oluşturuldu.' };
+}
+
+const CreateLocationSchema = z.object({
+  locationType: z.enum(['BUILDING', 'FLOOR', 'ROOM', 'RACK', 'DESK', 'DATA_CENTER']),
+  name: z.string().trim().min(1, 'Ad gerekli.'),
+  branchId: z.string().trim().optional(),
+  parentLocationId: z.string().trim().optional()
+});
+
+// lib/it/locations.ts — it_locations'ın İLK GERÇEK create UI'ı, EAM/Tesis
+// sayfasından tetiklenir (bkz. o dosyanın kendi yorumu).
+export async function createLocationAction(_prevState: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireSession();
+  const parsed = CreateLocationSchema.safeParse({
+    locationType: formData.get('locationType'), name: formData.get('name'), branchId: optionalField(formData, 'branchId'), parentLocationId: optionalField(formData, 'parentLocationId')
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
+
+  await createLocation(session.companyId, parsed.data);
+  revalidatePath('/dashboard/eam');
+  return { success: 'Konum oluşturuldu.' };
 }
 
 const CreateEamMaintenancePlanSchema = z.object({

@@ -2,11 +2,11 @@
 
 import { useActionState } from 'react';
 import {
-  createEamAssetAction, createEamMaintenancePlanAction, runEamMaintenanceGenerationAction, createEnergyMeterAction, recordEnergyReadingAction, type FormState
+  createEamAssetAction, createEamMaintenancePlanAction, runEamMaintenanceGenerationAction, createEnergyMeterAction, recordEnergyReadingAction, createLocationAction, type FormState
 } from '@/actions/eam';
 
-export function CreateEamAssetForm({ assetTypes, branches, departments }: {
-  assetTypes: { code: string; name: string }[]; branches: { id: string; name: string }[]; departments: { id: string; name: string }[];
+export function CreateEamAssetForm({ assetTypes, branches, locations, departments }: {
+  assetTypes: { code: string; name: string }[]; branches: { id: string; name: string }[]; locations: { id: string; name: string; locationType: string }[]; departments: { id: string; name: string }[];
 }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(createEamAssetAction, undefined);
   return (
@@ -25,6 +25,13 @@ export function CreateEamAssetForm({ assetTypes, branches, departments }: {
         <select name="branchId" style={{ padding: 6, minWidth: 120 }}>
           <option value="">Seçin</option>
           {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+        </select>
+      </div>
+      <div>
+        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Konum (Bina/Kat, ops.)</label>
+        <select name="locationId" style={{ padding: 6, minWidth: 140 }}>
+          <option value="">Seçin</option>
+          {locations.map((l) => <option key={l.id} value={l.id}>{l.name} ({l.locationType})</option>)}
         </select>
       </div>
       <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Konum Notu (ops.)</label><input name="locationNote" style={{ padding: 6, width: 160 }} /></div>
@@ -155,6 +162,40 @@ export function RecordEnergyReadingForm({ meters }: { meters: { id: string; code
       <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Tüketim</label><input name="consumption" type="number" step="0.01" required style={{ padding: 6, width: 100 }} /></div>
       <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Maliyet (ops.)</label><input name="cost" type="number" step="0.01" style={{ padding: 6, width: 100 }} /></div>
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Tüketim Kaydet'}</button>
+      {state?.error ? <p style={{ color: '#b00', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
+      {state?.success ? <p style={{ color: '#080', fontSize: 13, width: '100%' }}>{state.success}</p> : null}
+    </form>
+  );
+}
+
+export function CreateLocationForm({ branches, locations }: { branches: { id: string; name: string }[]; locations: { id: string; name: string; locationType: string }[] }) {
+  const [state, formAction, pending] = useActionState<FormState, FormData>(createLocationAction, undefined);
+  return (
+    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid #ddd', padding: 12, borderRadius: 6 }}>
+      <div>
+        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Tip</label>
+        <select name="locationType" required style={{ padding: 6 }}>
+          <option value="BUILDING">Bina</option>
+          <option value="FLOOR">Kat</option>
+          <option value="ROOM">Oda</option>
+        </select>
+      </div>
+      <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Ad</label><input name="name" required style={{ padding: 6, width: 160 }} /></div>
+      <div>
+        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Şube (ops.)</label>
+        <select name="branchId" style={{ padding: 6, minWidth: 120 }}>
+          <option value="">Seçin</option>
+          {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+        </select>
+      </div>
+      <div>
+        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Üst Konum (ops. — ör. Kat için Bina)</label>
+        <select name="parentLocationId" style={{ padding: 6, minWidth: 140 }}>
+          <option value="">Yok</option>
+          {locations.map((l) => <option key={l.id} value={l.id}>{l.name} ({l.locationType})</option>)}
+        </select>
+      </div>
+      <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Konum Ekle'}</button>
       {state?.error ? <p style={{ color: '#b00', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
       {state?.success ? <p style={{ color: '#080', fontSize: 13, width: '100%' }}>{state.success}</p> : null}
     </form>

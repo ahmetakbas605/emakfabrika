@@ -1,31 +1,37 @@
 import Link from 'next/link';
 import { requireSession } from '@/lib/dal';
 import { listEamAssets, listEamAssetTypes, listBranches } from '@/lib/eam/assets';
+import { listLocations } from '@/lib/it/locations';
 import { listEamMaintenancePlans, listMaintenanceWorkOrders } from '@/lib/it/maintenance';
 import { listCompanyDepartments } from '@/lib/departments';
-import { CreateEamAssetForm, CreateEamMaintenancePlanForm, RunEamMaintenanceGenerationButton } from '@/components/eam/eam-forms';
+import { CreateEamAssetForm, CreateEamMaintenancePlanForm, RunEamMaintenanceGenerationButton, CreateLocationForm } from '@/components/eam/eam-forms';
 
 const STATUS_LABELS: Record<string, string> = { IN_SERVICE: 'Serviste', UNDER_MAINTENANCE: 'Bakımda', OUT_OF_SERVICE: 'Servis Dışı', DECOMMISSIONED: 'Hizmetten Kaldırıldı' };
 const FREQUENCY_LABELS: Record<string, string> = { DAILY: 'Günlük', WEEKLY: 'Haftalık', MONTHLY: 'Aylık', QUARTERLY: '3 Aylık', ANNUAL: 'Yıllık' };
 
 export default async function EamPage() {
   const session = await requireSession();
-  const [assets, assetTypes, branches, departments, plans, workOrders] = await Promise.all([
-    listEamAssets(session.companyId), listEamAssetTypes(), listBranches(session.companyId), listCompanyDepartments(session.companyId),
+  const [assets, assetTypes, branches, locations, departments, plans, workOrders] = await Promise.all([
+    listEamAssets(session.companyId), listEamAssetTypes(), listBranches(session.companyId), listLocations(session.companyId), listCompanyDepartments(session.companyId),
     listEamMaintenancePlans(session.companyId), listMaintenanceWorkOrders(session.companyId)
   ]);
   const eamWorkOrders = workOrders.filter((w) => w.eamAssetCode);
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1 style={{ fontSize: 20, marginBottom: 4 }}>EAM (Genel Bakım — Fabrika Ekipmanı/Bina)</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>IT'nin mevcut bakım plan/iş emri motoru üzerine kuruldu — kompresör/jeneratör/HVAC/bina gibi ekipmanlar için. Enerji tüketimi <Link href="/dashboard/eam/energy">ayrı sayfada</Link>.</p>
+      <h1 style={{ fontSize: 20, marginBottom: 4 }}>EAM (Genel Bakım — Fabrika Ekipmanı/Bina/Tesis)</h1>
+      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>IT'nin mevcut bakım plan/iş emri motoru üzerine kuruldu — kompresör/jeneratör/HVAC/kamera/geçiş sistemi/bina gibi ekipmanlar için. Enerji tüketimi <Link href="/dashboard/eam/energy">ayrı sayfada</Link>.</p>
 
       <div style={{ marginBottom: 20 }}><RunEamMaintenanceGenerationButton /></div>
 
+      <h2 style={{ fontSize: 15, marginBottom: 8 }}>Konum Ekle (Bina/Kat/Oda)</h2>
+      <div style={{ marginBottom: 24 }}>
+        <CreateLocationForm branches={branches} locations={locations.map((l) => ({ id: l.id, name: l.name, locationType: l.locationType }))} />
+      </div>
+
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Ekipman Ekle</h2>
       <div style={{ marginBottom: 24 }}>
-        <CreateEamAssetForm assetTypes={assetTypes} branches={branches} departments={departments.map((d) => ({ id: d.id, name: d.name }))} />
+        <CreateEamAssetForm assetTypes={assetTypes} branches={branches} locations={locations.map((l) => ({ id: l.id, name: l.name, locationType: l.locationType }))} departments={departments.map((d) => ({ id: d.id, name: d.name }))} />
       </div>
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Ekipmanlar</h2>

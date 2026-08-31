@@ -16,7 +16,8 @@
     "test:mrp": "tsx tests/mrp.test.ts",
     "test:mes": "tsx tests/mes.test.ts",
     "test:quality": "tsx tests/quality.test.ts",
-    "test:eam": "tsx tests/eam.test.ts"
+    "test:eam": "tsx tests/eam.test.ts",
+    "test:fleet": "tsx tests/fleet.test.ts"
   },
   "dependencies": {
     "@xyflow/react": "^12.11.5",

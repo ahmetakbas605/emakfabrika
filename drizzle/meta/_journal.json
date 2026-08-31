@@ -323,6 +323,13 @@
       "when": 1788150224909,
       "tag": "0045_perfect_odin",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "5",
+      "when": 1788153173734,
+      "tag": "0046_odd_thunderbolts",
+      "breakpoints": true
     }
   ]
 }

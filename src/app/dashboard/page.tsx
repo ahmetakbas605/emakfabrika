@@ -23,6 +23,8 @@ const QUICK_LINKS = [
   { href: '/dashboard/quality', label: 'Kalite / NCR', icon: ShieldCheck },
   { href: '/dashboard/eam', label: 'EAM / Bakım', icon: Boxes },
   { href: '/dashboard/eam/energy', label: 'Enerji Tüketimi', icon: Landmark },
+  { href: '/dashboard/fleet', label: 'Filo / Araç Bakım', icon: Boxes },
+  { href: '/dashboard/fleet/expenses', label: 'Araç Giderleri', icon: Landmark },
   { href: '/dashboard/procurement', label: 'Satınalma Talepleri', icon: Boxes },
   { href: '/dashboard/procurement/dashboard', label: 'Satınalma Kontrol Paneli', icon: Landmark },
   { href: '/dashboard/procurement/tenders', label: 'İhaleler', icon: Landmark },

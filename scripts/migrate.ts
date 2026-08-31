@@ -140,6 +140,11 @@ async function main() {
     { code: 'ELECTRICAL_PANEL', name: 'Elektrik Panosu' },
     { code: 'WATER_PUMP', name: 'Su Pompası' },
     { code: 'BUILDING', name: 'Bina/Tesis' },
+    // Holding ERP Faz 7 (Tesis) — "kamera/geçiş sistemi" madde metninin
+    // karşılığı, IKI YENİ eam_asset_types satırı (ayrı bir "Tesis" modülü
+    // DEĞİL — schema.ts'in Faz 7 yorumunda kayıtlı gerekçe).
+    { code: 'CAMERA', name: 'Kamera' },
+    { code: 'ACCESS_CONTROL', name: 'Geçiş Kontrol Sistemi' },
     { code: 'OTHER', name: 'Diğer' }
   ];
   for (const row of EAM_ASSET_TYPE_SEED) {

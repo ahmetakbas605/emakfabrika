@@ -3,12 +3,13 @@ import { eq, and, lte, desc } from 'drizzle-orm';
 import { db } from '@/db/client';
 import type { Tx } from '@/db/client';
 import {
-  maintenancePlans, maintenanceWorkOrders, workOrders, serviceDeskTickets, itAssets, users, eamAssets
+  maintenancePlans, maintenanceWorkOrders, workOrders, serviceDeskTickets, itAssets, users, eamAssets, vehicles
 } from '@/db/schema';
 import { newId } from '@/lib/id';
 import { createTicketInTx } from '@/lib/it/tickets';
 import { changeAssetStatus } from '@/lib/it/assets';
 import { changeEamAssetStatus } from '@/lib/eam/assets';
+import { changeVehicleStatus } from '@/lib/fleet/vehicles';
 import { attachChecklistToWorkOrderInTx } from '@/lib/it/field-service';
 
 // MAINTENANCE.md §2 — frequency+interval'a göre next_due_date'i İLERLETİR.
@@ -35,6 +36,9 @@ export interface CreateMaintenancePlanInput {
   // gerçek kullanımda ya biri ya diğeri (çağıran taraf hangi UI'dan
   // geldiğine göre yalnızca kendi alanını doldurur).
   eamAssetId?: string;
+  // Holding ERP Faz 7 (Filo) — assetId/eamAssetId İLE AYNI desende üçüncü
+  // opsiyonel varlık türü.
+  vehicleId?: string;
   departmentId?: string;
   title: string;
   maintenanceType: (typeof maintenancePlans.$inferInsert)['maintenanceType'];
@@ -49,7 +53,7 @@ export interface CreateMaintenancePlanInput {
 export async function createMaintenancePlan(companyId: string, input: CreateMaintenancePlanInput): Promise<string> {
   const id = newId();
   await db.insert(maintenancePlans).values({
-    id, companyId, assetId: input.assetId, eamAssetId: input.eamAssetId, departmentId: input.departmentId, title: input.title, maintenanceType: input.maintenanceType,
+    id, companyId, assetId: input.assetId, eamAssetId: input.eamAssetId, vehicleId: input.vehicleId, departmentId: input.departmentId, title: input.title, maintenanceType: input.maintenanceType,
     frequency: input.frequency, intervalValue: input.intervalValue ?? 1, startDate: input.startDate,
     nextDueDate: input.startDate, assignedTechnicianId: input.assignedTechnicianId,
     checklistTemplateId: input.checklistTemplateId, estimatedDurationMinutes: input.estimatedDurationMinutes
@@ -62,11 +66,12 @@ export async function listMaintenancePlans(companyId: string) {
     .select({
       id: maintenancePlans.id, title: maintenancePlans.title, maintenanceType: maintenancePlans.maintenanceType,
       frequency: maintenancePlans.frequency, intervalValue: maintenancePlans.intervalValue, nextDueDate: maintenancePlans.nextDueDate,
-      active: maintenancePlans.active, assetTag: itAssets.assetTag, eamAssetCode: eamAssets.code, assignedTechnicianName: users.fullName
+      active: maintenancePlans.active, assetTag: itAssets.assetTag, eamAssetCode: eamAssets.code, plateNo: vehicles.plateNo, assignedTechnicianName: users.fullName
     })
     .from(maintenancePlans)
     .leftJoin(itAssets, eq(itAssets.id, maintenancePlans.assetId))
     .leftJoin(eamAssets, eq(eamAssets.id, maintenancePlans.eamAssetId))
+    .leftJoin(vehicles, eq(vehicles.id, maintenancePlans.vehicleId))
     .leftJoin(users, eq(users.id, maintenancePlans.assignedTechnicianId))
     .where(eq(maintenancePlans.companyId, companyId))
     .orderBy(maintenancePlans.nextDueDate);
@@ -84,6 +89,21 @@ export async function listEamMaintenancePlans(companyId: string) {
     })
     .from(maintenancePlans)
     .innerJoin(eamAssets, eq(eamAssets.id, maintenancePlans.eamAssetId))
+    .where(eq(maintenancePlans.companyId, companyId))
+    .orderBy(maintenancePlans.nextDueDate);
+}
+
+// Holding ERP Faz 7 (Filo) — listEamMaintenancePlans İLE AYNI desen,
+// yalnızca vehicleId dolu olan planlar.
+export async function listFleetMaintenancePlans(companyId: string) {
+  return db
+    .select({
+      id: maintenancePlans.id, title: maintenancePlans.title, maintenanceType: maintenancePlans.maintenanceType,
+      frequency: maintenancePlans.frequency, intervalValue: maintenancePlans.intervalValue, nextDueDate: maintenancePlans.nextDueDate,
+      active: maintenancePlans.active, plateNo: vehicles.plateNo
+    })
+    .from(maintenancePlans)
+    .innerJoin(vehicles, eq(vehicles.id, maintenancePlans.vehicleId))
     .where(eq(maintenancePlans.companyId, companyId))
     .orderBy(maintenancePlans.nextDueDate);
 }
@@ -165,7 +185,7 @@ export async function listMaintenanceWorkOrders(companyId: string) {
     .select({
       id: maintenanceWorkOrders.id, workOrderId: maintenanceWorkOrders.workOrderId, planTitle: maintenancePlans.title,
       scheduledDate: maintenanceWorkOrders.scheduledDate, generatedAt: maintenanceWorkOrders.generatedAt,
-      ticketNo: serviceDeskTickets.ticketNo, ticketStatus: serviceDeskTickets.status, assetTag: itAssets.assetTag, eamAssetCode: eamAssets.code
+      ticketNo: serviceDeskTickets.ticketNo, ticketStatus: serviceDeskTickets.status, assetTag: itAssets.assetTag, eamAssetCode: eamAssets.code, plateNo: vehicles.plateNo
     })
     .from(maintenanceWorkOrders)
     .innerJoin(maintenancePlans, eq(maintenancePlans.id, maintenanceWorkOrders.maintenancePlanId))
@@ -173,6 +193,7 @@ export async function listMaintenanceWorkOrders(companyId: string) {
     .innerJoin(serviceDeskTickets, eq(serviceDeskTickets.id, workOrders.ticketId))
     .leftJoin(itAssets, eq(itAssets.id, maintenancePlans.assetId))
     .leftJoin(eamAssets, eq(eamAssets.id, maintenancePlans.eamAssetId))
+    .leftJoin(vehicles, eq(vehicles.id, maintenancePlans.vehicleId))
     .where(eq(maintenancePlans.companyId, companyId))
     .orderBy(desc(maintenanceWorkOrders.scheduledDate));
 }
@@ -190,12 +211,16 @@ export async function listMaintenanceWorkOrders(companyId: string) {
 // geçmiş tablosu yok, madde eam_assets tanımının kendi yorumunda kayıtlı).
 export async function revertAssetAfterMaintenanceIfApplicable(companyId: string, ticketId: string, changedBy: string): Promise<void> {
   const [row] = await db
-    .select({ assetId: maintenancePlans.assetId, assetStatus: itAssets.status, eamAssetId: maintenancePlans.eamAssetId, eamAssetStatus: eamAssets.status })
+    .select({
+      assetId: maintenancePlans.assetId, assetStatus: itAssets.status, eamAssetId: maintenancePlans.eamAssetId, eamAssetStatus: eamAssets.status,
+      vehicleId: maintenancePlans.vehicleId, vehicleStatus: vehicles.status
+    })
     .from(workOrders)
     .innerJoin(maintenanceWorkOrders, eq(maintenanceWorkOrders.workOrderId, workOrders.id))
     .innerJoin(maintenancePlans, eq(maintenancePlans.id, maintenanceWorkOrders.maintenancePlanId))
     .leftJoin(itAssets, eq(itAssets.id, maintenancePlans.assetId))
     .leftJoin(eamAssets, eq(eamAssets.id, maintenancePlans.eamAssetId))
+    .leftJoin(vehicles, eq(vehicles.id, maintenancePlans.vehicleId))
     .where(eq(workOrders.ticketId, ticketId))
     .limit(1);
 
@@ -206,6 +231,10 @@ export async function revertAssetAfterMaintenanceIfApplicable(companyId: string,
   }
   if (row.eamAssetId && row.eamAssetStatus === 'UNDER_MAINTENANCE') {
     await changeEamAssetStatus(companyId, row.eamAssetId, 'IN_SERVICE');
+    return;
+  }
+  if (row.vehicleId && row.vehicleStatus === 'UNDER_MAINTENANCE') {
+    await changeVehicleStatus(companyId, row.vehicleId, 'ACTIVE');
   }
 }
 

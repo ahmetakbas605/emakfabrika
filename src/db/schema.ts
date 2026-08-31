@@ -1076,6 +1076,10 @@ export const maintenancePlans = mysqlTable('maint_plans', {
   // gerçek karşılığı: TEK plan/work-order/scheduler motoru, iki varlık
   // evreni.
   eamAssetId: char('eam_asset_id', { length: 36 }).references((): AnyMySqlColumn => eamAssets.id),
+  // Holding ERP Faz 7 (Filo) — eamAssetId İLE AYNI desende, dosyanın
+  // SONUNDA tanımlı `vehicles`'e üçüncü bir ileri-referans. Bir plan
+  // assetId/eamAssetId/vehicleId'DEN yalnızca BİRİNİ taşır.
+  vehicleId: char('vehicle_id', { length: 36 }).references((): AnyMySqlColumn => vehicles.id),
   // OPSİYONEL — boşsa runDueMaintenanceGeneration'a VERİLEN (çağıranın
   // sabit departmanı, bugüne kadar hep IT) departmana düşer, GERİYE UYUMLU
   // (mevcut IT planları hiç dokunulmadan aynı davranışı korur). EAM
@@ -3766,6 +3770,15 @@ export const eamAssets = mysqlTable('eam_assets', {
   id: char('id', { length: 36 }).primaryKey(),
   companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
   branchId: char('branch_id', { length: 36 }).references(() => branches.id),
+  // Holding ERP Faz 7 (Tesis) — OPSİYONEL, dosyanın BAŞINDA tanımlı zaten
+  // var olan (ama Faz 7'ye kadar HİÇBİR gerçek tüketicisi olmayan)
+  // it_locations'a bağlanır (BUILDING/FLOOR/ROOM tipleri Tesis'in "bina/
+  // kat" ihtiyacına TAM oturuyor — RACK/DESK/DATA_CENTER'ın IT'ye özgü
+  // olması EAM'in KENDİSİNİ bu hiyerarşiye ZORLAMAK anlamına gelmiyor,
+  // yalnızca EAM/Tesis o tipleri hiç SEÇMEZ). Biçimsel bir hiyerarşi
+  // kurulmadıysa `locationNote` (Faz 6) serbest metin olarak kalmaya devam
+  // eder — ikisi BİRLİKTE kullanılabilir.
+  locationId: char('location_id', { length: 36 }).references(() => itLocations.id),
   locationNote: varchar('location_note', { length: 255 }).notNull().default(''),
   assetTypeCode: varchar('asset_type_code', { length: 32 }).notNull().references(() => eamAssetTypes.code),
   code: varchar('code', { length: 32 }).notNull(),
@@ -3813,5 +3826,86 @@ export const energyReadings = mysqlTable('energy_readings', {
   consumption: decimal('consumption', { precision: 20, scale: 6 }).notNull(),
   cost: decimal('cost', { precision: 20, scale: 6 }),
   recordedByUserId: char('recorded_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// --- Holding ERP Faz 7 (Filo + Tesis) — Araç/ruhsat/sigorta/bakım/yakıt/
+// HGS + bina/kat/HVAC/jeneratör/kamera/geçiş sistemi. Bağımlılık YOK.
+//
+// "Tesis" yarısı AYRI bir modül OLARAK KURULMADI — HVAC/jeneratör zaten
+// Faz 6'nın eam_asset_types'ında vardı, kamera/geçiş sistemi burada İKİ
+// YENİ eam_asset_types satırı olarak eklendi (scripts/migrate.ts); "bina/
+// kat" ihtiyacı, Faz 4'ten beri var olan ama Faz 7'ye kadar HİÇBİR gerçek
+// tüketicisi olmayan it_locations'a eam_assets.locationId (yukarıda)
+// bağlanarak karşılandı. "Geçiş sistemi" BİLİNÇLİ OLARAK yalnızca bir EAM
+// varlık tipi (donanım) — gerçek bir rozet/giriş-çıkış log sistemi bu
+// fazın KAPSAMI DIŞINDA, o bir fiziksel güvenlik/badge sistemi olurdu ve
+// zaten var olan Core Security'nin (audit/RBAC) alanına taşardı, madde
+// metninin "kamera/geçiş sistemi" ifadesi donanım envanteri istiyor,
+// erişim logu istemiyor.
+//
+// "Filo" yarısı GERÇEKTEN yeni bir alan — ne it_assets ne eam_assets bir
+// aracı modelleyebilir. Bakım YİNE aynı maintenancePlans/
+// maintenanceWorkOrders motorunun (Faz 6'nın eamAssetId'siyle AYNI desende)
+// ÜÇÜNCÜ tüketicisi (vehicleId, yukarıda) — motor artık IT + EAM + Filo'yu
+// TEK yerden yönetiyor.
+export const VEHICLE_STATUSES = ['ACTIVE', 'UNDER_MAINTENANCE', 'OUT_OF_SERVICE', 'SOLD'] as const;
+export const FUEL_TYPES = ['GASOLINE', 'DIESEL', 'LPG', 'ELECTRIC', 'HYBRID'] as const;
+
+export const vehicles = mysqlTable('vehicles', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  plateNo: varchar('plate_no', { length: 32 }).notNull(),
+  brand: varchar('brand', { length: 100 }).notNull().default(''),
+  model: varchar('model', { length: 100 }).notNull().default(''),
+  year: int('year'),
+  vin: varchar('vin', { length: 64 }).notNull().default(''),
+  fuelType: mysqlEnum('fuel_type', FUEL_TYPES).notNull().default('DIESEL'),
+  status: mysqlEnum('status', VEHICLE_STATUSES).notNull().default('ACTIVE'),
+  // Ruhsat'ın KENDİSİ (taranmış belge) document_attachments'a
+  // (entityType='VEHICLE') opsiyonel olarak eklenir — burada yalnızca
+  // UYARI/rapor üretebilmek için GERÇEKTEN sorgulanması gereken son
+  // kullanma tarihi tutuluyor (bir PDF içine gömülü tarihi sorgulayamayız).
+  registrationExpiryDate: date('registration_expiry_date', { mode: 'string' }),
+  responsibleUserId: char('responsible_user_id', { length: 36 }).references(() => users.id),
+  departmentId: char('department_id', { length: 36 }).references(() => departments.id),
+  purchaseDate: date('purchase_date', { mode: 'string' }),
+  purchaseCost: decimal('purchase_cost', { precision: 20, scale: 6 }),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_vehicle_company_plate').on(table.companyId, table.plateNo)]);
+
+export const vehicleInsurances = mysqlTable('vehicle_insurances', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  vehicleId: char('vehicle_id', { length: 36 }).notNull().references(() => vehicles.id, { onDelete: 'cascade' }),
+  policyNo: varchar('policy_no', { length: 64 }).notNull(),
+  provider: varchar('provider', { length: 255 }).notNull().default(''),
+  // Trafik/Kasko/vb — sabit ENUM içine ZORLANMADI (madde 3'ün genel
+  // ilkesi burada bir seed tablosu KURACAK kadar çeşitlilik göstermiyor,
+  // serbest metin yeterli).
+  coverageType: varchar('coverage_type', { length: 100 }).notNull().default(''),
+  startDate: date('start_date', { mode: 'string' }).notNull(),
+  endDate: date('end_date', { mode: 'string' }).notNull(),
+  premium: decimal('premium', { precision: 20, scale: 6 }),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// Yakıt/HGS/Toll/Yıkama/Otopark — TEK bir "araç gideri" tablosu, birbirine
+// çok benzeyen (tarih+tutar+araç) 5 AYRI tablo AÇILMADI (NCR'nin 8D'yi 8
+// sabit kolona ZORLAMAMASIYLA AYNI "isme değil şekle göre modelle" kararı).
+// quantity/odometerKm yalnızca FUEL için anlamlı, İKİSİ de opsiyonel.
+export const VEHICLE_EXPENSE_TYPES = ['FUEL', 'HGS', 'TOLL', 'WASH', 'PARKING', 'OTHER'] as const;
+
+export const vehicleExpenses = mysqlTable('vehicle_expenses', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  vehicleId: char('vehicle_id', { length: 36 }).notNull().references(() => vehicles.id, { onDelete: 'cascade' }),
+  expenseType: mysqlEnum('expense_type', VEHICLE_EXPENSE_TYPES).notNull(),
+  expenseDate: date('expense_date', { mode: 'string' }).notNull(),
+  amount: decimal('amount', { precision: 20, scale: 6 }).notNull(),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }),
+  odometerKm: decimal('odometer_km', { precision: 20, scale: 2 }),
+  notes: text('notes'),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
