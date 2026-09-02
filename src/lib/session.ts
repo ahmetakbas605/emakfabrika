@@ -96,3 +96,37 @@ export async function verifyMfaPendingToken(token: string): Promise<MfaPendingPa
     return null;
   }
 }
+
+// Faz 13 (Integration Hub) — emakerp'ten gelen giriş-yönlendirme (handoff).
+// signMfaPendingToken İLE AYNI desen (kısa ömürlü, tek-amaçlı, imzalı
+// token) — emakerp zaten e-posta/şifreyi kendi tarafında doğruladı
+// (lib/integration/external-auth.ts:issueHandoffToken), bu token yalnızca
+// "bu kullanıcı doğrulandı, oturum açılabilir" der; çıplak bir userId'ye
+// GÜVENMEZ (MFA pending token'ın AYNI gerekçesi). 60 saniyelik ömür
+// BİLİNÇLİ OLARAK kısa — bu token yalnızca TEK bir HTTP yönlendirmesi
+// boyunca yaşamalı, e-posta linki gibi uzun süre canlı kalan bir "magic
+// link" DEĞİL.
+const HANDOFF_TOKEN_SECONDS = 60;
+
+export interface ExternalHandoffPayload {
+  userId: string;
+  companyId: string;
+}
+
+export async function signExternalHandoffToken(payload: ExternalHandoffPayload): Promise<string> {
+  return new SignJWT({ ...payload, purpose: 'external_handoff' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(`${HANDOFF_TOKEN_SECONDS}s`)
+    .sign(getSecretKey());
+}
+
+export async function verifyExternalHandoffToken(token: string): Promise<ExternalHandoffPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, getSecretKey(), { algorithms: ['HS256'] });
+    if (payload.purpose !== 'external_handoff' || typeof payload.userId !== 'string' || typeof payload.companyId !== 'string') return null;
+    return { userId: payload.userId, companyId: payload.companyId };
+  } catch {
+    return null;
+  }
+}
