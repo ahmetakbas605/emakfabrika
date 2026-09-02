@@ -1,6 +1,6 @@
 import { requireSession } from '@/lib/dal';
 import { logout } from '@/actions/auth';
-import { AuroraShell, type NavGroup } from '@/components/shell/AuroraShell';
+import { DimensionShell, type NavGroup } from '@/components/shell/DimensionShell';
 
 const NAV: NavGroup[] = [
   { label: 'Genel', items: [{ href: '/dashboard', label: 'Ana Panel', icon: 'dashboard' }] },
@@ -23,8 +23,8 @@ const NAV: NavGroup[] = [
 export default async function SecurityLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
   return (
-    <AuroraShell navGroups={NAV} brand="emakfabrika" brandHref="/dashboard" companyName={session.companyName} userName={session.fullName} logoutAction={logout}>
+    <DimensionShell navGroups={NAV} brand="emakfabrika" brandHref="/dashboard" companyName={session.companyName} userName={session.fullName} logoutAction={logout}>
       {children}
-    </AuroraShell>
+    </DimensionShell>
   );
 }

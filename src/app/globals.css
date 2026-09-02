@@ -1,111 +1,259 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Geist:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-/* ------------------------------------------------------------------
-   Aurora Command Center — emakfabrika Core Security tasarım sistemi.
-   Sadece Dashboard + Security modülü bu token setini kullanır (bilinçli
-   kapsam, kullanıcı onayı) — IT/Muhasebe/Satınalma/Depo/İK'nın mevcut
-   sade/animasyonsuz stili (PDF madde 8, 70) KASITLI OLARAK dokunulmadı,
-   bu iki dünya route seviyesinde ayrışıyor.
-   ------------------------------------------------------------------ */
+/* ==================================================================
+   DIMENSION — Görsel Yenileme Faz 1.
+
+   Bu token seti BENİM icadım DEĞİL: Google Stitch'teki "Emak Living 3D
+   ERP" projesinin (id 8231965360717330055) DESIGN.md çıktısından
+   BİREBİR alındı — "Dimension — dusk-lit workspace with frosted glass
+   panels". Değerler oradaki tablolardan aynen kopyalandı; renk/ölçü
+   uydurulmadı, "daha iyi olur" diye değiştirilmedi.
+
+   Sistemin özü (Stitch'in kendi ifadesiyle):
+   - Neredeyse tamamen akromatik. Renkli olan %2'lik kısım BİLİNÇLİ.
+     Yeni bir marka rengi eklemek sistemi bozar.
+   - Yükselti (elevation) GÖLGEYLE değil, saydamlık + 1px kıl-çizgi
+     kenarlık + yüzey kontrastıyla kurulur. box-shadow kullanılmaz.
+   - Hap (pill, 9999px) silueti sistemin imzası: tüm birincil butonlar,
+     nav bağlantıları ve etiketler hap.
+   - Başlıklar 500 ağırlığı geçmez. Bu bir öneri değil, imzanın kendisi.
+   - Dusk Violet YALNIZCA degrade yıkama/ışıma olarak görünür; asla
+     düz dolgu veya metin rengi değildir.
+
+   ESKİ AURORA KATMANI: --aurora-* değişkenleri SİLİNMEDİ, aşağıda
+   Dimension karşılıklarına takma ad olarak bağlandı. Gerekçe: bu
+   projede 127 sayfa var ve Faz 1 yalnızca kabuğu + paylaşılan
+   primitifleri taşıyor. Takma adlar sayesinde henüz taşınmamış hiçbir
+   sayfa bozulmaz — Faz 0'daki "çalışan sistemi bozma" disiplininin
+   aynısı.
+   ================================================================== */
 :root {
-  --aurora-bg: #05070c;
-  --aurora-bg-2: #0a0e17;
-  --aurora-surface: rgba(255, 255, 255, 0.045);
-  --aurora-surface-hover: rgba(255, 255, 255, 0.08);
-  --aurora-border: rgba(255, 255, 255, 0.09);
-  --aurora-border-strong: rgba(255, 255, 255, 0.18);
-  --aurora-text: #eef1f7;
-  --aurora-text-dim: #8b93a7;
-  --aurora-text-faint: #565f76;
+  /* --- Yüzeyler (Stitch: Surfaces tablosu) --- */
+  --dim-void: #0a0a0a;          /* seviye 0 — sayfa zemini */
+  --dim-surface: #131313;       /* gövde yüzeyi */
+  --dim-graphite: #161616;      /* seviye 1 — yüzen panel/nav gövdesi */
+  --dim-container-lowest: #0e0e0e;
+  --dim-container-low: #1c1b1b;
+  --dim-container: #201f1f;
+  --dim-container-high: #2a2a2a;
+  --dim-container-highest: #353534;
 
-  --aurora-violet: #8b5cf6;
-  --aurora-cyan: #22d3ee;
-  --aurora-emerald: #34d399;
-  --aurora-gradient: linear-gradient(120deg, var(--aurora-violet), var(--aurora-cyan) 55%, var(--aurora-emerald));
+  /* Seviye 2 — buzlu cam. Saydamlığın KENDİSİ derinliği kurar. */
+  --dim-frosted: rgba(212, 212, 212, 0.1);
+  --dim-frosted-soft: rgba(212, 212, 212, 0.05);
 
-  --aurora-ok: #34d399;
-  --aurora-warn: #f5a524;
-  --aurora-danger: #fb5a6e;
-  --aurora-critical: #ff3d71;
+  /* Seviye 3 — ters yüzey (beyaz CTA, dolu nav öğesi) */
+  --dim-primary: #ffffff;
+  --dim-on-primary: #2f3131;
 
-  --font-display: 'Sora', system-ui, sans-serif;
-  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  /* --- Kıl-çizgi kenarlıklar. Tek renk, farklı alfalar. --- */
+  --dim-hairline: #e5e5e5;
+  --dim-border: rgba(229, 229, 229, 0.2);
+  --dim-border-soft: rgba(229, 229, 229, 0.12);
+  --dim-border-faint: rgba(229, 229, 229, 0.05);
+  /* Üst kenardaki 1px iç ışık — "cam" hissini veren şey bu. */
+  --dim-inset-sheen: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+
+  /* --- Metin --- */
+  --dim-bone: #ededed;          /* koyu zeminde gövde metni (saf beyaz DEĞİL) */
+  --dim-on-surface: #e5e2e1;
+  --dim-on-surface-variant: #c4c7c8;
+  --dim-ash: #c2c2c2;           /* ikincil metin */
+  --dim-smoke: #b2b2b2;         /* pasif/atıl metin */
+  --dim-slate: #686868;         /* üçüncül, zaman damgası vb. */
+
+  /* --- Aksanlar. Stitch'in %2 renk bütçesi. --- */
+  --dim-sunset: #ff7e5f;
+  --dim-cobalt: #2563eb;
+  --dim-violet: #6b62f2;
+  --dim-success: #34d399;
+  --dim-warning: #f5a524;
+  --dim-danger: #fb5a6e;
+  --dim-error: #ffb4ab;
+
+  /* Dusk Violet yıkaması — dar bir orta banda yoğunlaşır, kenarlarda
+     saydama iner. Zemin dolgusu OLARAK KULLANILMAZ, yalnızca şerit. */
+  --dim-wash-violet: linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,0) 40%, rgba(107,98,242,0.565) 50%, rgba(0,0,0,0) 60%, rgba(0,0,0,0));
+
+  /* --- Tipografi --- */
+  --font-dm-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-geist: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Stitch'te gövde/hero DM Sans, başlık/teknik veri Geist. */
+  --font-body: var(--font-dm-sans);
+  --font-display: var(--font-dm-sans);
+  --font-heading: var(--font-geist);
+
+  /* --- Yarıçaplar (Stitch: Border Radius tablosu) --- */
+  --dim-radius-ui: 10px;
+  --dim-radius-card: 24px;
+  --dim-radius-panel: 42px;
+  --dim-radius-icon: 4px;
+  --dim-radius-pill: 9999px;
+
+  /* --- Aralıklar --- */
+  --dim-gutter: 24px;
+  --dim-section-gap: 64px;
+  --dim-card-padding: 28px;
+
+  /* ---------- ESKİ AURORA ADLARI — takma ad katmanı ----------
+     Henüz Dimension'a taşınmamış sayfalar bunları kullanmaya devam
+     ediyor. Değerler artık Dimension'ın; adlar geçiş bitene kadar
+     duruyor. Yeni kod --dim-* kullanmalı. */
+  --aurora-bg: var(--dim-void);
+  --aurora-bg-2: var(--dim-surface);
+  --aurora-surface: var(--dim-frosted-soft);
+  --aurora-surface-hover: var(--dim-frosted);
+  --aurora-border: var(--dim-border-soft);
+  --aurora-border-strong: var(--dim-border);
+  --aurora-text: var(--dim-bone);
+  --aurora-text-dim: var(--dim-on-surface-variant);
+  --aurora-text-faint: var(--dim-slate);
+  --aurora-violet: var(--dim-violet);
+  --aurora-cyan: var(--dim-cobalt);
+  --aurora-emerald: var(--dim-success);
+  --aurora-gradient: var(--dim-wash-violet);
+  --aurora-ok: var(--dim-success);
+  --aurora-warn: var(--dim-warning);
+  --aurora-danger: var(--dim-danger);
+  --aurora-critical: var(--dim-danger);
+  --font-mono: var(--font-geist);
 }
 
-.aurora-scope {
-  background: var(--aurora-bg);
-  color: var(--aurora-text);
+/* ------------------------------------------------------------------
+   Tipografi rolleri. Stitch'in fontSize tablosundan birebir —
+   boyut / satır yüksekliği / harf aralığı / ağırlık birlikte gelir,
+   çünkü bu sistemde ağırlık kısıtı (asla >500 başlık) rolün parçası.
+   ------------------------------------------------------------------ */
+.dim-display  { font-family: var(--font-display); font-size: 72px; line-height: 72px; letter-spacing: -0.035em; font-weight: 500; }
+.dim-h1       { font-family: var(--font-heading); font-size: 48px; line-height: 48px; letter-spacing: -0.025em; font-weight: 500; }
+.dim-h2       { font-family: var(--font-heading); font-size: 36px; line-height: 40px; letter-spacing: -0.02em;  font-weight: 500; }
+.dim-h3       { font-family: var(--font-heading); font-size: 20px; line-height: 28px; letter-spacing: -0.01em;  font-weight: 500; }
+.dim-subheading { font-family: var(--font-heading); font-size: 18px; line-height: 27px; font-weight: 500; }
+.dim-body     { font-family: var(--font-body); font-size: 16px; line-height: 24px; letter-spacing: 0.025em; font-weight: 400; }
+/* Teknik veri — tablo hücresi, nav etiketi, rozet. */
+.dim-technical { font-family: var(--font-heading); font-size: 13px; line-height: 18px; letter-spacing: 0.04em; font-weight: 500; }
+/* Metrik etiketi — büyük harf, çok geniş aralık. Sayının ÜSTÜNDE durur. */
+.dim-metric   { font-family: var(--font-heading); font-size: 11px; line-height: 15px; letter-spacing: 0.08em; font-weight: 600; text-transform: uppercase; }
+
+@media (max-width: 768px) {
+  .dim-display { font-size: 40px; line-height: 44px; }
+  .dim-h1 { font-size: 32px; line-height: 36px; }
+  .dim-h2 { font-size: 28px; line-height: 32px; }
+}
+
+/* ------------------------------------------------------------------
+   Kabuk ve yüzeyler.
+   ------------------------------------------------------------------ */
+.dim-scope {
+  background: var(--dim-void);
+  color: var(--dim-on-surface);
   font-family: var(--font-body);
   min-height: 100vh;
   position: relative;
   isolation: isolate;
+  -webkit-font-smoothing: antialiased;
 }
 
-.aurora-field {
+/* Zemindeki ışıma alanı. Stitch'in hero bölümündeki iki bulanık küre:
+   sunset sağ üstte, dusk violet sol altta, ikisi de %10 opaklıkta.
+   Aurora'nın üç dolaşan blob'unun yerini alır — bu sistem hareketi
+   zeminde değil, ETKİLEŞİMDE tutar. */
+.dim-field {
   position: fixed;
   inset: 0;
   z-index: -1;
   overflow: hidden;
-  background: var(--aurora-bg);
+  background: var(--dim-void);
+  pointer-events: none;
 }
-.aurora-blob {
+.dim-glow {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.22;
-  will-change: transform;
+  opacity: 0.1;
 }
-.aurora-blob-1 { width: 46rem; height: 46rem; background: var(--aurora-violet); top: -14rem; left: -10rem; animation: aurora-drift-1 26s ease-in-out infinite; }
-.aurora-blob-2 { width: 40rem; height: 40rem; background: var(--aurora-cyan); bottom: -16rem; right: -8rem; animation: aurora-drift-2 32s ease-in-out infinite; }
-.aurora-blob-3 { width: 34rem; height: 34rem; background: var(--aurora-emerald); top: 30%; right: 18%; animation: aurora-drift-3 22s ease-in-out infinite; opacity: 0.14; }
+.dim-glow-sunset { width: 600px; height: 600px; background: var(--dim-sunset); top: -8rem; right: 10%; filter: blur(120px); }
+.dim-glow-violet { width: 400px; height: 400px; background: var(--dim-violet); bottom: -6rem; left: 5%;  filter: blur(100px); }
 
-@keyframes aurora-drift-1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(6rem, 4rem) scale(1.08); }
-}
-@keyframes aurora-drift-2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-5rem, -3rem) scale(1.05); }
-}
-@keyframes aurora-drift-3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-3rem, 5rem) scale(0.95); }
+/* Buzlu panel — yüzen kenar çubuğu ve modal gövdeleri.
+   GÖLGE YOK: saydamlık + kıl-çizgi + iç ışık yeterli (Stitch "Don't"). */
+.dim-panel {
+  background: color-mix(in srgb, var(--dim-graphite) 80%, transparent);
+  border: 1px solid var(--dim-border-soft);
+  border-radius: var(--dim-radius-ui);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--dim-inset-sheen);
 }
 
-.aurora-noise {
-  position: fixed;
+/* Buzlu cam kart — bento ızgarasının taşıyıcısı. 24px yarıçap. */
+.dim-card {
+  background: var(--dim-frosted);
+  border: 1px solid var(--dim-border);
+  border-radius: var(--dim-radius-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+.dim-card:hover { border-color: color-mix(in srgb, var(--dim-hairline) 32%, transparent); }
+
+/* Kapsül — başlıktaki durum göstergeleri, ikon butonları. */
+.dim-capsule {
+  background: var(--dim-frosted-soft);
+  border: 1px solid var(--dim-border-soft);
+  border-radius: var(--dim-radius-pill);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--dim-inset-sheen);
+}
+
+/* Kartların üzerindeki çok soluk 20px ızgara dokusu. Stitch bunu
+   "decorative subtle grid bg" olarak %3 opaklıkta kullanıyor. */
+.dim-grid-overlay {
+  position: absolute;
   inset: 0;
-  z-index: -1;
-  opacity: 0.025;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  background-image:
+    linear-gradient(rgba(255,255,255,1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
-.glass-card {
-  background: var(--aurora-surface);
-  border: 1px solid var(--aurora-border);
-  border-radius: 16px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  transition: border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
-}
-.glass-card:hover {
-  border-color: var(--aurora-border-strong);
-  background: var(--aurora-surface-hover);
+/* Dusk Violet şeridi — bölüm ayırıcı. Tek kromatik an. */
+.dim-wash { height: 1px; background: var(--dim-wash-violet); }
+
+.dim-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.dim-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.dim-scrollbar::-webkit-scrollbar-thumb { background: var(--dim-border); border-radius: var(--dim-radius-pill); }
+
+/* İçerik sütununun kenar çubuğundan kaçınması.
+   320px = SIDEBAR_WIDTH (272) + 2 x GUTTER (24) — bu sayılar
+   components/shell/DimensionShell.tsx'te TANIMLI, buradaki değer
+   onlarla eşleşmek ZORUNDA. Mobilde kenar çubuğu gizli (md:flex),
+   bu yüzden ofset de yalnızca md ve üstünde uygulanır. */
+.dim-content { padding-left: 24px; padding-right: 24px; }
+@media (min-width: 768px) {
+  .dim-content { padding-left: 320px; padding-right: 40px; }
 }
 
-.aurora-gradient-text {
-  background: var(--aurora-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.dim-header {
+  background: color-mix(in srgb, var(--dim-void) 50%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-.aurora-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+/* ------------------------------------------------------------------
+   Eski Aurora sınıf adları. Henüz taşınmamış sayfalar bunları
+   kullanıyor; artık Dimension yüzeylerini çiziyorlar.
+   ------------------------------------------------------------------ */
+.aurora-scope { background: var(--dim-void); color: var(--dim-on-surface); font-family: var(--font-body); min-height: 100vh; position: relative; isolation: isolate; }
+.glass-card { background: var(--dim-frosted); border: 1px solid var(--dim-border); border-radius: var(--dim-radius-card); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: border-color 0.3s ease, background 0.3s ease; }
+.glass-card:hover { border-color: color-mix(in srgb, var(--dim-hairline) 32%, transparent); }
+.aurora-gradient-text { color: var(--dim-bone); }
+.aurora-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
 .aurora-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.aurora-scrollbar::-webkit-scrollbar-thumb { background: var(--aurora-border-strong); border-radius: 8px; }
+.aurora-scrollbar::-webkit-scrollbar-thumb { background: var(--dim-border); border-radius: var(--dim-radius-pill); }
 
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(14px); }
@@ -118,14 +266,15 @@
   100% { background-position: 200% 0; }
 }
 .animate-shimmer {
-  background: linear-gradient(90deg, var(--aurora-surface) 25%, var(--aurora-surface-hover) 50%, var(--aurora-surface) 75%);
+  background: linear-gradient(90deg, var(--dim-frosted-soft) 25%, var(--dim-frosted) 50%, var(--dim-frosted-soft) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .aurora-blob, .animate-fade-up, .animate-shimmer { animation: none !important; }
+  .animate-fade-up, .animate-shimmer { animation: none !important; }
 }
+
 
 /* ------------------------------------------------------------------
    HAREKET BÜTÇESİ — lib/motion.ts'in CSS karşılığı.
@@ -175,7 +324,7 @@
 
 /* Erişilebilirlik son sözü söyler: kullanıcı sistem seviyesinde hareket
    azaltma istediyse, kademe ne olursa olsun TÜM giriş animasyonları
-   kapanır. Yukarıdaki .aurora-blob/.animate-* bloğuyla AYNI ilke. */
+   kapanır. Yukarıdaki .animate-* bloğuyla AYNI ilke. */
 @media (prefers-reduced-motion: reduce) {
   [data-motion-page] > * { animation: none !important; }
 }

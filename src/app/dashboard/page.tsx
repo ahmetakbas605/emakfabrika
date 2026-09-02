@@ -4,7 +4,7 @@ import { listCompanyDepartments } from '@/lib/departments';
 import { listPendingApprovalsForUser } from '@/lib/workflow/engine';
 import { listLeaveRequests } from '@/lib/hr/leave';
 import { logout } from '@/actions/auth';
-import { AuroraShell, type NavGroup } from '@/components/shell/AuroraShell';
+import { DimensionShell, type NavGroup } from '@/components/shell/DimensionShell';
 import { StatCard } from '@/components/shell/StatCard';
 import { PageHeader, GlassPanel } from '@/components/shell/ui';
 import { ShieldCheck, PalmtreeIcon, ArrowUpRight, Boxes, Landmark, Users2, Settings2, Building2 } from 'lucide-react';
@@ -63,7 +63,7 @@ export default async function DashboardPage() {
   const openLeaveCount = myLeaveRequests.filter((r) => r.status === 'DRAFT' || r.status === 'SUBMITTED').length;
 
   return (
-    <AuroraShell navGroups={NAV} brand="emakfabrika" brandHref="/dashboard" companyName={session.companyName} userName={session.fullName} logoutAction={logout}>
+    <DimensionShell navGroups={NAV} brand="emakfabrika" brandHref="/dashboard" companyName={session.companyName} userName={session.fullName} logoutAction={logout}>
       <PageHeader eyebrow={`Hoş geldin, ${session.fullName.split(' ')[0]}`} title={session.companyName} description={session.isFactoryAdmin ? 'Fabrika Yöneticisi — şirketin tüm departmanlarına tam erişim.' : 'Kendi departman ve taleplerinize genel bakış.'} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -120,6 +120,6 @@ export default async function DashboardPage() {
           </GlassPanel>
         ) : null}
       </div>
-    </AuroraShell>
+    </DimensionShell>
   );
 }

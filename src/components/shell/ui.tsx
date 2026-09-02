@@ -2,22 +2,44 @@
 
 import { motion } from 'framer-motion';
 
+// ==================================================================
+// Paylaşılan primitifler — Görsel Yenileme Faz 1'de Stitch'in
+// "Dimension" sistemine taşındı.
+//
+// Sistemin üç kuralı bu dosyada görünür hâlde:
+//  1. Hap (9999px) silueti tüm butonlarda ve rozetlerde.
+//  2. Yükselti GÖLGEYLE değil, saydamlık + 1px kıl-çizgiyle kurulur.
+//  3. Başlık ağırlığı 500'ü GEÇMEZ (dim-h2/dim-h3 sınıfları bunu
+//     zaten sabitliyor — burada elle font-bold yazılmaz).
+//
+// İhraç ADLARI (AuroraButton vb.) bilinçli olarak DEĞİŞTİRİLMEDİ: bu
+// primitifleri 11 sayfa kullanıyor ve Faz 1'in kapsamı görsel dil,
+// yeniden adlandırma değil. Adlar, o sayfalar modül modül taşınırken
+// aynı commit'te düzelecek.
+// ==================================================================
+
 export function PageHeader({ eyebrow, title, description }: { eyebrow: string; title: string; description?: string }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }} className="mb-8">
-      <div className="text-[11px] font-semibold tracking-widest uppercase mb-2" style={{ color: 'var(--aurora-cyan)', fontFamily: 'var(--font-mono)' }}>{eyebrow}</div>
-      <h1 className="text-2xl md:text-[28px] font-bold tracking-tight mb-2" style={{ fontFamily: 'var(--font-display)' }}>{title}</h1>
-      {description ? <p className="text-sm max-w-2xl" style={{ color: 'var(--aurora-text-dim)' }}>{description}</p> : null}
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }} className="mb-10">
+      <div className="dim-metric mb-3" style={{ color: 'var(--dim-sunset)' }}>{eyebrow}</div>
+      <h1 className="dim-h2" style={{ color: 'var(--dim-bone)' }}>{title}</h1>
+      {description ? <p className="dim-body mt-3 max-w-2xl" style={{ color: 'var(--dim-on-surface-variant)' }}>{description}</p> : null}
     </motion.div>
   );
 }
 
 export function GlassPanel({ children, className = '', title, action }: { children: React.ReactNode; className?: string; title?: string; action?: React.ReactNode }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }} className={`glass-card p-5 ${className}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      className={`dim-card relative overflow-hidden p-7 ${className}`}
+    >
       {title ? (
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold" style={{ fontFamily: 'var(--font-display)' }}>{title}</h2>
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <h2 className="dim-subheading" style={{ color: 'var(--dim-bone)' }}>{title}</h2>
           {action}
         </div>
       ) : null}
@@ -26,54 +48,80 @@ export function GlassPanel({ children, className = '', title, action }: { childr
   );
 }
 
-const RISK_STYLES: Record<string, { bg: string; fg: string }> = {
-  LOW: { bg: 'rgba(52,211,153,0.14)', fg: '#34d399' },
-  MEDIUM: { bg: 'rgba(245,165,36,0.14)', fg: '#f5a524' },
-  HIGH: { bg: 'rgba(251,90,110,0.14)', fg: '#fb5a6e' },
-  CRITICAL: { bg: 'rgba(255,61,113,0.18)', fg: '#ff3d71' }
+// Rozet tonları. Stitch'in aksan bütçesi dışına ÇIKILMAZ — yeni bir
+// renk eklemek monokrom disiplini bozar (DESIGN.md "Don't" maddesi).
+const TONES: Record<string, { bg: string; fg: string; border: string }> = {
+  neutral: { bg: 'var(--dim-frosted-soft)', fg: 'var(--dim-on-surface-variant)', border: 'var(--dim-border-soft)' },
+  ok: { bg: 'rgba(52,211,153,0.1)', fg: 'var(--dim-success)', border: 'rgba(52,211,153,0.2)' },
+  warn: { bg: 'rgba(245,165,36,0.1)', fg: 'var(--dim-warning)', border: 'rgba(245,165,36,0.2)' },
+  danger: { bg: 'rgba(251,90,110,0.1)', fg: 'var(--dim-danger)', border: 'rgba(251,90,110,0.2)' },
+  accent: { bg: 'rgba(107,98,242,0.1)', fg: 'var(--dim-violet)', border: 'rgba(107,98,242,0.2)' }
+};
+
+const RISK_TONE: Record<string, keyof typeof TONES> = {
+  LOW: 'ok',
+  MEDIUM: 'warn',
+  HIGH: 'danger',
+  CRITICAL: 'danger'
 };
 
 export function RiskBadge({ level }: { level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' }) {
-  const s = RISK_STYLES[level] ?? RISK_STYLES.LOW;
+  const s = TONES[RISK_TONE[level] ?? 'ok'];
   return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: s.bg, color: s.fg }}>
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.fg }} />
+    <span
+      className="dim-metric inline-flex items-center gap-1.5 px-2.5 py-1"
+      style={{ background: s.bg, color: s.fg, border: `1px solid ${s.border}`, borderRadius: 'var(--dim-radius-pill)' }}
+    >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.fg }} />
       {level}
     </span>
   );
 }
 
 export function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'neutral' | 'ok' | 'warn' | 'danger' | 'accent' }) {
-  const tones: Record<string, { bg: string; fg: string }> = {
-    neutral: { bg: 'rgba(255,255,255,0.08)', fg: 'var(--aurora-text-dim)' },
-    ok: { bg: 'rgba(52,211,153,0.14)', fg: '#34d399' },
-    warn: { bg: 'rgba(245,165,36,0.14)', fg: '#f5a524' },
-    danger: { bg: 'rgba(251,90,110,0.14)', fg: '#fb5a6e' },
-    accent: { bg: 'rgba(139,92,246,0.16)', fg: '#a78bfa' }
-  };
-  const s = tones[tone];
-  return <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold" style={{ background: s.bg, color: s.fg }}>{children}</span>;
+  const s = TONES[tone];
+  return (
+    <span
+      className="dim-metric inline-flex px-2.5 py-1"
+      style={{ background: s.bg, color: s.fg, border: `1px solid ${s.border}`, borderRadius: 'var(--dim-radius-pill)' }}
+    >
+      {children}
+    </span>
+  );
 }
 
+// Birincil buton — sistemdeki TEK dolu yüzey: beyaz zemin, koyu metin.
+// Degrade dolgu YOK (Stitch: "gradients never on buttons").
 export function AuroraButton({ children, variant = 'primary', ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'ghost' | 'danger' }) {
-  const base = 'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed';
-  const variants: Record<string, string> = {
-    primary: 'text-black hover:brightness-110 active:scale-[0.98]',
-    ghost: 'border hover:bg-white/[0.06]',
-    danger: 'hover:brightness-110 active:scale-[0.98] text-white'
-  };
-  const style: React.CSSProperties = variant === 'primary' ? { background: 'var(--aurora-gradient)' } : variant === 'danger' ? { background: 'var(--aurora-danger)' } : { borderColor: 'var(--aurora-border-strong)', color: 'var(--aurora-text)' };
-  return <button {...props} className={`${base} ${variants[variant]} ${props.className ?? ''}`} style={{ ...style, ...props.style }}>{children}</button>;
+  const base = 'dim-technical inline-flex items-center gap-2 px-5 py-2.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]';
+  const style: React.CSSProperties =
+    variant === 'primary'
+      ? { background: 'var(--dim-primary)', color: 'var(--dim-on-primary)', borderRadius: 'var(--dim-radius-pill)' }
+      : variant === 'danger'
+        ? { background: 'rgba(251,90,110,0.12)', color: 'var(--dim-danger)', border: '1px solid rgba(251,90,110,0.3)', borderRadius: 'var(--dim-radius-pill)' }
+        : { background: 'var(--dim-frosted-soft)', color: 'var(--dim-bone)', border: '1px solid var(--dim-border)', borderRadius: 'var(--dim-radius-pill)' };
+  return <button {...props} className={`${base} ${props.className ?? ''}`} style={{ ...style, ...props.style }}>{children}</button>;
 }
+
+// Form alanları hap DEĞİL: Stitch hap silüetini eylem/etiket için
+// ayırıyor, giriş alanlarında 10px "ui" yarıçapı kullanılıyor.
+const FIELD_BASE = 'dim-body w-full px-4 py-2.5 outline-none transition-colors';
+const FIELD_STYLE: React.CSSProperties = {
+  background: 'var(--dim-frosted-soft)',
+  border: '1px solid var(--dim-border-soft)',
+  borderRadius: 'var(--dim-radius-ui)',
+  color: 'var(--dim-bone)',
+  fontSize: 14
+};
 
 export function AuroraInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`px-3 py-2 rounded-lg text-sm bg-white/[0.04] border border-white/[0.09] focus:border-[var(--aurora-cyan)] outline-none transition-colors placeholder:text-[var(--aurora-text-faint)] ${props.className ?? ''}`} />;
+  return <input {...props} className={`${FIELD_BASE} ${props.className ?? ''}`} style={{ ...FIELD_STYLE, ...props.style }} />;
 }
 
 export function AuroraSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={`px-3 py-2 rounded-lg text-sm bg-white/[0.04] border border-white/[0.09] focus:border-[var(--aurora-cyan)] outline-none transition-colors ${props.className ?? ''}`} style={{ colorScheme: 'dark' }} />;
+  return <select {...props} className={`${FIELD_BASE} ${props.className ?? ''}`} style={{ ...FIELD_STYLE, colorScheme: 'dark', ...props.style }} />;
 }
 
 export function AuroraTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={`px-3 py-2 rounded-lg text-sm bg-white/[0.04] border border-white/[0.09] focus:border-[var(--aurora-cyan)] outline-none transition-colors placeholder:text-[var(--aurora-text-faint)] ${props.className ?? ''}`} />;
+  return <textarea {...props} className={`${FIELD_BASE} ${props.className ?? ''}`} style={{ ...FIELD_STYLE, ...props.style }} />;
 }
