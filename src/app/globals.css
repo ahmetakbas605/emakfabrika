@@ -126,3 +126,56 @@
 @media (prefers-reduced-motion: reduce) {
   .aurora-blob, .animate-fade-up, .animate-shimmer { animation: none !important; }
 }
+
+/* ------------------------------------------------------------------
+   HAREKET BÜTÇESİ — lib/motion.ts'in CSS karşılığı.
+   Süreler ORADAKİ MOTION_DURATIONS ile BİREBİR aynı olmalı (tek kaynak
+   ilkesi; JS tarafı framer-motion için aynı sayıları oradan okur).
+
+   Kademeyi components/shell/MotionScope.tsx `data-motion` olarak yazar.
+   O sarmalayıcı `display: contents` olduğu için KUTU ÜRETMEZ — animasyon
+   bu yüzden DOĞRUDAN ÇOCUKLARINA (`> *`) uygulanır.
+   ------------------------------------------------------------------ */
+[data-motion='STAGE']  { --motion-page: 520ms; --motion-element: 420ms; }
+[data-motion='FLOW']   { --motion-page: 260ms; --motion-element: 200ms; }
+[data-motion='WORKBENCH'] { --motion-page: 120ms; --motion-element: 90ms; }
+
+/* STAGE — anlatım. Derinlik (translateZ) + yukarı süzülme.
+   `perspective` gövdede değil burada: yalnızca sahne sayfaları 3D
+   bağlam kurar, tezgâh sayfaları hiç kurmaz (bedava performans). */
+@keyframes motion-enter-stage {
+  from { opacity: 0; transform: perspective(1200px) translate3d(0, 18px, -60px); }
+  to   { opacity: 1; transform: perspective(1200px) translate3d(0, 0, 0); }
+}
+[data-motion='STAGE'][data-motion-page] > * {
+  animation: motion-enter-stage var(--motion-page) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* FLOW — gezinme. Yalnızca hafif kayma, 3D YOK. */
+@keyframes motion-enter-flow {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+[data-motion='FLOW'][data-motion-page] > * {
+  animation: motion-enter-flow var(--motion-page) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* WORKBENCH — tezgâh. SADECE opaklık; transform YOK.
+   Gerekçe (lib/motion.ts): imleç bir input'tayken sayfanın kayması odak
+   kaybettirir ve yanlış alana yazdırır. 120ms, Doherty eşiğinin çok
+   altında — kullanıcı "anında" algılar, ama boş->dolu geçişi yine de
+   göz için yumuşak kalır. */
+@keyframes motion-enter-workbench {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+[data-motion='WORKBENCH'][data-motion-page] > * {
+  animation: motion-enter-workbench var(--motion-page) linear both;
+}
+
+/* Erişilebilirlik son sözü söyler: kullanıcı sistem seviyesinde hareket
+   azaltma istediyse, kademe ne olursa olsun TÜM giriş animasyonları
+   kapanır. Yukarıdaki .aurora-blob/.animate-* bloğuyla AYNI ilke. */
+@media (prefers-reduced-motion: reduce) {
+  [data-motion-page] > * { animation: none !important; }
+}

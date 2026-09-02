@@ -25,7 +25,8 @@
     "test:bi": "tsx tests/bi.test.ts",
     "test:isolation-audit": "tsx tests/isolation-audit.test.ts",
     "test:integration": "tsx tests/integration.test.ts",
-    "test:external-auth": "tsx tests/external-auth.test.ts"
+    "test:external-auth": "tsx tests/external-auth.test.ts",
+    "test:motion": "tsx tests/motion.test.ts"
   },
   "dependencies": {
     "@xyflow/react": "^12.11.5",
