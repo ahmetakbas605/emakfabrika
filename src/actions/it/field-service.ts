@@ -101,7 +101,7 @@ export async function toggleChecklistItemAction(departmentId: string, _prevState
   const parsed = ToggleChecklistItemSchema.safeParse({ itemId: formData.get('itemId'), workOrderId: formData.get('workOrderId'), checked: optionalField(formData, 'checked'), note: optionalField(formData, 'note') });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
 
-  await toggleChecklistItem(parsed.data.itemId, parsed.data.checked === 'on', session.id, parsed.data.note);
+  await toggleChecklistItem(session.companyId, parsed.data.itemId, parsed.data.checked === 'on', session.id, parsed.data.note);
   revalidatePath(`/dashboard/departments/${departmentId}/it/field-service/${parsed.data.workOrderId}`);
   return { success: 'Güncellendi.' };
 }

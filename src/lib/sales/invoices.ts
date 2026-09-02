@@ -44,8 +44,13 @@ export async function createInvoice(companyId: string, createdByUserId: string, 
       if (!product) throw new SalesError('Ürün bulunamadı.');
 
       if (line.orderLineId) {
-        const [orderLine] = await tx.select({ quantity: salesOrderLines.quantity, invoicedQuantity: salesOrderLines.invoicedQuantity }).from(salesOrderLines).where(eq(salesOrderLines.id, line.orderLineId)).limit(1);
-        if (!orderLine) throw new SalesError('Sipariş kalemi bulunamadı.');
+        const [orderLine] = await tx
+          .select({ quantity: salesOrderLines.quantity, invoicedQuantity: salesOrderLines.invoicedQuantity, orderId: salesOrderLines.orderId })
+          .from(salesOrderLines)
+          .innerJoin(salesOrders, eq(salesOrders.id, salesOrderLines.orderId))
+          .where(and(eq(salesOrderLines.id, line.orderLineId), eq(salesOrders.companyId, companyId)))
+          .limit(1);
+        if (!orderLine || (input.orderId && orderLine.orderId !== input.orderId)) throw new SalesError('Sipariş kalemi bulunamadı.');
         const remaining = money(orderLine.quantity).minus(orderLine.invoicedQuantity);
         if (money(line.quantity).greaterThan(remaining)) throw new SalesError(`Faturalanan miktar (${line.quantity}), kalan miktardan (${remaining.toFixed(2)}) fazla olamaz.`);
       }
@@ -107,7 +112,12 @@ export async function approveInvoice(companyId: string, invoiceId: string, creat
 
     for (const line of lines) {
       if (!line.orderLineId) continue;
-      const [orderLine] = await tx.select({ invoicedQuantity: salesOrderLines.invoicedQuantity }).from(salesOrderLines).where(eq(salesOrderLines.id, line.orderLineId)).limit(1);
+      const [orderLine] = await tx
+        .select({ invoicedQuantity: salesOrderLines.invoicedQuantity })
+        .from(salesOrderLines)
+        .innerJoin(salesOrders, eq(salesOrders.id, salesOrderLines.orderId))
+        .where(and(eq(salesOrderLines.id, line.orderLineId), eq(salesOrders.companyId, companyId)))
+        .limit(1);
       if (orderLine) await tx.update(salesOrderLines).set({ invoicedQuantity: toDb(money(orderLine.invoicedQuantity).plus(line.quantity)) }).where(eq(salesOrderLines.id, line.orderLineId));
     }
 

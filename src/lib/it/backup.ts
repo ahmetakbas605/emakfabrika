@@ -1,9 +1,10 @@
 import 'server-only';
-import { eq, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { backupJobs, backupResults, itAssets } from '@/db/schema';
 import { newId } from '@/lib/id';
 import { createAlert, getOrCreateAssetMonitorTarget } from '@/lib/it/monitoring';
+import { ItError } from './errors';
 
 export interface CreateBackupJobInput {
   assetId: string;
@@ -38,19 +39,21 @@ export interface RecordBackupResultInput {
 // üretir, aynı zincirden (lib/it/monitoring.ts:createAlert) Incident'a
 // gidebilir (madde 75'in kendi isteği).
 export async function recordBackupResult(companyId: string, requestedByUserId: string, input: RecordBackupResultInput): Promise<string> {
+  const [job] = await db.select({ assetId: backupJobs.assetId, source: backupJobs.source }).from(backupJobs).where(and(eq(backupJobs.id, input.backupJobId), eq(backupJobs.companyId, companyId))).limit(1);
+  if (!job) throw new ItError('Yedekleme işi bulunamadı.');
+
   const id = newId();
   await db.insert(backupResults).values({ id, backupJobId: input.backupJobId, startedAt: input.startedAt, finishedAt: input.finishedAt, result: input.result, sizeBytes: input.sizeBytes !== undefined ? String(input.sizeBytes) : undefined, errorMessage: input.errorMessage });
 
   if (input.result === 'FAILED') {
-    const [job] = await db.select({ assetId: backupJobs.assetId, source: backupJobs.source }).from(backupJobs).where(eq(backupJobs.id, input.backupJobId)).limit(1);
-    if (job) {
-      const targetId = await getOrCreateAssetMonitorTarget(companyId, job.assetId);
-      await createAlert(companyId, requestedByUserId, targetId, 'HIGH', `Yedekleme başarısız — ${job.source}${input.errorMessage ? `: ${input.errorMessage}` : ''}`);
-    }
+    const targetId = await getOrCreateAssetMonitorTarget(companyId, job.assetId);
+    await createAlert(companyId, requestedByUserId, targetId, 'HIGH', `Yedekleme başarısız — ${job.source}${input.errorMessage ? `: ${input.errorMessage}` : ''}`);
   }
   return id;
 }
 
-export async function listBackupResults(backupJobId: string) {
+export async function listBackupResults(companyId: string, backupJobId: string) {
+  const [job] = await db.select({ id: backupJobs.id }).from(backupJobs).where(and(eq(backupJobs.id, backupJobId), eq(backupJobs.companyId, companyId))).limit(1);
+  if (!job) throw new ItError('Yedekleme işi bulunamadı.');
   return db.select().from(backupResults).where(eq(backupResults.backupJobId, backupJobId)).orderBy(desc(backupResults.startedAt));
 }

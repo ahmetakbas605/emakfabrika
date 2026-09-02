@@ -167,7 +167,16 @@ export async function getWorkOrderChecklist(workOrderId: string) {
   return { checklist, items };
 }
 
-export async function toggleChecklistItem(itemId: string, checked: boolean, checkedBy: string, note?: string): Promise<void> {
+export async function toggleChecklistItem(companyId: string, itemId: string, checked: boolean, checkedBy: string, note?: string): Promise<void> {
+  const [item] = await db
+    .select({ id: workOrderChecklistItems.id })
+    .from(workOrderChecklistItems)
+    .innerJoin(workOrderChecklists, eq(workOrderChecklists.id, workOrderChecklistItems.checklistId))
+    .innerJoin(workOrders, eq(workOrders.id, workOrderChecklists.workOrderId))
+    .where(and(eq(workOrderChecklistItems.id, itemId), eq(workOrders.companyId, companyId)))
+    .limit(1);
+  if (!item) throw new ItError('Checklist kalemi bulunamadı.');
+
   await db.update(workOrderChecklistItems).set({ checked, note, checkedAt: checked ? new Date() : null, checkedBy: checked ? checkedBy : null }).where(eq(workOrderChecklistItems.id, itemId));
 }
 

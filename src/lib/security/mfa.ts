@@ -2,7 +2,7 @@ import 'server-only';
 import { generateSecret as generateTotpSecret, generateURI as generateTotpURI, verify as verifyTotp } from 'otplib';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { users } from '@/db/schema';
 import { encryptSecret, decryptSecret, parseHexKey } from '@/lib/crypto';
@@ -37,6 +37,9 @@ export interface MfaSetupResult {
 // mfaEnabled hâlâ false — confirmMfaSetup ile ilk doğru kod girilene
 // kadar gerçek anlamda AKTİF olmaz, yanlışlıkla kilitlenmeyi önler).
 export async function beginMfaSetup(companyId: string, userId: string, accountLabel: string): Promise<MfaSetupResult> {
+  const [user] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, userId), eq(users.companyId, companyId))).limit(1);
+  if (!user) throw new SecurityError('Kullanıcı bulunamadı.');
+
   const secret = generateTotpSecret();
   const otpauth = generateTotpURI({ issuer: 'emakfabrika', label: accountLabel, secret });
   const qrCodeDataUrl = await QRCode.toDataURL(otpauth);
@@ -55,7 +58,9 @@ export async function confirmMfaSetup(userId: string, code: string): Promise<voi
   await db.update(users).set({ mfaEnabled: true, mfaEnabledAt: new Date() }).where(eq(users.id, userId));
 }
 
-export async function disableMfa(userId: string): Promise<void> {
+export async function disableMfa(companyId: string, userId: string): Promise<void> {
+  const [user] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, userId), eq(users.companyId, companyId))).limit(1);
+  if (!user) throw new SecurityError('Kullanıcı bulunamadı.');
   await db.update(users).set({ mfaEnabled: false, totpSecretEncrypted: null, mfaRecoveryCodesHash: null, mfaEnabledAt: null }).where(eq(users.id, userId));
 }
 

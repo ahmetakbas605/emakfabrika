@@ -39,7 +39,7 @@ export async function confirmMfaSetupAction(_prevState: FormState, formData: For
 
 export async function disableMfaAction(_prevState: FormState, _formData: FormData): Promise<FormState> {
   const session = await requireSession();
-  await disableMfa(session.id);
+  await disableMfa(session.companyId, session.id);
   await writeAuditLog({ companyId: session.companyId, userId: session.id, action: 'MFA_CHANGED', entity: 'USER', entityId: session.id, module: 'SECURITY', riskLevel: 'HIGH', changedFields: { mfaEnabled: false } });
   revalidatePath('/dashboard/security/mfa');
   return { success: 'MFA devre dışı bırakıldı.' };
@@ -54,7 +54,11 @@ export async function adminDisableMfaAction(_prevState: FormState, formData: For
   const parsed = AdminDisableSchema.safeParse({ userId: formData.get('userId') });
   if (!parsed.success) return { error: 'Geçersiz form.' };
 
-  await disableMfa(parsed.data.userId);
+  try {
+    await disableMfa(session.companyId, parsed.data.userId);
+  } catch (err) {
+    return { error: toErrorMessage(err, 'MFA sıfırlanamadı.') };
+  }
   await writeAuditLog({ companyId: session.companyId, userId: session.id, action: 'MFA_CHANGED', entity: 'USER', entityId: parsed.data.userId, module: 'SECURITY', riskLevel: 'CRITICAL', changedFields: { mfaEnabled: false, byAdmin: true } });
   revalidatePath('/dashboard/security');
   return { success: 'Kullanıcının MFA\'sı sıfırlandı.' };

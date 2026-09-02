@@ -104,6 +104,9 @@ export async function createDelegation(companyId: string, input: CreateDelegatio
   if (input.delegatorUserId === input.delegateUserId) throw new CoreError('Bir kullanıcı kendine vekalet veremez.');
   if (input.endsAt <= input.startsAt) throw new CoreError('Bitiş tarihi başlangıçtan sonra olmalı.');
 
+  const [delegate] = await db.select({ id: users.id }).from(users).where(and(eq(users.id, input.delegateUserId), eq(users.companyId, companyId))).limit(1);
+  if (!delegate) throw new CoreError('Vekalet edilecek kullanıcı bulunamadı.');
+
   const id = newId();
   await db.insert(approvalDelegations).values({
     id, companyId,
