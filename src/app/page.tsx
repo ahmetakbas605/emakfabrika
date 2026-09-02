@@ -1,8 +1,9 @@
+import { redirect } from 'next/navigation';
+
+// En ilk scaffold'dan (proje başlangıcı) kalma yer tutucu sayfa — 13 faz
+// boyunca hiç düzeltilmemiş, gerçek uygulama hep /login'den başlıyordu.
+// Kök adres artık /dashboard'a yönlendiriyor; requireSession zaten
+// oturumu olmayan kullanıcıyı /login'e gönderiyor (lib/dal.ts).
 export default function Home() {
-  return (
-    <main style={{ padding: "3rem", fontFamily: "system-ui, sans-serif" }}>
-      <h1>emakfabrika</h1>
-      <p>Mimari iskelet aşaması — bkz. ARCHITECTURE.md. Henüz hiçbir modül kodlanmadı.</p>
-    </main>
-  );
+  redirect('/dashboard');
 }
