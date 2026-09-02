@@ -4277,3 +4277,32 @@ export const treasuryCashFlowItems = mysqlTable('treasury_cash_flow_items', {
   createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow()
 });
+
+// --- Holding ERP Faz 13 (Integration Hub + Event Bus) — madde metninin
+// "Bank/E-Belge/RFID/PLC/SCADA/LDAP/Email/SMS provider abstraction +
+// merkezi event bus" isteği. E-Belge'nin (lib/e-document/provider.ts)
+// AYNI "arayüz + dürüst Null implementasyon" deseni burada TEKRAR
+// kullanılıyor (§150) — yeni bir mimari icat edilmedi.
+//
+// Event bus, gerçek bir mesaj kuyruğu/broker DEĞİL (tek fabrika süreci,
+// dağıtık bir sistem yok — Kafka/RabbitMQ gibi bir altyapı bu ölçekte
+// spekülatif olur, projenin kendi "gerçekten ihtiyaç duyulmayan altyapı
+// kurulmaz" ilkesiyle çelişir). Bu, İÇİ-SÜREÇ (in-process) senkron bir
+// publish/subscribe kaydı + KALICI bir olay günlüğü (aşağıdaki tablo) —
+// "Hub" burada "her modülün ürettiği olayların TEK bir yerde toplandığı
+// ve ileride entegrasyonların (bildirim/webhook/dış sistem) buna
+// ABONE OLABİLECEĞİ merkez" anlamına geliyor, dağıtık bir broker değil.
+//
+// eventType BİLİNÇLİ OLARAK enum DEĞİL (serbest varchar) —
+// document_attachments.entityType/accounting_journals.sourceType'ın AYNI
+// polimorfik deseni: yeni bir modül yeni bir olay türü eklediğinde
+// migration GEREKMEMELİ.
+export const integrationEvents = mysqlTable('integration_events', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  eventType: varchar('event_type', { length: 64 }).notNull(),
+  sourceModule: varchar('source_module', { length: 32 }).notNull(),
+  entityId: char('entity_id', { length: 36 }),
+  payload: json('payload'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [index('idx_integration_events_company_type').on(table.companyId, table.eventType)]);

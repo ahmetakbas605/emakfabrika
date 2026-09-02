@@ -4,6 +4,8 @@ import { db } from '@/db/client';
 import { ncrRecords, parties, products } from '@/db/schema';
 import { newId } from '@/lib/id';
 import { nextDocumentNo } from '@/lib/numbering';
+import { publishEventInTx, dispatchEvent } from '@/lib/integration/events';
+import '@/lib/integration/subscribers';
 import { QualityError } from './errors';
 
 // Holding ERP Faz 5 (Kalite) — NCR/CAPA. lib/sales/complaints.ts İLE AYNI
@@ -25,15 +27,19 @@ export interface CreateNcrInput {
 }
 
 export async function createNcr(companyId: string, createdByUserId: string, input: CreateNcrInput): Promise<string> {
-  return db.transaction(async (tx) => {
+  const severity = input.severity ?? 'MINOR';
+  const id = await db.transaction(async (tx) => {
     const id = newId();
     const ncrNo = await nextDocumentNo(tx, companyId, 'NCR', 'DUR', new Date().getFullYear(), 6);
     await tx.insert(ncrRecords).values({
       id, companyId, ncrNo, inspectionId: input.inspectionId, supplierPartyId: input.supplierPartyId, productId: input.productId,
-      title: input.title, description: input.description, severity: input.severity ?? 'MINOR', assignedToUserId: input.assignedToUserId, createdByUserId
+      title: input.title, description: input.description, severity, assignedToUserId: input.assignedToUserId, createdByUserId
     });
+    await publishEventInTx(tx, companyId, { eventType: 'QUALITY_NCR_CREATED', sourceModule: 'QUALITY', entityId: id, payload: { severity, title: input.title } });
     return id;
   });
+  await dispatchEvent(companyId, 'QUALITY_NCR_CREATED', id, { severity, title: input.title });
+  return id;
 }
 
 export interface ListNcrsFilter {

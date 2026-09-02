@@ -41,6 +41,7 @@ const QUICK_LINKS = [
 
 const ADMIN_LINKS = [
   { href: '/dashboard/bi', label: 'BI / Yönetim Panosu', icon: Landmark },
+  { href: '/dashboard/integration', label: 'Integration Hub / Event Bus', icon: Settings2 },
   { href: '/dashboard/master-data/parties', label: 'Master Data (Cari/Ürün/Birim/Döviz)', icon: Boxes },
   { href: '/dashboard/org', label: 'Organizasyon', icon: Users2 },
   { href: '/dashboard/workflow/rules', label: 'Onay Kuralları', icon: Settings2 },

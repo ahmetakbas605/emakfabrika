@@ -4,6 +4,8 @@ import { db } from '@/db/client';
 import { safetyIncidents, employees } from '@/db/schema';
 import { newId } from '@/lib/id';
 import { nextDocumentNo } from '@/lib/numbering';
+import { publishEventInTx, dispatchEvent } from '@/lib/integration/events';
+import '@/lib/integration/subscribers';
 import { SafetyError } from './errors';
 
 // Faz 9'un risk_register_entries'inden (POTANSİYEL risk) BİLİNÇLİ OLARAK
@@ -24,15 +26,19 @@ export async function createIncident(companyId: string, createdByUserId: string,
     if (!employee) throw new SafetyError('Çalışan bulunamadı.');
   }
 
-  return db.transaction(async (tx) => {
+  const severity = input.severity ?? 'MINOR';
+  const id = await db.transaction(async (tx) => {
     const id = newId();
     const incidentNo = await nextDocumentNo(tx, companyId, 'SFTY', 'OLY', new Date().getFullYear(), 6);
     await tx.insert(safetyIncidents).values({
-      id, companyId, incidentNo, incidentType: input.incidentType, severity: input.severity ?? 'MINOR', incidentDate: input.incidentDate,
+      id, companyId, incidentNo, incidentType: input.incidentType, severity, incidentDate: input.incidentDate,
       location: input.location ?? '', employeeId: input.employeeId, description: input.description, createdByUserId
     });
+    await publishEventInTx(tx, companyId, { eventType: 'SAFETY_INCIDENT_CREATED', sourceModule: 'SAFETY', entityId: id, payload: { severity, incidentType: input.incidentType } });
     return id;
   });
+  await dispatchEvent(companyId, 'SAFETY_INCIDENT_CREATED', id, { severity, incidentType: input.incidentType });
+  return id;
 }
 
 export async function listIncidents(companyId: string) {

@@ -617,12 +617,48 @@ talep üzerine hesaplanan rapor" ilkesinin şirket-geneli bir uzantısı.
   kapsamda test edildi. Tam regresyon (13 paket, tümü yeşil) + `tsc
   --noEmit` + `npm run build` (tümü hatasız).
 
-## FAZ 13 — Integration Hub + Event Bus
+## FAZ 13 — Integration Hub + Event Bus ✅
 
 **Bağımlılık:** yok ama en çok fayda Faz 0-12 sonrasında (event üretecek
 modül sayısı arttıkça değer artar). Bank/E-Belge/RFID/PLC/SCADA/LDAP/Email/
 SMS provider abstraction + merkezi event bus (bugün kod içi yorumlarla
 "yok" diye işaretli).
+
+**Yapıldı (2026-09-02):**
+- **Event Bus** (`lib/integration/events.ts`) — TEK fabrika süreci için
+  gerçek bir mesaj kuyruğu/broker (Kafka/RabbitMQ) BİLİNÇLİ OLARAK
+  KURULMADI (spekülatif altyapı olurdu) — süreç-içi (in-process) senkron
+  bir publish/subscribe kaydı + kalıcı `integration_events` günlüğü.
+  `publishEventInTx`/`publishEvent` ikilisi `lib/accounting.ts:postJournal/
+  postJournalInTx` İLE AYNI desen: olay satırı çağıranın KENDİ
+  transaction'ında ATOMİK yazılır (rollback olursa yetim olay kalmaz),
+  abonelere bildirim ise commit'ten SONRA, ayrı olarak (`dispatchEvent`)
+  yapılır — bir abone (network I/O gerektirebilir) ASLA bir DB
+  transaction'ı içinde ÇALIŞTIRILMAZ. **En kritik garanti**: bir abone
+  hata fırlatırsa bu asla onu tetikleyen GERÇEK iş kaydını (İSG olayı/NCR)
+  bozmaz — yalnızca loglanır, `tests/integration.test.ts` ile doğrulandı.
+- **Sağlayıcı soyutlamaları** (`lib/integration/notifications.ts`:
+  Email/SMS, `lib/integration/external-systems.ts`: LDAP/RFID/PLC-SCADA/
+  Banka Ekstresi) — `lib/e-document/provider.ts`'in ZATEN kanıtlanmış
+  "arayüz + dürüst Null implementasyon" deseni AYNEN tekrarlandı (§150) —
+  hiçbiri için gerçek donanım/protokol/API kararı henüz verilmedi, Null
+  sağlayıcılar her çağrıda açık bir `TODO: *_CREDENTIALS_REQUIRED` hatası
+  fırlatır, asla "başarılı gibi" davranmaz.
+- **Gerçek bağlantı (uçtan uca kanıt)**: `lib/safety/incidents.ts:
+  createIncident` (SEVERE/FATAL) ve `lib/quality/ncr.ts:createNcr`
+  (CRITICAL/MAJOR) artık olay yayınlıyor; `lib/integration/subscribers.ts`
+  bu olaylara abone olup fabrika yöneticilerine e-posta göndermeyi
+  DENİYOR — bugün Null sağlayıcı yüzünden bu deneme her zaman başarısız
+  olur, ama olay kaydı VE onu tetikleyen asıl İSG/Kalite kaydı bundan
+  ETKİLENMEDEN başarıyla oluşur (test edildi).
+- UI: `/dashboard/integration` (`requireFactoryAdmin` — şirket geneli
+  operasyonel veri, BI sayfasıyla AYNI erişim ilkesi) — olay günlüğü
+  görüntüleme + tür filtresi.
+- `tests/integration.test.ts` (kalıcı, 18/18) — olay kalıcılığı, abonelik
+  gerçekten çalışıyor mu, hata fırlatan abonenin izole edildiği, 6
+  Null sağlayıcının hepsinin dürüstçe reddettiği, gerçek İSG/NCR
+  bağlantısının doğru payload ile çalıştığı. Tam regresyon (16 paket,
+  tümü yeşil) + `tsc --noEmit` + `npm run build` hatasız.
 
 ## FAZ 14 — Feature Flags + Central Configuration
 
