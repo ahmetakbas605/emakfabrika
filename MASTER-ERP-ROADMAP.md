@@ -557,7 +557,7 @@ legal/environment/treasury) birlikte toplam 225/225. `tsc --noEmit` +
 `npm run build` temiz. Bu oturumda da canlı tarayıcı aracı erişilebilir
 DEĞİLDİ (Faz 4-10'daki AYNI durum).
 
-## FAZ 12 — BI + Holding/CEO Dashboard
+## FAZ 12 — BI + Holding/CEO Dashboard ✅
 
 **Bağımlılık:** Faz 0-11'in TÜMÜ (veri kaynakları olgunlaşmadan anlamlı BI
 olmaz — master prompt'un kendi §148 ilkesi: "her modül veri ürettiğinde BI
@@ -565,6 +565,57 @@ katmanına uygun event/metric üretir"). CEO/Fabrika Müdürü/CFO/IT Müdürü
 dashboard'ları, Alert Center, Expiration Engine (garanti/lisans/sözleşme/
 sertifika — kısmen İK Faz 1'de `listExpiringQualifications` olarak zaten var,
 genelleştirilecek).
+
+**Yapıldı (2026-09-02):** Hiçbir yeni tablo/migration YOK — bu fazın TAMAMI
+bu oturumun OEE'den beri tekrar tekrar uyguladığı "saklanan alan değil,
+talep üzerine hesaplanan rapor" ilkesinin şirket-geneli bir uzantısı.
+
+- **Expiration Engine** (`lib/bi/expiration.ts:getExpirationAlerts`) —
+  madde 566'nın istediği genelleştirme TAM OLARAK yapıldı: Fleet
+  (`listExpiringVehicleDocuments`), Legal (`listExpiringContracts`),
+  Environment (`listExpiringEnvPermits`), HR (`listExpiringQualifications`)
+  DOĞRUDAN yeniden kullanıldı (§150, sıfır yeni sorgu). IT'nin 3 fonksiyonu
+  (`listExpiringLicenses/Warranties/Contracts`) SABİT bir
+  `EXPIRING_SOON_DAYS=30` sabitine göre filtrelenmiş döndüğü için (parametre
+  almıyor), `withinDays`'in TÜM kaynaklarda TUTARLI çalışması adına IT'nin
+  FİLTRESİZ tam listeleri (`listLicenses/listWarranties/listContracts`)
+  kullanılıp filtre BURADA (tek yerde) uygulandı — testte doğrulandı: IT
+  lisansı/sözleşmesi 25/28 gün sonra sona eriyor, IT'nin kendi sabit 30-gün
+  sabitiyle YANLIŞLIKLA örtüşmüyor, BI'ın kendi withinDays parametresiyle
+  doğru yakalanıyor.
+- **Alert Center** (`lib/bi/alerts.ts:getAlertCenterItems`) — açık İSG
+  olayı/NCR/müşteri şikayeti/dava + skor≥15 risk kaydı + (Expiration
+  Engine'i 7-gün penceresiyle çağırarak) yakın-sona-erecek kayıtları TEK
+  listede toplar, severity (HIGH/MEDIUM) her modülün KENDİ severity/
+  priority/skor alanından türetilir — YENİ bir "alert" tablosu veya kural
+  motoru AÇILMADI (bilinçli kapsam kararı, dosya içi yorum: TODO
+  CONFIGURABLE_ALERT_THRESHOLDS).
+- **Rol-bazlı özetler** (`lib/bi/dashboard.ts`) — `getExecutiveSummary`
+  (CEO), `getFactoryManagerSummary` (Fabrika Müdürü), `getCfoSummary` (CFO):
+  üçü de it/dashboard.ts'in AYNI ucuz-toplama deseniyle (COUNT/GROUP BY) +
+  ZATEN var olan `getFinancialStatements`/`getCashFlowForecast`/
+  `getFxExposure` fonksiyonlarının doğrudan yeniden kullanımıyla inşa
+  edildi — CFO'nun gelir/gider rakamı BİLİNÇLİ OLARAK sipariş/fatura
+  satırlarından TOPLANMADI, muhasebenin defter-i kebirinden (tek doğru
+  kaynak) geldi. BT Müdürü dashboard'u AYRICA inşa EDİLMEDİ — Faz 10'dan
+  beri zaten var (`lib/it/dashboard.ts`,
+  `/dashboard/departments/[id]/it/dashboard`), BI sayfası ona yalnızca
+  LİNK verir (§150).
+- **UI**: `/dashboard/bi` (yalnızca `requireFactoryAdmin` — şirket geneli
+  veri = yalnızca fabrika yöneticisi, procurement/dashboard.ts İLE AYNI
+  ilke), CEO/Fabrika Müdürü/CFO panelleri + Alert Center tablosu +
+  Expiration Engine tablosu (URL'den `withinDays` parametreli, treasury
+  sayfasının tarih-aralığı form deseniyle AYNI).
+- **Kalıcı test** (`tests/bi.test.ts`, `npm run test:bi`, 23/23) —
+  Expiration Engine'in 5 modülü DOĞRU birleştirdiği + withinDays sınırının
+  IT dahil TÜM kaynaklarda tutarlı çalıştığı + Alert Center'ın severity
+  eşiklerinin (MAJOR/SEVERE→HIGH, MINOR NCR listeden ÇIKARILMAZ ama
+  MEDIUM'a düşer) doğru olduğu TAM test edildi; üç özet fonksiyonu ise
+  (it/dashboard.ts'in getItDashboardSummary'sinin KENDİSİ hiç ayrı test
+  edilmediği emsaliyle TUTARLI olarak) atmadan çalıştığı + Alert
+  Center/Expiration Engine ile TUTARLI sayı döndürdüğü doğrulanarak hafif
+  kapsamda test edildi. Tam regresyon (13 paket, tümü yeşil) + `tsc
+  --noEmit` + `npm run build` (tümü hatasız).
 
 ## FAZ 13 — Integration Hub + Event Bus
 

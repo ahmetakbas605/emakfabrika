@@ -21,7 +21,8 @@
     "test:projects": "tsx tests/projects.test.ts",
     "test:legal": "tsx tests/legal.test.ts",
     "test:environment": "tsx tests/environment-safety-rnd.test.ts",
-    "test:treasury": "tsx tests/treasury.test.ts"
+    "test:treasury": "tsx tests/treasury.test.ts",
+    "test:bi": "tsx tests/bi.test.ts"
   },
   "dependencies": {
     "@xyflow/react": "^12.11.5",
