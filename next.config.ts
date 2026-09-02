@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   // emakerp/next.config.ts'teki AYNI gerekçe — Next.js 16 dev sunucusu
   // yalnızca kendi algıladığı "Local" origin'den gelen isteklere izin
   // verir, LAN IP'sinden test için ek origin eklenmesi gerekir.
-  allowedDevOrigins: ["127.0.0.1", "192.168.1.54"],
+  allowedDevOrigins: ["localhost", "127.0.0.1", "192.168.1.54"],
 
   // Faz 20 (Production Hardening) — /api/v1/* zaten kendi CORS
   // başlıklarını proxy.ts'te ayarlıyor (mobil istemciler için), bu genel
