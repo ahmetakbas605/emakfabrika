@@ -328,3 +328,128 @@
 @media (prefers-reduced-motion: reduce) {
   [data-motion-page] > * { animation: none !important; }
 }
+
+/* ==================================================================
+   Görsel Yenileme Faz 2 — HAM ELEMAN KATMANI.
+
+   Gerekçe: bu projedeki 123 modül sayfası shadcn/ui gibi bir bileşen
+   kitaplığı KULLANMIYOR; düz <table>/<input>/<h2> yazıyor ve rengi
+   inline style ile veriyordu. Faz 2'nin codemod'u inline RENKLERİ
+   Dimension token'larına çevirdi, ama eleman biçimini (tipografi,
+   tablo düzeni, form alanı görünümü) inline style HİÇ tanımlamıyordu —
+   yani tarayıcı varsayılanı kalıyordu: koyu zeminde mavi bağlantılar
+   ve bembeyaz input'lar.
+
+   Bu blok o boşluğu kapatır. `.dim-content` ile SINIRLI: yalnızca
+   kabuğun içeriği. Giriş ekranı ve diğer ağaçlar etkilenmez.
+
+   Inline style'ı EZMEZ: sayfaların kendi yazdığı fontSize/renk
+   kazanmaya devam eder (inline specificity daha yüksek) — burada
+   yalnızca hiç tanımlanmamış olanı dolduruyoruz. Bu bilinçli: 123
+   sayfanın elle ayarlanmış ölçüleri bozulmasın.
+   ================================================================== */
+
+.dim-content h1 { font-family: var(--font-heading); font-weight: 500; letter-spacing: -0.02em; color: var(--dim-bone); }
+.dim-content h2 { font-family: var(--font-heading); font-weight: 500; letter-spacing: -0.01em; color: var(--dim-bone); }
+.dim-content h3 { font-family: var(--font-heading); font-weight: 500; color: var(--dim-bone); }
+.dim-content p  { color: var(--dim-on-surface-variant); }
+
+/* Bağlantılar — tarayıcı varsayılanı koyu zeminde okunmaz mavi. */
+.dim-content a {
+  color: var(--dim-bone);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.dim-content a:hover { color: var(--dim-primary); }
+
+/* Tablolar — sayfaların en yoğun elemanı (174 tablo, 973 hücre).
+   Kenarlık yerine BOŞLUK ve çok soluk ayırıcı: Stitch'in "gölge/ağır
+   çizgi yok, hairline yeter" kuralı. */
+.dim-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.dim-content thead th {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim-slate);
+  text-align: left;
+  padding: 10px 12px;
+  white-space: nowrap;
+}
+.dim-content tbody td {
+  padding: 10px 12px;
+  color: var(--dim-on-surface-variant);
+  border-bottom: 1px solid var(--dim-border-faint);
+  vertical-align: top;
+}
+.dim-content tbody tr:last-child td { border-bottom: 0; }
+.dim-content tbody tr { transition: background 0.15s ease; }
+.dim-content tbody tr:hover { background: var(--dim-frosted-soft); }
+/* Satırdaki ilk hücre genelde kimlik/ad — bir tık öne çıksın. */
+.dim-content tbody td:first-child { color: var(--dim-bone); }
+
+/* Geniş tablolar sayfayı yatay kaydırmasın (Stitch: içerik kendi
+   kabında kayar). */
+.dim-content table { display: table; }
+.dim-content .table-scroll { overflow-x: auto; }
+
+/* Form alanları — varsayılan beyaz input koyu zeminde göz alıyor. */
+.dim-content input:not([type='checkbox']):not([type='radio']),
+.dim-content select,
+.dim-content textarea {
+  background: var(--dim-frosted-soft);
+  border: 1px solid var(--dim-border-soft);
+  border-radius: var(--dim-radius-ui);
+  color: var(--dim-bone);
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
+  color-scheme: dark;
+}
+.dim-content input:focus,
+.dim-content select:focus,
+.dim-content textarea:focus { border-color: var(--dim-border); }
+.dim-content input::placeholder,
+.dim-content textarea::placeholder { color: var(--dim-slate); }
+.dim-content label { color: var(--dim-on-surface-variant); font-size: 13px; }
+
+/* Butonlar — hap silueti sistemin imzası. Birincil eylem TEK dolu
+   yüzey (beyaz); type=submit onu alır, diğerleri hayalet kalır. */
+.dim-content button {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 8px 18px;
+  border-radius: var(--dim-radius-pill);
+  border: 1px solid var(--dim-border);
+  background: var(--dim-frosted-soft);
+  color: var(--dim-bone);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.dim-content button:hover:not(:disabled) { background: var(--dim-frosted); }
+.dim-content button:disabled { opacity: 0.5; cursor: not-allowed; }
+.dim-content button[type='submit'] {
+  background: var(--dim-primary);
+  border-color: var(--dim-primary);
+  color: var(--dim-on-primary);
+}
+.dim-content button[type='submit']:hover:not(:disabled) { opacity: 0.9; background: var(--dim-primary); }
+
+.dim-content hr { border: 0; border-top: 1px solid var(--dim-border-faint); margin: 24px 0; }
+.dim-content code {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 12px;
+  background: var(--dim-frosted-soft);
+  border: 1px solid var(--dim-border-faint);
+  border-radius: var(--dim-radius-icon);
+  padding: 1px 5px;
+}

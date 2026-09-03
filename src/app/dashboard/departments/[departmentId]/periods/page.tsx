@@ -11,11 +11,11 @@ export default async function PeriodsPage({ params }: { params: Promise<{ depart
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Muhasebe Dönemleri</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Kapalı bir döneme yeni fiş işlenemez — yalnızca ters kayıt/düzeltme fişi (PDF madde 17, 77).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Kapalı bir döneme yeni fiş işlenemez — yalnızca ters kayıt/düzeltme fişi (PDF madde 17, 77).</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Başlangıç</th>
             <th style={{ padding: '6px 8px' }}>Bitiş</th>
             <th style={{ padding: '6px 8px' }}>Durum</th>
@@ -24,10 +24,10 @@ export default async function PeriodsPage({ params }: { params: Promise<{ depart
         </thead>
         <tbody>
           {periods.map((p) => (
-            <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={p.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{p.periodStart}</td>
               <td style={{ padding: '6px 8px' }}>{p.periodEnd}</td>
-              <td style={{ padding: '6px 8px', fontWeight: 600, color: p.status === 'OPEN' ? '#080' : '#b00' }}>{p.status === 'OPEN' ? 'Açık' : 'Kapalı'}</td>
+              <td style={{ padding: '6px 8px', fontWeight: 600, color: p.status === 'OPEN' ? '#080' : 'var(--dim-danger)' }}>{p.status === 'OPEN' ? 'Açık' : 'Kapalı'}</td>
               <td style={{ padding: '6px 8px' }}>
                 {(p.status === 'OPEN' && access.permissions.close_period) || (p.status === 'CLOSED' && access.permissions.reopen_period) ? (
                   <PeriodStatusButton departmentId={departmentId} periodId={p.id} status={p.status} />

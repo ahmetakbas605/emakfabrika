@@ -13,11 +13,11 @@ export default async function IncidentsPage({ params }: { params: Promise<{ depa
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Incidentlar</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Birden fazla ticket bir incident'a bağlanabilir (SERVICE-DESK.md §5).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Birden fazla ticket bir incident'a bağlanabilir (SERVICE-DESK.md §5).</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Başlık</th>
             <th style={{ padding: '6px 8px' }}>Önem</th>
             <th style={{ padding: '6px 8px' }}>Durum</th>
@@ -27,15 +27,15 @@ export default async function IncidentsPage({ params }: { params: Promise<{ depa
         </thead>
         <tbody>
           {incidents.map((i) => (
-            <tr key={i.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={i.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{i.title}</td>
               <td style={{ padding: '6px 8px' }}>{i.severity}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{i.status}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{i.openedByName}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{i.openedByName}</td>
               <td style={{ padding: '6px 8px' }}>{access.permissions.update ? <IncidentStatusForm departmentId={departmentId} incidentId={i.id} currentStatus={i.status} /> : null}</td>
             </tr>
           ))}
-          {incidents.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: '#999' }}>Henüz incident yok.</td></tr> : null}
+          {incidents.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz incident yok.</td></tr> : null}
         </tbody>
       </table>
 

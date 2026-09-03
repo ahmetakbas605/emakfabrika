@@ -20,19 +20,19 @@ export default async function LegalPage() {
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Hukuk (Sözleşme/Dava/Teminat)</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Risk kaydı için <a href="/dashboard/legal/risks">ayrı sayfa</a>. Sözleşme/dava belgeleri opsiyonel olarak yüklenebilir.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Risk kaydı için <a href="/dashboard/legal/risks">ayrı sayfa</a>. Sözleşme/dava belgeleri opsiyonel olarak yüklenebilir.</p>
 
       {expiringContracts.length > 0 ? (
         <>
-          <h2 style={{ fontSize: 15, marginBottom: 8, color: '#b00' }}>30 Gün İçinde Sona Erecek Sözleşmeler ({expiringContracts.length})</h2>
+          <h2 style={{ fontSize: 15, marginBottom: 8, color: 'var(--dim-danger)' }}>30 Gün İçinde Sona Erecek Sözleşmeler ({expiringContracts.length})</h2>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
-            <thead><tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}><th style={{ padding: '6px 8px' }}>No</th><th style={{ padding: '6px 8px' }}>Başlık</th><th style={{ padding: '6px 8px' }}>Bitiş</th></tr></thead>
+            <thead><tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}><th style={{ padding: '6px 8px' }}>No</th><th style={{ padding: '6px 8px' }}>Başlık</th><th style={{ padding: '6px 8px' }}>Bitiş</th></tr></thead>
             <tbody>
               {expiringContracts.map((c) => (
-                <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+                <tr key={c.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
                   <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{c.contractNo}</td>
                   <td style={{ padding: '6px 8px' }}>{c.title}</td>
-                  <td style={{ padding: '6px 8px', color: '#b00', fontWeight: 600 }}>{c.endDate}</td>
+                  <td style={{ padding: '6px 8px', color: 'var(--dim-danger)', fontWeight: 600 }}>{c.endDate}</td>
                 </tr>
               ))}
             </tbody>
@@ -48,24 +48,24 @@ export default async function LegalPage() {
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Sözleşmeler</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>No</th><th style={{ padding: '6px 8px' }}>Başlık</th><th style={{ padding: '6px 8px' }}>Tip</th>
             <th style={{ padding: '6px 8px' }}>Karşı Taraf</th><th style={{ padding: '6px 8px' }}>Bitiş</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}></th>
           </tr>
         </thead>
         <tbody>
           {contracts.map((c) => (
-            <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={c.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{c.contractNo}</td>
               <td style={{ padding: '6px 8px' }}>{c.title}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{CONTRACT_TYPE_LABELS[c.contractType]}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.counterpartyName ?? c.counterpartyFreeName ?? '—'}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.endDate ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{CONTRACT_TYPE_LABELS[c.contractType]}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.counterpartyName ?? c.counterpartyFreeName ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.endDate ?? '—'}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{CONTRACT_STATUS_LABELS[c.status]}</td>
               <td style={{ padding: '6px 8px' }}><UpdateContractStatusForm contractId={c.id} /></td>
             </tr>
           ))}
-          {contracts.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: '#999' }}>Henüz sözleşme yok.</td></tr> : null}
+          {contracts.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz sözleşme yok.</td></tr> : null}
         </tbody>
       </table>
 
@@ -80,24 +80,24 @@ export default async function LegalPage() {
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Davalar</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>No</th><th style={{ padding: '6px 8px' }}>Başlık</th><th style={{ padding: '6px 8px' }}>Rol</th>
             <th style={{ padding: '6px 8px' }}>Karşı Taraf</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Dava Değeri</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}></th>
           </tr>
         </thead>
         <tbody>
           {lawsuits.map((l) => (
-            <tr key={l.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={l.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{l.caseNo}</td>
               <td style={{ padding: '6px 8px' }}>{l.title}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{l.companyRole === 'PLAINTIFF' ? 'Davacı' : 'Davalı'}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{l.counterpartyName ?? l.counterpartyFreeName ?? '—'}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{l.claimAmount ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{l.companyRole === 'PLAINTIFF' ? 'Davacı' : 'Davalı'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{l.counterpartyName ?? l.counterpartyFreeName ?? '—'}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{l.claimAmount ?? '—'}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{LAWSUIT_STATUS_LABELS[l.status]}</td>
               <td style={{ padding: '6px 8px' }}><UpdateLawsuitStatusForm lawsuitId={l.id} /></td>
             </tr>
           ))}
-          {lawsuits.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: '#999' }}>Henüz dava kaydı yok.</td></tr> : null}
+          {lawsuits.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz dava kaydı yok.</td></tr> : null}
         </tbody>
       </table>
 
@@ -109,24 +109,24 @@ export default async function LegalPage() {
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Teminatlar</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Tip</th><th style={{ padding: '6px 8px' }}>Sözleşme</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Tutar</th>
             <th style={{ padding: '6px 8px' }}>Veren</th><th style={{ padding: '6px 8px' }}>Son Geçerlilik</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}></th>
           </tr>
         </thead>
         <tbody>
           {collaterals.map((c) => (
-            <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={c.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{COLLATERAL_TYPE_LABELS[c.collateralType]}</td>
-              <td style={{ padding: '6px 8px', color: '#666', fontFamily: 'monospace' }}>{c.contractNo ?? '—'}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{c.amount}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.provider || '—'}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.expiryDate ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)', fontFamily: 'monospace' }}>{c.contractNo ?? '—'}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{c.amount}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.provider || '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.expiryDate ?? '—'}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{c.status === 'ACTIVE' ? 'Aktif' : c.status === 'RELEASED' ? 'Serbest' : 'Süresi Doldu'}</td>
               <td style={{ padding: '6px 8px' }}>{c.status === 'ACTIVE' ? <ReleaseCollateralButton collateralId={c.id} /> : null}</td>
             </tr>
           ))}
-          {collaterals.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: '#999' }}>Henüz teminat yok.</td></tr> : null}
+          {collaterals.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz teminat yok.</td></tr> : null}
         </tbody>
       </table>
     </div>

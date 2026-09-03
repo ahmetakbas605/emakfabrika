@@ -11,13 +11,13 @@ export default async function CredentialsPage({ params }: { params: Promise<{ de
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Kimlik Bilgisi Kasası (Secret Vault)</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Sırlar AES-256-GCM ile şifrelenir — bu sayfa hiçbir zaman gerçek sır değerini göstermez (IT-SECURITY.md §1).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Sırlar AES-256-GCM ile şifrelenir — bu sayfa hiçbir zaman gerçek sır değerini göstermez (IT-SECURITY.md §1).</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 8 }}>
-        <thead><tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}><th style={{ padding: '6px 8px' }}>Etiket</th><th style={{ padding: '6px 8px' }}>Tür</th><th style={{ padding: '6px 8px' }}>Varlık</th><th style={{ padding: '6px 8px' }}>Eklendi</th></tr></thead>
+        <thead><tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}><th style={{ padding: '6px 8px' }}>Etiket</th><th style={{ padding: '6px 8px' }}>Tür</th><th style={{ padding: '6px 8px' }}>Varlık</th><th style={{ padding: '6px 8px' }}>Eklendi</th></tr></thead>
         <tbody>
-          {credentials.map((c) => <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}><td style={{ padding: '6px 8px' }}>{c.label}</td><td style={{ padding: '6px 8px', color: '#666' }}>{c.credentialType}</td><td style={{ padding: '6px 8px', color: '#666' }}>{c.assetId ?? 'Genel'}</td><td style={{ padding: '6px 8px', color: '#666' }}>{new Date(c.createdAt).toLocaleDateString('tr-TR')}</td></tr>)}
-          {credentials.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: '#999' }}>Henüz kimlik bilgisi yok.</td></tr> : null}
+          {credentials.map((c) => <tr key={c.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}><td style={{ padding: '6px 8px' }}>{c.label}</td><td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.credentialType}</td><td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.assetId ?? 'Genel'}</td><td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{new Date(c.createdAt).toLocaleDateString('tr-TR')}</td></tr>)}
+          {credentials.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz kimlik bilgisi yok.</td></tr> : null}
         </tbody>
       </table>
       {access.permissions.manage_credentials ? <CredentialForm departmentId={departmentId} assets={assets.map((a) => ({ id: a.id, assetTag: a.assetTag, name: a.name }))} /> : null}

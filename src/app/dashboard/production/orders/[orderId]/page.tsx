@@ -39,7 +39,7 @@ export default async function ProductionOrderDetailPage({ params }: { params: Pr
         <h1 style={{ fontSize: 20, margin: 0 }}>{order.orderNo}</h1>
         <span style={{ fontWeight: 600 }}>{ORDER_STATUS_LABELS[order.status] ?? order.status}</span>
       </div>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>{product.name} ({product.sku}) · Miktar: {order.quantity} · BOM: {bom?.code} v{bom?.version}{routing ? ` · Routing: ${routing.code} v${routing.version}` : ' · Routing yok'}</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>{product.name} ({product.sku}) · Miktar: {order.quantity} · BOM: {bom?.code} v{bom?.version}{routing ? ` · Routing: ${routing.code} v${routing.version}` : ' · Routing yok'}</p>
 
       {order.status === 'DRAFT' || order.status === 'REVISION_REQUIRED' ? (
         <div style={{ marginBottom: 20 }}>
@@ -53,7 +53,7 @@ export default async function ProductionOrderDetailPage({ params }: { params: Pr
           <h2 style={{ fontSize: 15, marginBottom: 8 }}>İş Emri Operasyonları</h2>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
             <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+              <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
                 <th style={{ padding: '6px 8px' }}>#</th><th style={{ padding: '6px 8px' }}>Operasyon</th><th style={{ padding: '6px 8px' }}>Durum</th>
                 <th style={{ padding: '6px 8px', textAlign: 'right' }}>İyi</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Fire</th>
                 <th style={{ padding: '6px 8px', textAlign: 'right' }}>OEE</th><th style={{ padding: '6px 8px' }}>İşlem</th>
@@ -63,13 +63,13 @@ export default async function ProductionOrderDetailPage({ params }: { params: Pr
               {operations.map((op) => {
                 const oee = oeeByOperation.get(op.id);
                 return (
-                  <tr key={op.id} style={{ borderBottom: '1px solid #eee' }}>
+                  <tr key={op.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
                     <td style={{ padding: '6px 8px' }}>{op.operationOrder}</td>
                     <td style={{ padding: '6px 8px' }}>{op.name}</td>
                     <td style={{ padding: '6px 8px', fontWeight: 600 }}>{OP_STATUS_LABELS[op.status] ?? op.status}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{op.goodQuantity}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{op.scrapQuantity}</td>
-                    <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }} title={oee ? `Kullanılabilirlik: %${(oee.availability * 100).toFixed(0)} · Kalite: %${(oee.quality * 100).toFixed(0)}${oee.performance !== null ? ` · Performans: %${(oee.performance * 100).toFixed(0)}` : ' · Performans: makine ideal çevrim süresi tanımlı değil'}` : undefined}>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{op.goodQuantity}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{op.scrapQuantity}</td>
+                    <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }} title={oee ? `Kullanılabilirlik: %${(oee.availability * 100).toFixed(0)} · Kalite: %${(oee.quality * 100).toFixed(0)}${oee.performance !== null ? ` · Performans: %${(oee.performance * 100).toFixed(0)}` : ' · Performans: makine ideal çevrim süresi tanımlı değil'}` : undefined}>
                       {oee ? (oee.oee !== null ? `%${(oee.oee * 100).toFixed(0)}` : '—') : (op.machineId ? '' : '—')}
                     </td>
                     <td style={{ padding: '6px 8px' }}>
@@ -90,7 +90,7 @@ export default async function ProductionOrderDetailPage({ params }: { params: Pr
           <IssueMaterialsForm orderId={order.id} />
         </div>
       ) : null}
-      {order.materialsIssuedAt ? <p style={{ fontSize: 12, color: '#666', marginBottom: 20 }}>Malzeme çıkışı yapıldı: {new Date(order.materialsIssuedAt).toLocaleString('tr-TR')}</p> : null}
+      {order.materialsIssuedAt ? <p style={{ fontSize: 12, color: 'var(--dim-on-surface-variant)', marginBottom: 20 }}>Malzeme çıkışı yapıldı: {new Date(order.materialsIssuedAt).toLocaleString('tr-TR')}</p> : null}
 
       {canComplete ? (
         <div style={{ marginBottom: 20 }}>
@@ -100,7 +100,7 @@ export default async function ProductionOrderDetailPage({ params }: { params: Pr
       ) : null}
 
       {order.status === 'COMPLETED' ? (
-        <p style={{ fontSize: 13, color: '#080' }}>Tamamlandı — İyi: {order.goodQuantity}, Fire: {order.scrapQuantity} ({order.completedAt ? new Date(order.completedAt).toLocaleString('tr-TR') : ''})</p>
+        <p style={{ fontSize: 13, color: 'var(--dim-success)' }}>Tamamlandı — İyi: {order.goodQuantity}, Fire: {order.scrapQuantity} ({order.completedAt ? new Date(order.completedAt).toLocaleString('tr-TR') : ''})</p>
       ) : null}
     </div>
   );

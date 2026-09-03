@@ -27,7 +27,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{po.poNo}</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>
         {PO_STATUS_LABEL[po.status] ?? po.status} · {supplierName} · Toplam: {Number(total).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {po.currencyCode}
         {po.deliveryLocation ? ` · Teslimat: ${po.deliveryLocation}` : ''}
         {po.paymentTerms ? ` · Ödeme: ${po.paymentTerms}` : ''}
@@ -42,7 +42,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Kalemler</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Açıklama</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Miktar</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Birim Fiyat</th>
@@ -51,7 +51,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
         </thead>
         <tbody>
           {lines.map((l) => (
-            <tr key={l.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={l.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{l.description}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{Number(l.quantity).toLocaleString('tr-TR')} {l.unitCode}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{Number(l.unitPrice).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
@@ -64,14 +64,14 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Sözleşme / Ek Dosyalar</h2>
       <div style={{ marginBottom: 8, fontSize: 12 }}>
         {attachments.map((a) => <div key={a.id}>{a.fileName}</div>)}
-        {attachments.length === 0 ? <span style={{ color: '#999' }}>Henüz dosya yok.</span> : null}
+        {attachments.length === 0 ? <span style={{ color: 'var(--dim-slate)' }}>Henüz dosya yok.</span> : null}
       </div>
       <PoAttachmentForm poId={poId} />
 
       <h2 style={{ fontSize: 16, margin: '24px 0 8px' }}>Mal Kabul Durumu</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 16 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Kalem</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Sipariş</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Kabul Edilen</th>
@@ -80,11 +80,11 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
         </thead>
         <tbody>
           {receivingStatus.map((l) => (
-            <tr key={l.poLineId} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={l.poLineId} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{l.description}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{Number(l.orderedQty).toLocaleString('tr-TR')} {l.unitCode}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#080' }}>{Number(l.receivedQty).toLocaleString('tr-TR')}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: Number(l.remainingQty) > 0 ? '#b70' : '#999' }}>{Number(l.remainingQty).toLocaleString('tr-TR')}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-success)' }}>{Number(l.receivedQty).toLocaleString('tr-TR')}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: Number(l.remainingQty) > 0 ? '#b70' : 'var(--dim-slate)' }}>{Number(l.remainingQty).toLocaleString('tr-TR')}</td>
             </tr>
           ))}
         </tbody>
@@ -95,7 +95,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
           {receipts.map((r) => (
             <div key={r.id} style={{ marginBottom: 6 }}>
               <b>{r.receiptNo}</b> — {new Date(r.receiptDate).toLocaleDateString('tr-TR')}
-              {r.lines.map((l) => <div key={l.id} style={{ color: '#666', marginLeft: 12 }}>{l.description}: {Number(l.receivedQty).toLocaleString('tr-TR')} {l.unitCode}</div>)}
+              {r.lines.map((l) => <div key={l.id} style={{ color: 'var(--dim-on-surface-variant)', marginLeft: 12 }}>{l.description}: {Number(l.receivedQty).toLocaleString('tr-TR')} {l.unitCode}</div>)}
             </div>
           ))}
         </div>
@@ -115,11 +115,11 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Tedarikçi Faturaları</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 16 }}>
         {invoices.map((inv) => (
-          <Link key={inv.id} href={`/dashboard/procurement/vendor-invoices/${inv.id}`} style={{ fontSize: 13, color: '#111' }}>
+          <Link key={inv.id} href={`/dashboard/procurement/vendor-invoices/${inv.id}`} style={{ fontSize: 13, color: 'var(--dim-bone)' }}>
             {inv.supplierInvoiceNo} — {new Date(inv.invoiceDate).toLocaleDateString('tr-TR')} ({INVOICE_STATUS_LABEL[inv.status] ?? inv.status})
           </Link>
         ))}
-        {invoices.length === 0 ? <span style={{ color: '#999', fontSize: 13 }}>Henüz fatura yok.</span> : null}
+        {invoices.length === 0 ? <span style={{ color: 'var(--dim-slate)', fontSize: 13 }}>Henüz fatura yok.</span> : null}
       </div>
 
       {canReceive ? (

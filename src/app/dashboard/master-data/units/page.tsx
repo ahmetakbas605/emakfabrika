@@ -10,11 +10,11 @@ export default async function UnitsPage() {
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Birimler</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Taban birim + dönüşüm çarpanı (madde 21) — ör. 1 KOLİ = 24 ADET.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Taban birim + dönüşüm çarpanı (madde 21) — ör. 1 KOLİ = 24 ADET.</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Kod</th>
             <th style={{ padding: '6px 8px' }}>Ad</th>
             <th style={{ padding: '6px 8px' }}>Dönüşüm</th>
@@ -22,13 +22,13 @@ export default async function UnitsPage() {
         </thead>
         <tbody>
           {units.map((u) => (
-            <tr key={u.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={u.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{u.code}</td>
               <td style={{ padding: '6px 8px' }}>{u.name}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{u.baseUnitId ? `1 ${u.code} = ${u.conversionFactor} ${unitById.get(u.baseUnitId)?.code ?? '?'}` : 'Taban birim'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{u.baseUnitId ? `1 ${u.code} = ${u.conversionFactor} ${unitById.get(u.baseUnitId)?.code ?? '?'}` : 'Taban birim'}</td>
             </tr>
           ))}
-          {units.length === 0 ? <tr><td colSpan={3} style={{ padding: '8px', color: '#999' }}>Henüz birim yok.</td></tr> : null}
+          {units.length === 0 ? <tr><td colSpan={3} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz birim yok.</td></tr> : null}
         </tbody>
       </table>
 

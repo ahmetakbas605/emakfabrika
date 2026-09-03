@@ -11,11 +11,11 @@ export default async function ChangesPage({ params }: { params: Promise<{ depart
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Değişiklik Yönetimi (Change Management)</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Risk veya etki HIGH/CRITICAL ise planlanmadan önce en az bir onay kaydı gerekir (SERVICE-DESK.md §6).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Risk veya etki HIGH/CRITICAL ise planlanmadan önce en az bir onay kaydı gerekir (SERVICE-DESK.md §6).</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Başlık</th>
             <th style={{ padding: '6px 8px' }}>Risk</th>
             <th style={{ padding: '6px 8px' }}>Etki</th>
@@ -29,13 +29,13 @@ export default async function ChangesPage({ params }: { params: Promise<{ depart
           {changes.map((c) => {
             const needsApproval = requiresApproval(c.riskLevel, c.impactLevel);
             return (
-              <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={c.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
                 <td style={{ padding: '6px 8px' }}>{c.title}</td>
                 <td style={{ padding: '6px 8px' }}>{c.riskLevel}</td>
                 <td style={{ padding: '6px 8px' }}>{c.impactLevel}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{needsApproval ? 'Evet' : 'Hayır'}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{needsApproval ? 'Evet' : 'Hayır'}</td>
                 <td style={{ padding: '6px 8px', fontWeight: 600 }}>{c.status}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{c.requestedByName}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.requestedByName}</td>
                 <td style={{ padding: '6px 8px' }}>
                   {c.status === 'DRAFT' ? (
                     <ChangeApprovalForm departmentId={departmentId} changeId={c.id} canApprove={!!access.permissions.approve && needsApproval} canSchedule={!!access.permissions.update} />
@@ -44,7 +44,7 @@ export default async function ChangesPage({ params }: { params: Promise<{ depart
               </tr>
             );
           })}
-          {changes.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: '#999' }}>Henüz değişiklik talebi yok.</td></tr> : null}
+          {changes.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz değişiklik talebi yok.</td></tr> : null}
         </tbody>
       </table>
 

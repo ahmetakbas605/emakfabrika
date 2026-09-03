@@ -18,7 +18,7 @@ export default async function NcrDetailPage({ params }: { params: Promise<{ ncrI
         <h1 style={{ fontSize: 20, margin: 0 }}>{ncr.ncrNo} — {ncr.title}</h1>
         <span style={{ fontWeight: 600 }}>{NCR_STATUS_LABELS[ncr.status]}</span>
       </div>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Önem: {SEVERITY_LABELS[ncr.severity]} · Oluşturulma: {new Date(ncr.createdAt).toLocaleString('tr-TR')}{ncr.closedAt ? ` · Kapanış: ${new Date(ncr.closedAt).toLocaleString('tr-TR')}` : ''}</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Önem: {SEVERITY_LABELS[ncr.severity]} · Oluşturulma: {new Date(ncr.createdAt).toLocaleString('tr-TR')}{ncr.closedAt ? ` · Kapanış: ${new Date(ncr.closedAt).toLocaleString('tr-TR')}` : ''}</p>
 
       <p style={{ marginBottom: 20, fontSize: 14 }}>{ncr.description}</p>
 
@@ -37,7 +37,7 @@ export default async function NcrDetailPage({ params }: { params: Promise<{ ncrI
       {ncr.rootCause ? (
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ fontSize: 15, marginBottom: 8 }}>Kök Neden</h2>
-          <p style={{ fontSize: 13, color: '#666' }}>{ncr.rootCause}</p>
+          <p style={{ fontSize: 13, color: 'var(--dim-on-surface-variant)' }}>{ncr.rootCause}</p>
         </div>
       ) : null}
 
@@ -52,9 +52,9 @@ export default async function NcrDetailPage({ params }: { params: Promise<{ ncrI
       {ncr.correctiveAction ? (
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ fontSize: 15, marginBottom: 8 }}>Düzeltici Faaliyet</h2>
-          <p style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>{ncr.correctiveAction}</p>
+          <p style={{ fontSize: 13, color: 'var(--dim-on-surface-variant)', marginBottom: 8 }}>{ncr.correctiveAction}</p>
           <h2 style={{ fontSize: 15, marginBottom: 8 }}>Önleyici Faaliyet</h2>
-          <p style={{ fontSize: 13, color: '#666' }}>{ncr.preventiveAction}</p>
+          <p style={{ fontSize: 13, color: 'var(--dim-on-surface-variant)' }}>{ncr.preventiveAction}</p>
         </div>
       ) : null}
 
@@ -65,7 +65,7 @@ export default async function NcrDetailPage({ params }: { params: Promise<{ ncrI
         </div>
       ) : null}
 
-      {isTerminal ? <p style={{ fontSize: 13, color: ncr.status === 'CLOSED' ? '#080' : '#b00' }}>Bu NCR sonuçlanmıştır, yeni bir işlem yapılamaz.</p> : null}
+      {isTerminal ? <p style={{ fontSize: 13, color: ncr.status === 'CLOSED' ? '#080' : 'var(--dim-danger)' }}>Bu NCR sonuçlanmıştır, yeni bir işlem yapılamaz.</p> : null}
     </div>
   );
 }

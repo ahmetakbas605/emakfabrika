@@ -23,11 +23,11 @@ export default async function ChecksPage({ params }: { params: Promise<{ departm
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Çek / Senet</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Her durum geçişi otomatik muhasebe fişi üretir (PDF madde 28).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Her durum geçişi otomatik muhasebe fişi üretir (PDF madde 28).</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Yön</th>
             <th style={{ padding: '6px 8px' }}>Çek No</th>
             <th style={{ padding: '6px 8px' }}>Taraf</th>
@@ -39,7 +39,7 @@ export default async function ChecksPage({ params }: { params: Promise<{ departm
         </thead>
         <tbody>
           {allChecks.map((c) => (
-            <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={c.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{c.direction === 'RECEIVED' ? 'Alınan' : 'Verilen'}</td>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{c.checkNo}</td>
               <td style={{ padding: '6px 8px' }}>{c.partyName}</td>

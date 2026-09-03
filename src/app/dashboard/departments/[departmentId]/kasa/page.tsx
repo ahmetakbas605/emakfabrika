@@ -22,14 +22,14 @@ export default async function KasaPage({ params }: { params: Promise<{ departmen
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Kasa</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Her nakit hareket otomatik muhasebe fişi üretir (PDF madde 26).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Her nakit hareket otomatik muhasebe fişi üretir (PDF madde 26).</p>
 
       {cashAccounts.length === 0 ? (
-        <p style={{ color: '#999', fontSize: 13, marginBottom: 16 }}>Henüz kasa kartı yok.</p>
+        <p style={{ color: 'var(--dim-slate)', fontSize: 13, marginBottom: 16 }}>Henüz kasa kartı yok.</p>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
               <th style={{ padding: '6px 8px' }}>Kasa</th>
               <th style={{ padding: '6px 8px' }}>Bağlı Hesap</th>
               <th style={{ padding: '6px 8px' }}>Para Birimi</th>
@@ -37,10 +37,10 @@ export default async function KasaPage({ params }: { params: Promise<{ departmen
           </thead>
           <tbody>
             {cashAccounts.map((c) => (
-              <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={c.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
                 <td style={{ padding: '6px 8px' }}>{c.name}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{c.accountCode} — {c.accountName}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{c.currency}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.accountCode} — {c.accountName}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.currency}</td>
               </tr>
             ))}
           </tbody>
@@ -60,7 +60,7 @@ export default async function KasaPage({ params }: { params: Promise<{ departmen
         <h2 style={{ fontSize: 16, marginBottom: 8 }}>Son Hareketler</h2>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
               <th style={{ padding: '6px 8px' }}>Tarih</th>
               <th style={{ padding: '6px 8px' }}>Kasa</th>
               <th style={{ padding: '6px 8px' }}>Yön</th>
@@ -71,13 +71,13 @@ export default async function KasaPage({ params }: { params: Promise<{ departmen
           </thead>
           <tbody>
             {transactions.map((t) => (
-              <tr key={t.id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={t.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
                 <td style={{ padding: '6px 8px' }}>{t.transactionDate}</td>
                 <td style={{ padding: '6px 8px' }}>{cashByAccountId.get(t.cashAccountId)?.name ?? '-'}</td>
-                <td style={{ padding: '6px 8px', color: t.transactionType === 'IN' ? '#080' : '#b00' }}>{t.transactionType === 'IN' ? 'Giriş' : 'Çıkış'}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{t.counterAccountCode}</td>
+                <td style={{ padding: '6px 8px', color: t.transactionType === 'IN' ? '#080' : 'var(--dim-danger)' }}>{t.transactionType === 'IN' ? 'Giriş' : 'Çıkış'}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{t.counterAccountCode}</td>
                 <td style={{ padding: '6px 8px', textAlign: 'right' }}>{money(t.amount, 'TRY')}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{t.description}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{t.description}</td>
               </tr>
             ))}
           </tbody>

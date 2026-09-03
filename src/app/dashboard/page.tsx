@@ -3,17 +3,10 @@ import { listUserDepartmentAccess } from '@/lib/permissions';
 import { listCompanyDepartments } from '@/lib/departments';
 import { listPendingApprovalsForUser } from '@/lib/workflow/engine';
 import { listLeaveRequests } from '@/lib/hr/leave';
-import { logout } from '@/actions/auth';
-import { DimensionShell, type NavGroup } from '@/components/shell/DimensionShell';
 import { StatCard } from '@/components/shell/StatCard';
 import { PageHeader, GlassPanel } from '@/components/shell/ui';
 import { ShieldCheck, PalmtreeIcon, ArrowUpRight, Boxes, Landmark, Users2, Settings2, Building2 } from 'lucide-react';
 import Link from 'next/link';
-
-const NAV: NavGroup[] = [
-  { label: 'Genel', items: [{ href: '/dashboard', label: 'Panel', icon: 'dashboard' }, { href: '/dashboard/approvals', label: 'Onay Kutusu', icon: 'inbox' }] },
-  { label: 'Güvenlik', items: [{ href: '/dashboard/security', label: 'Core Security', icon: 'shield' }] }
-];
 
 const QUICK_LINKS = [
   { href: '/dashboard/sales', label: 'Satış & CRM', icon: Landmark },
@@ -63,7 +56,7 @@ export default async function DashboardPage() {
   const openLeaveCount = myLeaveRequests.filter((r) => r.status === 'DRAFT' || r.status === 'SUBMITTED').length;
 
   return (
-    <DimensionShell navGroups={NAV} brand="emakfabrika" brandHref="/dashboard" companyName={session.companyName} userName={session.fullName} logoutAction={logout}>
+    <>
       <PageHeader eyebrow={`Hoş geldin, ${session.fullName.split(' ')[0]}`} title={session.companyName} description={session.isFactoryAdmin ? 'Fabrika Yöneticisi — şirketin tüm departmanlarına tam erişim.' : 'Kendi departman ve taleplerinize genel bakış.'} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -120,6 +113,6 @@ export default async function DashboardPage() {
           </GlassPanel>
         ) : null}
       </div>
-    </DimensionShell>
+    </>
   );
 }

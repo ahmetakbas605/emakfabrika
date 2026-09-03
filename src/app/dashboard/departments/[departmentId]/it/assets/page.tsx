@@ -18,11 +18,11 @@ export default async function ItAssetsPage({ params }: { params: Promise<{ depar
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>IT Varlıkları</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Her varlığın kendi durum geçmişi ve kullanıcı atama geçmişi tutulur (PDF madde 6, 8).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Her varlığın kendi durum geçmişi ve kullanıcı atama geçmişi tutulur (PDF madde 6, 8).</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Etiket</th>
             <th style={{ padding: '6px 8px' }}>Ad</th>
             <th style={{ padding: '6px 8px' }}>Tür</th>
@@ -33,16 +33,16 @@ export default async function ItAssetsPage({ params }: { params: Promise<{ depar
         </thead>
         <tbody>
           {assets.map((a) => (
-            <tr key={a.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={a.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{a.assetTag}</td>
               <td style={{ padding: '6px 8px' }}>{a.name}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{a.assetTypeName}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{a.manufacturer} {a.model}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{a.assetTypeName}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{a.manufacturer} {a.model}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{STATUS_LABELS[a.status] ?? a.status}</td>
               <td style={{ padding: '6px 8px' }}>{access.permissions.assign ? <AssignAssetForm departmentId={departmentId} assetId={a.id} users={companyUsers} /> : null}</td>
             </tr>
           ))}
-          {assets.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: '#999' }}>Henüz varlık yok.</td></tr> : null}
+          {assets.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz varlık yok.</td></tr> : null}
         </tbody>
       </table>
 

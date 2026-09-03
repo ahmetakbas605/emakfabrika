@@ -13,28 +13,28 @@ export default async function QuotesPage() {
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Teklifler</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Kabul edilen bir teklif, satırlarıyla birlikte doğrudan bir Siparişe dönüştürülür.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Kabul edilen bir teklif, satırlarıyla birlikte doğrudan bir Siparişe dönüştürülür.</p>
 
       <div style={{ marginBottom: 20 }}><CreateQuoteForm parties={parties.map((p) => ({ id: p.id, legalName: p.legalName }))} products={products.map((p) => ({ id: p.id, sku: p.sku, name: p.name }))} /></div>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>No</th><th style={{ padding: '6px 8px' }}>Cari</th><th style={{ padding: '6px 8px' }}>Tarih</th>
             <th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}>İşlem</th>
           </tr>
         </thead>
         <tbody>
           {quotes.map((q) => (
-            <tr key={q.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={q.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{q.quoteNo}</td>
               <td style={{ padding: '6px 8px' }}>{q.partyName}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{q.quoteDate}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{q.quoteDate}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{STATUS_LABELS[q.status] ?? q.status}</td>
               <td style={{ padding: '6px 8px' }}><QuoteStatusButtons quoteId={q.id} status={q.status} /></td>
             </tr>
           ))}
-          {quotes.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: '#999' }}>Henüz teklif yok.</td></tr> : null}
+          {quotes.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz teklif yok.</td></tr> : null}
         </tbody>
       </table>
     </div>

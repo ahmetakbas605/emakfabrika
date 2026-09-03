@@ -36,12 +36,12 @@ export default async function TreasuryPage({ searchParams }: { searchParams: Pro
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Hazine (Nakit Akış/Kur Riski/Teminat)</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Sözleşmeye bağlı teminatlar <a href="/dashboard/legal">Hukuk sayfasında</a>; burada yalnızca genel (banka kredi limiti vb.) teminatlar listelenir.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Sözleşmeye bağlı teminatlar <a href="/dashboard/legal">Hukuk sayfasında</a>; burada yalnızca genel (banka kredi limiti vb.) teminatlar listelenir.</p>
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Nakit Akış Tahmini</h2>
       <form method="get" style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 16 }}>
-        <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Başlangıç</label><input name="from" type="date" defaultValue={fromDate} style={{ padding: 6 }} /></div>
-        <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Bitiş</label><input name="to" type="date" defaultValue={toDate} style={{ padding: 6 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Başlangıç</label><input name="from" type="date" defaultValue={fromDate} style={{ padding: 6 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Bitiş</label><input name="to" type="date" defaultValue={toDate} style={{ padding: 6 }} /></div>
         <button type="submit" style={{ padding: '7px 14px', cursor: 'pointer' }}>Uygula</button>
       </form>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
@@ -52,51 +52,51 @@ export default async function TreasuryPage({ searchParams }: { searchParams: Pro
       </div>
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Manuel Nakit Akış Kalemi Ekle</h2>
-      <p style={{ color: '#666', marginBottom: 8, fontSize: 12 }}>Çek/banka hareketi olmayan bilinen büyük tahsilat/ödeme beklentileri için.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 8, fontSize: 12 }}>Çek/banka hareketi olmayan bilinen büyük tahsilat/ödeme beklentileri için.</p>
       <div style={{ marginBottom: 24 }}><CreateCashFlowItemForm currencies={currencies.map((c) => ({ code: c.code, name: c.name }))} /></div>
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Nakit Akış Kalemleri</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
-        <thead><tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}><th style={{ padding: '6px 8px' }}>Yön</th><th style={{ padding: '6px 8px' }}>Açıklama</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Tutar</th><th style={{ padding: '6px 8px' }}>Tarih</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}></th></tr></thead>
+        <thead><tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}><th style={{ padding: '6px 8px' }}>Yön</th><th style={{ padding: '6px 8px' }}>Açıklama</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Tutar</th><th style={{ padding: '6px 8px' }}>Tarih</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}></th></tr></thead>
         <tbody>
           {items.map((i) => (
-            <tr key={i.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td style={{ padding: '6px 8px', color: i.direction === 'INFLOW' ? '#080' : '#b00' }}>{i.direction === 'INFLOW' ? 'Tahsilat' : 'Ödeme'}</td>
+            <tr key={i.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
+              <td style={{ padding: '6px 8px', color: i.direction === 'INFLOW' ? '#080' : 'var(--dim-danger)' }}>{i.direction === 'INFLOW' ? 'Tahsilat' : 'Ödeme'}</td>
               <td style={{ padding: '6px 8px' }}>{i.description}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{i.amount} {i.currencyCode}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{i.expectedDate}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{i.amount} {i.currencyCode}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{i.expectedDate}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{ITEM_STATUS_LABELS[i.status]}</td>
               <td style={{ padding: '6px 8px' }}>
                 {i.status === 'FORECAST' ? (<><MarkCashFlowItemRealizedButton itemId={i.id} /><CancelCashFlowItemButton itemId={i.id} /></>) : null}
               </td>
             </tr>
           ))}
-          {items.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: '#999' }}>Henüz kalem yok.</td></tr> : null}
+          {items.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz kalem yok.</td></tr> : null}
         </tbody>
       </table>
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Kur Riski (Yabancı Para Banka Hesapları)</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Hesap</th><th style={{ padding: '6px 8px' }}>Para Birimi</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Bakiye</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Defter Değeri (₺)</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Güncel Değer (₺)</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Gerçekleşmemiş K/Z</th>
           </tr>
         </thead>
         <tbody>
           {fxExposure.map((f) => (
-            <tr key={f.bankAccountId} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={f.bankAccountId} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{f.name}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{f.currency}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{fmt(f.nativeBalance)}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{fmt(f.bookedTryValue)}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{f.currentTryValue === null ? '—' : fmt(f.currentTryValue)}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600, color: f.unrealizedGainLoss === null ? '#999' : f.unrealizedGainLoss >= 0 ? '#080' : '#b00' }}>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{f.currency}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{fmt(f.nativeBalance)}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{fmt(f.bookedTryValue)}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{f.currentTryValue === null ? '—' : fmt(f.currentTryValue)}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600, color: f.unrealizedGainLoss === null ? '#999' : f.unrealizedGainLoss >= 0 ? '#080' : 'var(--dim-danger)' }}>
                 {f.unrealizedGainLoss === null ? 'Kur bulunamadı' : fmt(f.unrealizedGainLoss)}
               </td>
             </tr>
           ))}
-          {fxExposure.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: '#999' }}>Yabancı para banka hesabı yok.</td></tr> : null}
+          {fxExposure.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Yabancı para banka hesabı yok.</td></tr> : null}
         </tbody>
       </table>
 
@@ -105,19 +105,19 @@ export default async function TreasuryPage({ searchParams }: { searchParams: Pro
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Genel Teminatlar</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-        <thead><tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}><th style={{ padding: '6px 8px' }}>Tip</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Tutar</th><th style={{ padding: '6px 8px' }}>Veren</th><th style={{ padding: '6px 8px' }}>Son Geçerlilik</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}></th></tr></thead>
+        <thead><tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}><th style={{ padding: '6px 8px' }}>Tip</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Tutar</th><th style={{ padding: '6px 8px' }}>Veren</th><th style={{ padding: '6px 8px' }}>Son Geçerlilik</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}></th></tr></thead>
         <tbody>
           {generalCollaterals.map((c) => (
-            <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={c.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{COLLATERAL_TYPE_LABELS[c.collateralType]}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{c.amount}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.provider || '—'}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.expiryDate ?? '—'}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{c.amount}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.provider || '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.expiryDate ?? '—'}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{c.status === 'ACTIVE' ? 'Aktif' : c.status === 'RELEASED' ? 'Serbest' : 'Süresi Doldu'}</td>
               <td style={{ padding: '6px 8px' }}>{c.status === 'ACTIVE' ? <ReleaseCollateralButton collateralId={c.id} /> : null}</td>
             </tr>
           ))}
-          {generalCollaterals.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: '#999' }}>Henüz genel teminat yok.</td></tr> : null}
+          {generalCollaterals.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz genel teminat yok.</td></tr> : null}
         </tbody>
       </table>
     </div>
@@ -126,9 +126,9 @@ export default async function TreasuryPage({ searchParams }: { searchParams: Pro
 
 function Stat({ label, value, big }: { label: string; value: string; big?: boolean }) {
   return (
-    <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '10px 16px', minWidth: 130 }}>
+    <div style={{ border: '1px solid var(--dim-border-soft)', borderRadius: 6, padding: '10px 16px', minWidth: 130 }}>
       <div style={{ fontSize: big ? 24 : 18, fontWeight: 700 }}>₺{value}</div>
-      <div style={{ fontSize: 12, color: '#666' }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>{label}</div>
     </div>
   );
 }

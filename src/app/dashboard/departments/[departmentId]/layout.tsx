@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { SubNav } from '@/components/shell/SubNav';
 import { requireDepartmentAccess } from '@/lib/dal';
 
 // PDF madde 8, 70: "Muhasebe kullanıcısı için sistem son derece kolay/hızlı/
@@ -69,17 +69,22 @@ export default async function DepartmentLayout({ children, params }: { children:
   const nav = navFor(departmentId, access.departmentTypeCode);
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif' }}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '0.75rem 2rem', borderBottom: '1px solid #ddd' }}>
-        <Link href="/dashboard" style={{ fontWeight: 700, textDecoration: 'none', color: '#111' }}>emakfabrika</Link>
-        <span style={{ color: '#666' }}>{access.departmentName} — {access.roleName}</span>
-        <nav style={{ display: 'flex', gap: 14, marginLeft: 'auto', flexWrap: 'wrap' }}>
-          {nav.map((item) => (
-            <Link key={item.href} href={item.href} style={{ textDecoration: 'none', color: '#333', fontSize: 14 }}>{item.label}</Link>
-          ))}
-        </nav>
-      </header>
-      <main style={{ padding: '1.5rem 2rem' }}>{children}</main>
-    </div>
+    <>
+      {/* Görsel Yenileme Faz 2: buradaki kendi başlık çubuğu kaldırıldı.
+          /dashboard/layout.tsx artık her sayfaya markayı ve ana menüyü
+          zaten koyuyordu — ikinci bir "emakfabrika" bağlantısı ve ikinci
+          bir üst çubuk tekrardı. Kalan bilgi (hangi departman, hangi rol)
+          değerli olduğu için bağlam satırı olarak korundu.
+          `fontFamily: system-ui` override'ı da kaldırıldı; Dimension'ın
+          kendi yazı tiplerini eziyordu. */}
+      <div className="mb-6">
+        <span className="dim-metric" style={{ color: 'var(--dim-sunset)' }}>{access.departmentName}</span>
+        <span className="dim-technical ml-3" style={{ color: 'var(--dim-slate)' }}>{access.roleName}</span>
+      </div>
+
+      {nav.length > 0 ? <SubNav items={nav.map((item) => ({ href: item.href, label: item.label }))} /> : null}
+
+      {children}
+    </>
   );
 }

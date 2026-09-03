@@ -12,13 +12,13 @@ export default async function BackupPage({ params }: { params: Promise<{ departm
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Yedekleme Yönetimi</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Başarısız bir sonuç otomatik olarak bir alert + incident açar (MONITORING.md §6).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Başarısız bir sonuç otomatik olarak bir alert + incident açar (MONITORING.md §6).</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 8 }}>
-        <thead><tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}><th style={{ padding: '6px 8px' }}>Varlık</th><th style={{ padding: '6px 8px' }}>Kaynak</th><th style={{ padding: '6px 8px' }}>Hedef</th><th style={{ padding: '6px 8px' }}>Zamanlama</th><th style={{ padding: '6px 8px' }}>Saklama</th></tr></thead>
+        <thead><tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}><th style={{ padding: '6px 8px' }}>Varlık</th><th style={{ padding: '6px 8px' }}>Kaynak</th><th style={{ padding: '6px 8px' }}>Hedef</th><th style={{ padding: '6px 8px' }}>Zamanlama</th><th style={{ padding: '6px 8px' }}>Saklama</th></tr></thead>
         <tbody>
-          {jobs.map((j) => <tr key={j.id} style={{ borderBottom: '1px solid #eee' }}><td style={{ padding: '6px 8px' }}>{j.assetTag}</td><td style={{ padding: '6px 8px' }}>{j.source}</td><td style={{ padding: '6px 8px', color: '#666' }}>{j.destination}</td><td style={{ padding: '6px 8px', color: '#666' }}>{j.schedule || '—'}</td><td style={{ padding: '6px 8px', color: '#666' }}>{j.retentionDays} gün</td></tr>)}
-          {jobs.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: '#999' }}>Henüz yedekleme işi yok.</td></tr> : null}
+          {jobs.map((j) => <tr key={j.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}><td style={{ padding: '6px 8px' }}>{j.assetTag}</td><td style={{ padding: '6px 8px' }}>{j.source}</td><td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{j.destination}</td><td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{j.schedule || '—'}</td><td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{j.retentionDays} gün</td></tr>)}
+          {jobs.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz yedekleme işi yok.</td></tr> : null}
         </tbody>
       </table>
       {access.permissions.configure ? <div style={{ marginBottom: 24 }}><BackupJobForm departmentId={departmentId} assets={assets.map((a) => ({ id: a.id, assetTag: a.assetTag, name: a.name }))} /></div> : null}

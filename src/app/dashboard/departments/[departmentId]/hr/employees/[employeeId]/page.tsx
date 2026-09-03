@@ -53,19 +53,19 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
         <h1 style={{ fontSize: 20, margin: 0 }}>{employee.firstName} {employee.lastName}</h1>
-        <span style={{ fontFamily: 'monospace', color: '#666' }}>{employee.employeeNumber}</span>
+        <span style={{ fontFamily: 'monospace', color: 'var(--dim-on-surface-variant)' }}>{employee.employeeNumber}</span>
       </div>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Durum: <strong>{STATUS_LABELS[employee.employmentStatus] ?? employee.employmentStatus}</strong> · İşe Giriş: {employee.hireDate}{employee.terminationDate ? ` · İşten Ayrılış: ${employee.terminationDate}` : ''}</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Durum: <strong>{STATUS_LABELS[employee.employmentStatus] ?? employee.employmentStatus}</strong> · İşe Giriş: {employee.hireDate}{employee.terminationDate ? ` · İşten Ayrılış: ${employee.terminationDate}` : ''}</p>
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Genel Bilgiler</h2>
       <table style={{ fontSize: 13, marginBottom: 24, borderCollapse: 'collapse' }}>
         <tbody>
-          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>TC Kimlik No</td><td>{maskIdentityReference(employee.identityReference, access.permissions.view_sensitive) ?? '—'}</td></tr>
-          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Doğum Tarihi</td><td>{employee.birthDate ?? '—'}</td></tr>
-          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Uyruk</td><td>{employee.nationality ?? '—'}</td></tr>
-          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Cinsiyet</td><td>{employee.gender ?? '—'}</td></tr>
-          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Medeni Hal</td><td>{employee.maritalStatus ?? '—'}</td></tr>
-          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>ERP Hesabı</td><td>{linkedUser ? `${linkedUser.fullName} (${linkedUser.email})` : '—'}</td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: 'var(--dim-on-surface-variant)' }}>TC Kimlik No</td><td>{maskIdentityReference(employee.identityReference, access.permissions.view_sensitive) ?? '—'}</td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: 'var(--dim-on-surface-variant)' }}>Doğum Tarihi</td><td>{employee.birthDate ?? '—'}</td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: 'var(--dim-on-surface-variant)' }}>Uyruk</td><td>{employee.nationality ?? '—'}</td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: 'var(--dim-on-surface-variant)' }}>Cinsiyet</td><td>{employee.gender ?? '—'}</td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: 'var(--dim-on-surface-variant)' }}>Medeni Hal</td><td>{employee.maritalStatus ?? '—'}</td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: 'var(--dim-on-surface-variant)' }}>ERP Hesabı</td><td>{linkedUser ? `${linkedUser.fullName} (${linkedUser.email})` : '—'}</td></tr>
         </tbody>
       </table>
       {access.permissions.update && !linkedUser ? (
@@ -77,12 +77,12 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Organizasyon</h2>
       <table style={{ fontSize: 13, marginBottom: 12, borderCollapse: 'collapse' }}>
         <tbody>
-          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Departman</td><td>{departmentName ?? '—'}</td></tr>
-          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Pozisyon</td><td>{positionTitle ?? '—'}</td></tr>
-          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Yönetici</td><td>{managerName ?? '—'}</td></tr>
-          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Masraf Merkezi</td><td>{costCenterName ?? '—'}</td></tr>
-          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Çalışma Yeri</td><td>{employee.workLocation || '—'}</td></tr>
-          <tr><td style={{ padding: '4px 12px 4px 0', color: '#666' }}>Vardiya</td><td>{shiftName ?? '—'}<span style={{ color: '#999', fontSize: 12 }}> (PDKS sayfasından atanır)</span></td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: 'var(--dim-on-surface-variant)' }}>Departman</td><td>{departmentName ?? '—'}</td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: 'var(--dim-on-surface-variant)' }}>Pozisyon</td><td>{positionTitle ?? '—'}</td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: 'var(--dim-on-surface-variant)' }}>Yönetici</td><td>{managerName ?? '—'}</td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: 'var(--dim-on-surface-variant)' }}>Masraf Merkezi</td><td>{costCenterName ?? '—'}</td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: 'var(--dim-on-surface-variant)' }}>Çalışma Yeri</td><td>{employee.workLocation || '—'}</td></tr>
+          <tr><td style={{ padding: '4px 12px 4px 0', color: 'var(--dim-on-surface-variant)' }}>Vardiya</td><td>{shiftName ?? '—'}<span style={{ color: 'var(--dim-slate)', fontSize: 12 }}> (PDKS sayfasından atanır)</span></td></tr>
         </tbody>
       </table>
       {access.permissions.update ? (
@@ -101,21 +101,21 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Ücret Geçmişi</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 8 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Versiyon</th><th style={{ padding: '6px 8px' }}>Yürürlük</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Maaş</th><th style={{ padding: '6px 8px' }}>Neden</th><th style={{ padding: '6px 8px' }}>Durum</th>
           </tr>
         </thead>
         <tbody>
           {compensationHistory.map((c) => (
-            <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={c.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>v{c.version}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.effectiveDate}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.effectiveDate}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{maskSalary(c.baseSalary, access.permissions.view_sensitive)} {access.permissions.view_sensitive ? c.currencyCode : ''}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.changeReason || '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.changeReason || '—'}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{COMPENSATION_STATUS_LABELS[c.status] ?? c.status}</td>
             </tr>
           ))}
-          {compensationHistory.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: '#999' }}>Henüz maaş kaydı yok.</td></tr> : null}
+          {compensationHistory.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz maaş kaydı yok.</td></tr> : null}
         </tbody>
       </table>
       {access.permissions.update ? <div style={{ marginBottom: 24 }}><CompensationForm departmentId={departmentId} employeeId={employeeId} currencies={currencies.map((c) => ({ code: c.code, name: c.name }))} /></div> : null}
@@ -123,13 +123,13 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Ödüller / Bonuslar</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 8 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>No</th><th style={{ padding: '6px 8px' }}>Tür</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Tutar</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}>İşlem</th>
           </tr>
         </thead>
         <tbody>
           {bonusRequests.map((b) => (
-            <tr key={b.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={b.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{b.bonusNo}</td>
               <td style={{ padding: '6px 8px' }}>{BONUS_TYPE_LABELS[b.bonusType] ?? b.bonusType}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{b.amount} {b.currencyCode}</td>
@@ -145,7 +145,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
               </td>
             </tr>
           ))}
-          {bonusRequests.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: '#999' }}>Henüz ödül talebi yok.</td></tr> : null}
+          {bonusRequests.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz ödül talebi yok.</td></tr> : null}
         </tbody>
       </table>
       {access.permissions.update ? <div style={{ marginBottom: 24 }}><BonusForm departmentId={departmentId} employeeId={employeeId} currencies={currencies.map((c) => ({ code: c.code, name: c.name }))} /></div> : null}
@@ -153,7 +153,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Sözleşmeler</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 8 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Versiyon</th>
             <th style={{ padding: '6px 8px' }}>Tür</th>
             <th style={{ padding: '6px 8px' }}>Başlangıç</th>
@@ -164,16 +164,16 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         </thead>
         <tbody>
           {contracts.map((c, i) => (
-            <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={c.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>v{c.version}</td>
               <td style={{ padding: '6px 8px' }}>{CONTRACT_TYPE_LABELS[c.contractType] ?? c.contractType}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.startDate}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.endDate ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.startDate}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.endDate ?? '—'}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{CONTRACT_STATUS_LABELS[c.status] ?? c.status}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{contractAttachments[i].map((a) => a.fileName).join(', ') || '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{contractAttachments[i].map((a) => a.fileName).join(', ') || '—'}</td>
             </tr>
           ))}
-          {contracts.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: '#999' }}>Henüz sözleşme yok.</td></tr> : null}
+          {contracts.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz sözleşme yok.</td></tr> : null}
         </tbody>
       </table>
       {access.permissions.update ? <div style={{ marginBottom: 24 }}><ContractForm departmentId={departmentId} employeeId={employeeId} /></div> : null}
@@ -181,7 +181,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Belgeler / Diploma / Sertifika / Eğitim</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 8 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Tür</th>
             <th style={{ padding: '6px 8px' }}>Ad</th>
             <th style={{ padding: '6px 8px' }}>Veren Kurum</th>
@@ -193,17 +193,17 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         </thead>
         <tbody>
           {qualifications.map((q, i) => (
-            <tr key={q.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={q.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{QUALIFICATION_TYPE_LABELS[q.qualificationType] ?? q.qualificationType}</td>
               <td style={{ padding: '6px 8px' }}>{q.name}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{q.institution || '—'}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{q.expiryDate ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{q.institution || '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{q.expiryDate ?? '—'}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{QUALIFICATION_STATUS_LABELS[q.status] ?? q.status}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{qualificationAttachments[i].map((a) => a.fileName).join(', ') || '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{qualificationAttachments[i].map((a) => a.fileName).join(', ') || '—'}</td>
               <td style={{ padding: '6px 8px' }}>{access.permissions.update && q.status === 'ACTIVE' ? <RevokeQualificationButton departmentId={departmentId} employeeId={employeeId} qualificationId={q.id} /> : null}</td>
             </tr>
           ))}
-          {qualifications.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: '#999' }}>Henüz belge/eğitim kaydı yok.</td></tr> : null}
+          {qualifications.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz belge/eğitim kaydı yok.</td></tr> : null}
         </tbody>
       </table>
       {access.permissions.update ? <div style={{ marginBottom: 24 }}><QualificationForm departmentId={departmentId} employeeId={employeeId} /></div> : null}
@@ -215,21 +215,21 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           const displayValue = isPhone ? maskPhone(c.value, access.permissions.view_sensitive) : c.value;
           return <li key={c.id}>{CONTACT_TYPE_LABELS[c.contactType] ?? c.contactType}: {displayValue}{c.isPrimary ? ' (birincil)' : ''}</li>;
         })}
-        {contacts.length === 0 ? <li style={{ color: '#999', listStyle: 'none', marginLeft: -18 }}>Henüz iletişim bilgisi yok.</li> : null}
+        {contacts.length === 0 ? <li style={{ color: 'var(--dim-slate)', listStyle: 'none', marginLeft: -18 }}>Henüz iletişim bilgisi yok.</li> : null}
       </ul>
       {access.permissions.update ? <div style={{ marginBottom: 24 }}><ContactForm departmentId={departmentId} employeeId={employeeId} /></div> : null}
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Adresler</h2>
       <ul style={{ fontSize: 13, marginBottom: 8, paddingLeft: 18 }}>
         {addresses.map((a) => <li key={a.id}>{ADDRESS_TYPE_LABELS[a.addressType] ?? a.addressType}: {a.line}, {a.district} {a.city} {a.postalCode}{a.isPrimary ? ' (birincil)' : ''}</li>)}
-        {addresses.length === 0 ? <li style={{ color: '#999', listStyle: 'none', marginLeft: -18 }}>Henüz adres yok.</li> : null}
+        {addresses.length === 0 ? <li style={{ color: 'var(--dim-slate)', listStyle: 'none', marginLeft: -18 }}>Henüz adres yok.</li> : null}
       </ul>
       {access.permissions.update ? <div style={{ marginBottom: 24 }}><AddressForm departmentId={departmentId} employeeId={employeeId} /></div> : null}
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Acil Durum Kişileri</h2>
       <ul style={{ fontSize: 13, marginBottom: 8, paddingLeft: 18 }}>
         {emergencyContacts.map((c) => <li key={c.id}>{c.fullName} ({c.relationship || '—'}): {c.phone}</li>)}
-        {emergencyContacts.length === 0 ? <li style={{ color: '#999', listStyle: 'none', marginLeft: -18 }}>Henüz acil durum kişisi yok.</li> : null}
+        {emergencyContacts.length === 0 ? <li style={{ color: 'var(--dim-slate)', listStyle: 'none', marginLeft: -18 }}>Henüz acil durum kişisi yok.</li> : null}
       </ul>
       {access.permissions.update ? <div style={{ marginBottom: 24 }}><EmergencyContactForm departmentId={departmentId} employeeId={employeeId} /></div> : null}
 

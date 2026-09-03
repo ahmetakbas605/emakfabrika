@@ -26,7 +26,7 @@ export default async function TenderAwardPage({ params }: { params: Promise<{ te
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{tender.tenderNo} — Ödül Oluştur</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>
         Ağırlıklı skora göre en yüksek skorlu tedarikçi varsayılan olarak önerilir — miktarı bölerek birden fazla tedarikçiye ödül verebilirsiniz.
       </p>
       <TenderAwardCreateForm tenderId={tenderId} lines={awardLines} />

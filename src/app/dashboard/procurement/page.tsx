@@ -32,11 +32,11 @@ export default async function ProcurementPage() {
         <h1 style={{ fontSize: 20, margin: 0 }}>Satınalma Talepleri</h1>
         <Link href="/dashboard/procurement/rfqs" style={{ fontSize: 13 }}>RFQ'lar (Teklif Talepleri) →</Link>
       </div>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Talep → Stok/Bütçe Kontrolü → Onay (madde 12-28). Onay motoru genel — bkz. Onay Kutusu.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Talep → Stok/Bütçe Kontrolü → Onay (madde 12-28). Onay motoru genel — bkz. Onay Kutusu.</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>No</th>
             <th style={{ padding: '6px 8px' }}>Talep Eden</th>
             <th style={{ padding: '6px 8px' }}>Tür</th>
@@ -47,21 +47,21 @@ export default async function ProcurementPage() {
         </thead>
         <tbody>
           {requests.map((r) => (
-            <tr key={r.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={r.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}><Link href={`/dashboard/procurement/${r.id}`}>{r.requestNo}</Link></td>
               <td style={{ padding: '6px 8px' }}>{r.requestedByName}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{REQUEST_TYPE_LABEL[r.requestType] ?? r.requestType}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{r.priority}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{REQUEST_TYPE_LABEL[r.requestType] ?? r.requestType}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{r.priority}</td>
               <td style={{ padding: '6px 8px' }}>{STATUS_LABEL[r.status] ?? r.status}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{r.estimatedTotal ? `${Number(r.estimatedTotal).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ${r.currencyCode ?? ''}` : '—'}</td>
             </tr>
           ))}
-          {requests.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: '#999' }}>Henüz talep yok.</td></tr> : null}
+          {requests.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz talep yok.</td></tr> : null}
         </tbody>
       </table>
 
       {units.length === 0 ? (
-        <p style={{ color: '#b00', fontSize: 13 }}>Önce Master Data → Birimler sayfasında en az bir birim tanımlanmalı.</p>
+        <p style={{ color: 'var(--dim-danger)', fontSize: 13 }}>Önce Master Data → Birimler sayfasında en az bir birim tanımlanmalı.</p>
       ) : (
         <ProcRequestForm
           units={units.map((u) => ({ id: u.id, code: u.code }))}

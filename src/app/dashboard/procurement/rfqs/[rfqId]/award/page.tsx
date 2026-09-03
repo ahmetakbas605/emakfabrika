@@ -26,7 +26,7 @@ export default async function RfqAwardPage({ params }: { params: Promise<{ rfqId
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{rfq.rfqNo} — Ödül Oluştur</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>
         Faz 3&apos;ün ağırlıklı skoruna göre en yüksek skorlu tedarikçi varsayılan olarak önerilir — miktarı bölerek birden fazla tedarikçiye ödül verebilirsiniz.
       </p>
       <AwardCreateForm rfqId={rfqId} lines={awardLines} />

@@ -30,7 +30,7 @@ export default async function QualityPage() {
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Kalite (Giriş/Proses/Final Muayene + NCR/CAPA)</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Muayene sonuçları Satınalma'nın mal kabul kayıtlarına ve Üretim'in operasyon/emirlerine bağlanır. Tedarikçi kalite skoru <Link href="#tedarikci">aşağıda</Link>, cari bazlı hesaplanır.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Muayene sonuçları Satınalma'nın mal kabul kayıtlarına ve Üretim'in operasyon/emirlerine bağlanır. Tedarikçi kalite skoru <Link href="#tedarikci">aşağıda</Link>, cari bazlı hesaplanır.</p>
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
         <Stat label="Giriş Muayene Kabul Oranı" value={incomingPassRate === null ? '—' : `%${incomingPassRate.toFixed(1)}`} big />
@@ -52,7 +52,7 @@ export default async function QualityPage() {
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Son Muayeneler</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>No</th><th style={{ padding: '6px 8px' }}>Tip</th><th style={{ padding: '6px 8px' }}>Ürün</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Muayene</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Geçen</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Ret</th>
             <th style={{ padding: '6px 8px' }}>Sonuç</th><th style={{ padding: '6px 8px' }}>Tarih</th>
@@ -60,18 +60,18 @@ export default async function QualityPage() {
         </thead>
         <tbody>
           {inspections.slice(0, 20).map((i) => (
-            <tr key={i.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={i.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{i.inspectionNo}</td>
               <td style={{ padding: '6px 8px' }}>{TYPE_LABELS[i.type]}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{i.productName ?? '—'}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{i.inspectedQty}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{i.passedQty}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{i.failedQty}</td>
-              <td style={{ padding: '6px 8px', fontWeight: 600, color: i.result === 'FAIL' ? '#b00' : i.result === 'CONDITIONAL' ? '#a60' : '#080' }}>{RESULT_LABELS[i.result]}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{new Date(i.inspectedAt).toLocaleString('tr-TR')}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{i.productName ?? '—'}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{i.inspectedQty}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{i.passedQty}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{i.failedQty}</td>
+              <td style={{ padding: '6px 8px', fontWeight: 600, color: i.result === 'FAIL' ? '#b00' : i.result === 'CONDITIONAL' ? '#a60' : 'var(--dim-success)' }}>{RESULT_LABELS[i.result]}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{new Date(i.inspectedAt).toLocaleString('tr-TR')}</td>
             </tr>
           ))}
-          {inspections.length === 0 ? <tr><td colSpan={8} style={{ padding: '8px', color: '#999' }}>Henüz muayene kaydı yok.</td></tr> : null}
+          {inspections.length === 0 ? <tr><td colSpan={8} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz muayene kaydı yok.</td></tr> : null}
         </tbody>
       </table>
 
@@ -87,37 +87,37 @@ export default async function QualityPage() {
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>NCR Listesi</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>No</th><th style={{ padding: '6px 8px' }}>Başlık</th><th style={{ padding: '6px 8px' }}>Tedarikçi</th>
             <th style={{ padding: '6px 8px' }}>Önem</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}></th>
           </tr>
         </thead>
         <tbody>
           {ncrs.map((n) => (
-            <tr key={n.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={n.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{n.ncrNo}</td>
               <td style={{ padding: '6px 8px' }}>{n.title}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{n.supplierName ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{n.supplierName ?? '—'}</td>
               <td style={{ padding: '6px 8px', color: n.severity === 'CRITICAL' ? '#b00' : n.severity === 'MAJOR' ? '#a60' : '#666' }}>{SEVERITY_LABELS[n.severity]}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{NCR_STATUS_LABELS[n.status]}</td>
               <td style={{ padding: '6px 8px' }}><Link href={`/dashboard/quality/ncr/${n.id}`}>Detay →</Link></td>
             </tr>
           ))}
-          {ncrs.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: '#999' }}>Henüz NCR kaydı yok.</td></tr> : null}
+          {ncrs.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz NCR kaydı yok.</td></tr> : null}
         </tbody>
       </table>
 
       <h2 id="tedarikci" style={{ fontSize: 15, marginBottom: 8 }}>Tedarikçi Kalite</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-        <thead><tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}><th style={{ padding: '6px 8px' }}>Tedarikçi</th><th style={{ padding: '6px 8px' }}></th></tr></thead>
+        <thead><tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}><th style={{ padding: '6px 8px' }}>Tedarikçi</th><th style={{ padding: '6px 8px' }}></th></tr></thead>
         <tbody>
           {suppliers.map((s) => (
-            <tr key={s.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={s.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{s.legalName}</td>
               <td style={{ padding: '6px 8px' }}><Link href={`/dashboard/quality/suppliers/${s.id}`}>Kalite Skoru →</Link></td>
             </tr>
           ))}
-          {suppliers.length === 0 ? <tr><td colSpan={2} style={{ padding: '8px', color: '#999' }}>Henüz SUPPLIER rolünde cari kartı yok.</td></tr> : null}
+          {suppliers.length === 0 ? <tr><td colSpan={2} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz SUPPLIER rolünde cari kartı yok.</td></tr> : null}
         </tbody>
       </table>
     </div>
@@ -126,9 +126,9 @@ export default async function QualityPage() {
 
 function Stat({ label, value, big }: { label: string; value: string; big?: boolean }) {
   return (
-    <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '10px 16px', minWidth: 110 }}>
+    <div style={{ border: '1px solid var(--dim-border-soft)', borderRadius: 6, padding: '10px 16px', minWidth: 110 }}>
       <div style={{ fontSize: big ? 26 : 20, fontWeight: 700 }}>{value}</div>
-      <div style={{ fontSize: 12, color: '#666' }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>{label}</div>
     </div>
   );
 }

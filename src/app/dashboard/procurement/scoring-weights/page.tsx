@@ -9,7 +9,7 @@ export default async function ScoringWeightsPage() {
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Skorlama Ağırlıkları</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Teklif değerlendirmesinde fiyat/teknik/teslimat/ticari bileşenlerin ağırlıklı ortalamadaki payı. Toplam %100 olmalı.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Teklif değerlendirmesinde fiyat/teknik/teslimat/ticari bileşenlerin ağırlıklı ortalamadaki payı. Toplam %100 olmalı.</p>
       <ScoringWeightsForm weights={weights} />
     </div>
   );

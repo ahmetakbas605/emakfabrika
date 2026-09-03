@@ -17,12 +17,12 @@ export default async function WarehouseDetailPage({ params }: { params: Promise<
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{warehouse?.name ?? 'Depo'}</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Konum hiyerarşisi (Bölge/Koridor/Raf/Göz/Bin) ve depo bazlı bakiye.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Konum hiyerarşisi (Bölge/Koridor/Raf/Göz/Bin) ve depo bazlı bakiye.</p>
 
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Bakiye (bu depo)</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>SKU</th>
             <th style={{ padding: '6px 8px' }}>Ad</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Miktar</th>
@@ -31,21 +31,21 @@ export default async function WarehouseDetailPage({ params }: { params: Promise<
         </thead>
         <tbody>
           {balances.map((b) => (
-            <tr key={b.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={b.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{b.sku}</td>
               <td style={{ padding: '6px 8px' }}>{b.name}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{Number(b.qty).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{Number(b.avgCost).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{Number(b.avgCost).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</td>
             </tr>
           ))}
-          {balances.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: '#999' }}>Bu depoda henüz hareket yok.</td></tr> : null}
+          {balances.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Bu depoda henüz hareket yok.</td></tr> : null}
         </tbody>
       </table>
 
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Konumlar</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Kod</th>
             <th style={{ padding: '6px 8px' }}>Tür</th>
             <th style={{ padding: '6px 8px' }}>Ad</th>
@@ -53,13 +53,13 @@ export default async function WarehouseDetailPage({ params }: { params: Promise<
         </thead>
         <tbody>
           {locations.map((l) => (
-            <tr key={l.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={l.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{l.code}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{LOCATION_TYPE_LABEL[l.locationType] ?? l.locationType}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{l.name || '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{LOCATION_TYPE_LABEL[l.locationType] ?? l.locationType}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{l.name || '—'}</td>
             </tr>
           ))}
-          {locations.length === 0 ? <tr><td colSpan={3} style={{ padding: '8px', color: '#999' }}>Henüz konum yok.</td></tr> : null}
+          {locations.length === 0 ? <tr><td colSpan={3} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz konum yok.</td></tr> : null}
         </tbody>
       </table>
 

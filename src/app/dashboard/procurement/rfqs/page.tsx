@@ -19,11 +19,11 @@ export default async function RfqsPage() {
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>RFQ (Teklif Talebi)</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Onaylanmış talep satırları (Procurement Queue) veya doğrudan kalemlerle tedarikçilere teklif talebi gönderin.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Onaylanmış talep satırları (Procurement Queue) veya doğrudan kalemlerle tedarikçilere teklif talebi gönderin.</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>No</th>
             <th style={{ padding: '6px 8px' }}>Başlık</th>
             <th style={{ padding: '6px 8px' }}>Durum</th>
@@ -32,19 +32,19 @@ export default async function RfqsPage() {
         </thead>
         <tbody>
           {rfqs.map((r) => (
-            <tr key={r.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={r.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}><Link href={`/dashboard/procurement/rfqs/${r.id}`}>{r.rfqNo}</Link></td>
               <td style={{ padding: '6px 8px' }}>{r.title}</td>
               <td style={{ padding: '6px 8px' }}>{RFQ_STATUS_LABEL[r.status] ?? r.status}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{r.quotationDeadline ? new Date(r.quotationDeadline).toLocaleString('tr-TR') : '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{r.quotationDeadline ? new Date(r.quotationDeadline).toLocaleString('tr-TR') : '—'}</td>
             </tr>
           ))}
-          {rfqs.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: '#999' }}>Henüz RFQ yok.</td></tr> : null}
+          {rfqs.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz RFQ yok.</td></tr> : null}
         </tbody>
       </table>
 
       {units.length === 0 ? (
-        <p style={{ color: '#b00', fontSize: 13 }}>Önce Master Data → Birimler'de en az bir birim tanımlanmalı.</p>
+        <p style={{ color: 'var(--dim-danger)', fontSize: 13 }}>Önce Master Data → Birimler'de en az bir birim tanımlanmalı.</p>
       ) : (
         <RfqCreateForm
           queueItems={queueItems.map((q) => ({ lineId: q.lineId, requestNo: q.requestNo, description: q.description, quantity: q.purchaseQty ?? q.quantity, unitId: q.unitId, unitCode: q.unitCode, productId: q.productId }))}

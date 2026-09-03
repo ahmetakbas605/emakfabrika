@@ -12,10 +12,10 @@ export default async function VendorInvoiceDetailPage({ params }: { params: Prom
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{invoice.supplierInvoiceNo}</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>
         {INVOICE_STATUS_LABEL[invoice.status] ?? invoice.status} · {new Date(invoice.invoiceDate).toLocaleDateString('tr-TR')} · Toplam: {Number(total).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {invoice.currencyCode}
         {' · '}
-        <span style={{ color: fullyMatched ? '#080' : '#b00', fontWeight: 600 }}>{fullyMatched ? 'Eşleşti' : `Fiyat Sapması (>%${tolerancePercent})`}</span>
+        <span style={{ color: fullyMatched ? '#080' : 'var(--dim-danger)', fontWeight: 600 }}>{fullyMatched ? 'Eşleşti' : `Fiyat Sapması (>%${tolerancePercent})`}</span>
       </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
@@ -26,7 +26,7 @@ export default async function VendorInvoiceDetailPage({ params }: { params: Prom
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>3-Way Match — Kalemler</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Açıklama</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Faturalanan</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Fatura Fiyatı</th>
@@ -37,12 +37,12 @@ export default async function VendorInvoiceDetailPage({ params }: { params: Prom
         </thead>
         <tbody>
           {lines.map((l) => (
-            <tr key={l.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={l.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{l.description}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{Number(l.invoicedQty).toLocaleString('tr-TR')} {l.unitCode}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{Number(l.invoicedUnitPrice).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{Number(l.poUnitPrice).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: l.withinTolerance ? '#080' : '#b00', fontWeight: l.withinTolerance ? 400 : 600 }}>%{l.priceVariancePercent}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{Number(l.poUnitPrice).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: l.withinTolerance ? '#080' : 'var(--dim-danger)', fontWeight: l.withinTolerance ? 400 : 600 }}>%{l.priceVariancePercent}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>{Number(l.lineTotal).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
             </tr>
           ))}

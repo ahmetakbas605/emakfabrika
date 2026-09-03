@@ -18,7 +18,7 @@ export default async function RiskRegisterPage() {
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Risk Kaydı</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Skor = Olasılık × Etki, her zaman otomatik hesaplanır — elle girilemez. En yüksek skorlu risk en üstte.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Skor = Olasılık × Etki, her zaman otomatik hesaplanır — elle girilemez. En yüksek skorlu risk en üstte.</p>
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Risk Kaydı Oluştur</h2>
       <div style={{ marginBottom: 24 }}><CreateRiskForm /></div>
@@ -26,19 +26,19 @@ export default async function RiskRegisterPage() {
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Riskler</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>No</th><th style={{ padding: '6px 8px' }}>Başlık</th><th style={{ padding: '6px 8px' }}>Kategori</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Skor</th><th style={{ padding: '6px 8px' }}>Sorumlu</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}></th>
           </tr>
         </thead>
         <tbody>
           {risks.map((r) => (
-            <tr key={r.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={r.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{r.riskNo}</td>
               <td style={{ padding: '6px 8px' }}>{r.title}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{CATEGORY_LABELS[r.category]}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: scoreColor(r.score) }}>{r.score} <span style={{ fontSize: 11, color: '#999' }}>({r.probability}×{r.impact})</span></td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{r.ownerName ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{CATEGORY_LABELS[r.category]}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 700, color: scoreColor(r.score) }}>{r.score} <span style={{ fontSize: 11, color: 'var(--dim-slate)' }}>({r.probability}×{r.impact})</span></td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{r.ownerName ?? '—'}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{STATUS_LABELS[r.status]}</td>
               <td style={{ padding: '6px 8px' }}>
                 {r.status !== 'CLOSED' ? (
@@ -53,7 +53,7 @@ export default async function RiskRegisterPage() {
               </td>
             </tr>
           ))}
-          {risks.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: '#999' }}>Henüz risk kaydı yok.</td></tr> : null}
+          {risks.length === 0 ? <tr><td colSpan={7} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz risk kaydı yok.</td></tr> : null}
         </tbody>
       </table>
     </div>

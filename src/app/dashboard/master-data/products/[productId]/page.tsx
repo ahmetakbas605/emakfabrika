@@ -21,7 +21,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{product.sku} — {product.name}</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>
         {PRODUCT_TYPE_LABEL[product.productType] ?? product.productType} · Takip: {TRACKING_LABEL[product.trackingType] ?? product.trackingType}
         {product.taxRatePercent ? ` · KDV %${product.taxRatePercent}` : ''}
       </p>
@@ -30,19 +30,19 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Barkodlar</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 12 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Barkod</th>
             <th style={{ padding: '6px 8px' }}>Tür</th>
           </tr>
         </thead>
         <tbody>
           {barcodes.map((b) => (
-            <tr key={b.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={b.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{b.barcode}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{b.barcodeType}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{b.barcodeType}</td>
             </tr>
           ))}
-          {barcodes.length === 0 ? <tr><td colSpan={2} style={{ padding: '8px', color: '#999' }}>Henüz barkod yok.</td></tr> : null}
+          {barcodes.length === 0 ? <tr><td colSpan={2} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz barkod yok.</td></tr> : null}
         </tbody>
       </table>
       <div style={{ marginBottom: 24 }}><ProductBarcodeForm productId={productId} /></div>
@@ -50,7 +50,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Tedarikçiler</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 12 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Tedarikçi</th>
             <th style={{ padding: '6px 8px' }}>Tedarikçi SKU</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Fiyat</th>
@@ -60,19 +60,19 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         </thead>
         <tbody>
           {suppliers.map((s) => (
-            <tr key={s.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={s.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{s.supplierName}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{s.supplierSku || '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{s.supplierSku || '—'}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{s.purchasePrice ? `${Number(s.purchasePrice).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ${s.currencyCode ?? ''}` : '—'}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{s.leadTimeDays ?? '—'}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{s.minOrderQty ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{s.leadTimeDays ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{s.minOrderQty ?? '—'}</td>
             </tr>
           ))}
-          {suppliers.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: '#999' }}>Henüz tedarikçi yok.</td></tr> : null}
+          {suppliers.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz tedarikçi yok.</td></tr> : null}
         </tbody>
       </table>
       {allSuppliers.length === 0 ? (
-        <p style={{ color: '#b00', fontSize: 13 }}>Önce Cariler sayfasında Tedarikçi rolüyle bir cari kartı oluşturun.</p>
+        <p style={{ color: 'var(--dim-danger)', fontSize: 13 }}>Önce Cariler sayfasında Tedarikçi rolüyle bir cari kartı oluşturun.</p>
       ) : (
         <ProductSupplierForm productId={productId} suppliers={allSuppliers.map((s) => ({ id: s.id, legalName: s.legalName }))} currencies={currencies} />
       )}

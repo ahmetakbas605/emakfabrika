@@ -11,11 +11,11 @@ export default async function CurrenciesPage() {
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Para Birimleri</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>ISO 4217 kodları global referans verisi (şirkete özgü değil). Muhasebe hâlâ TRY-merkezli çalışıyor — bu, ileride Satınalma/Satış'ın döviz belgelerinde kullanacağı kur geçmişi.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>ISO 4217 kodları global referans verisi (şirkete özgü değil). Muhasebe hâlâ TRY-merkezli çalışıyor — bu, ileride Satınalma/Satış'ın döviz belgelerinde kullanacağı kur geçmişi.</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Kod</th>
             <th style={{ padding: '6px 8px' }}>Ad</th>
             <th style={{ padding: '6px 8px' }}>Sembol</th>
@@ -23,10 +23,10 @@ export default async function CurrenciesPage() {
         </thead>
         <tbody>
           {currencies.map((c) => (
-            <tr key={c.code} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={c.code} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{c.code}</td>
               <td style={{ padding: '6px 8px' }}>{c.name}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.symbol}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.symbol}</td>
             </tr>
           ))}
         </tbody>
@@ -35,7 +35,7 @@ export default async function CurrenciesPage() {
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Kur Geçmişi</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Tarih</th>
             <th style={{ padding: '6px 8px' }}>Para Birimi</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Kur</th>
@@ -44,14 +44,14 @@ export default async function CurrenciesPage() {
         </thead>
         <tbody>
           {rates.map((r) => (
-            <tr key={r.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={r.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{r.rateDate}</td>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{r.currencyCode}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{Number(r.rate).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{RATE_TYPE_LABEL[r.rateType] ?? r.rateType}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{RATE_TYPE_LABEL[r.rateType] ?? r.rateType}</td>
             </tr>
           ))}
-          {rates.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: '#999' }}>Henüz kur kaydı yok.</td></tr> : null}
+          {rates.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz kur kaydı yok.</td></tr> : null}
         </tbody>
       </table>
 

@@ -22,14 +22,14 @@ export default async function BankaPage({ params }: { params: Promise<{ departme
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Banka</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Havale/EFT/FAST/kredi kartı/POS/komisyon — her hareket otomatik muhasebe fişi üretir (PDF madde 27).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Havale/EFT/FAST/kredi kartı/POS/komisyon — her hareket otomatik muhasebe fişi üretir (PDF madde 27).</p>
 
       {bankAccounts.length === 0 ? (
-        <p style={{ color: '#999', fontSize: 13, marginBottom: 16 }}>Henüz banka hesabı yok.</p>
+        <p style={{ color: 'var(--dim-slate)', fontSize: 13, marginBottom: 16 }}>Henüz banka hesabı yok.</p>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
               <th style={{ padding: '6px 8px' }}>Banka Hesabı</th>
               <th style={{ padding: '6px 8px' }}>IBAN</th>
               <th style={{ padding: '6px 8px' }}>Bağlı Hesap</th>
@@ -38,11 +38,11 @@ export default async function BankaPage({ params }: { params: Promise<{ departme
           </thead>
           <tbody>
             {bankAccounts.map((b) => (
-              <tr key={b.id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={b.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
                 <td style={{ padding: '6px 8px' }}>{b.name}</td>
-                <td style={{ padding: '6px 8px', fontFamily: 'monospace', color: '#666' }}>{b.iban}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{b.accountCode} — {b.accountName}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{b.currency}</td>
+                <td style={{ padding: '6px 8px', fontFamily: 'monospace', color: 'var(--dim-on-surface-variant)' }}>{b.iban}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{b.accountCode} — {b.accountName}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{b.currency}</td>
               </tr>
             ))}
           </tbody>
@@ -62,7 +62,7 @@ export default async function BankaPage({ params }: { params: Promise<{ departme
         <h2 style={{ fontSize: 16, marginBottom: 8 }}>Son Hareketler</h2>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
               <th style={{ padding: '6px 8px' }}>Tarih</th>
               <th style={{ padding: '6px 8px' }}>Hesap</th>
               <th style={{ padding: '6px 8px' }}>Yön</th>
@@ -74,14 +74,14 @@ export default async function BankaPage({ params }: { params: Promise<{ departme
           </thead>
           <tbody>
             {transactions.map((t) => (
-              <tr key={t.id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={t.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
                 <td style={{ padding: '6px 8px' }}>{t.transactionDate}</td>
                 <td style={{ padding: '6px 8px' }}>{bankByAccountId.get(t.bankAccountId)?.name ?? '-'}</td>
-                <td style={{ padding: '6px 8px', color: t.transactionType === 'IN' ? '#080' : '#b00' }}>{t.transactionType === 'IN' ? 'Giriş' : 'Çıkış'}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{t.method}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{t.counterAccountCode}</td>
+                <td style={{ padding: '6px 8px', color: t.transactionType === 'IN' ? '#080' : 'var(--dim-danger)' }}>{t.transactionType === 'IN' ? 'Giriş' : 'Çıkış'}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{t.method}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{t.counterAccountCode}</td>
                 <td style={{ padding: '6px 8px', textAlign: 'right' }}>{money(t.amount, 'TRY')}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{t.description}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{t.description}</td>
               </tr>
             ))}
           </tbody>

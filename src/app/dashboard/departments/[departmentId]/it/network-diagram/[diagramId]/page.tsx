@@ -13,7 +13,7 @@ export default async function NetworkDiagramEditorPage({ params }: { params: Pro
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{diagram.name}</h1>
-      <p style={{ color: '#666', marginBottom: 16, fontSize: 13 }}>{versions.length} versiyon — en son: v{versions[0]?.versionNo ?? '—'}</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 16, fontSize: 13 }}>{versions.length} versiyon — en son: v{versions[0]?.versionNo ?? '—'}</p>
 
       <NetworkDiagramCanvas
         departmentId={departmentId}

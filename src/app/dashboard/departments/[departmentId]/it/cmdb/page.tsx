@@ -12,11 +12,11 @@ export default async function CmdbPage({ params }: { params: Promise<{ departmen
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>CMDB</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Yalnızca bağımlılık/etki analizi gereken varlıklar CI'ya yükseltilir — her varlık otomatik CI olmaz (CMDB.md).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Yalnızca bağımlılık/etki analizi gereken varlıklar CI'ya yükseltilir — her varlık otomatik CI olmaz (CMDB.md).</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>CI Key</th>
             <th style={{ padding: '6px 8px' }}>Ad</th>
             <th style={{ padding: '6px 8px' }}>Tür</th>
@@ -25,14 +25,14 @@ export default async function CmdbPage({ params }: { params: Promise<{ departmen
         </thead>
         <tbody>
           {cis.map((c) => (
-            <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={c.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{c.ciKey}</td>
               <td style={{ padding: '6px 8px' }}>{c.name}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.ciType}{c.assetTypeName ? ` (${c.assetTypeName})` : ''}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{c.status}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.ciType}{c.assetTypeName ? ` (${c.assetTypeName})` : ''}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.status}</td>
             </tr>
           ))}
-          {cis.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: '#999' }}>Henüz CI yok.</td></tr> : null}
+          {cis.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz CI yok.</td></tr> : null}
         </tbody>
       </table>
 
@@ -45,7 +45,7 @@ export default async function CmdbPage({ params }: { params: Promise<{ departmen
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>İlişkiler</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Kaynak</th>
             <th style={{ padding: '6px 8px' }}>İlişki</th>
             <th style={{ padding: '6px 8px' }}>Hedef</th>
@@ -53,13 +53,13 @@ export default async function CmdbPage({ params }: { params: Promise<{ departmen
         </thead>
         <tbody>
           {relationships.map((r) => (
-            <tr key={r.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={r.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{r.sourceCiKey} — {r.sourceCiName}</td>
-              <td style={{ padding: '6px 8px', color: '#666', fontFamily: 'monospace' }}>{r.relationshipType}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)', fontFamily: 'monospace' }}>{r.relationshipType}</td>
               <td style={{ padding: '6px 8px' }}>{r.targetCiKey} — {r.targetCiName}</td>
             </tr>
           ))}
-          {relationships.length === 0 ? <tr><td colSpan={3} style={{ padding: '8px', color: '#999' }}>Henüz ilişki yok.</td></tr> : null}
+          {relationships.length === 0 ? <tr><td colSpan={3} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz ilişki yok.</td></tr> : null}
         </tbody>
       </table>
 

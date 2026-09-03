@@ -18,11 +18,11 @@ export default async function FixedAssetsPage({ params }: { params: Promise<{ de
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Demirbaş</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Doğrusal amortisman — her ay için bir kez işlenebilir (PDF madde 32).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Doğrusal amortisman — her ay için bir kez işlenebilir (PDF madde 32).</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Ad</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Maliyet</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Birikmiş Amortisman</th>
@@ -37,17 +37,17 @@ export default async function FixedAssetsPage({ params }: { params: Promise<{ de
             const accum = accumulated[i];
             const net = cost.minus(accum);
             return (
-              <tr key={a.id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={a.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
                 <td style={{ padding: '6px 8px' }}>{a.name}</td>
                 <td style={{ padding: '6px 8px', textAlign: 'right' }}>{money(cost.toFixed(2))}</td>
                 <td style={{ padding: '6px 8px', textAlign: 'right' }}>{money(accum.toFixed(2))}</td>
                 <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>{money(net.toFixed(2))}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{a.usefulLifeYears} yıl</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{a.usefulLifeYears} yıl</td>
                 <td style={{ padding: '6px 8px' }}>{access.permissions.post ? <RunDepreciationButton departmentId={departmentId} fixedAssetId={a.id} /> : null}</td>
               </tr>
             );
           })}
-          {assets.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: '#999' }}>Henüz demirbaş yok.</td></tr> : null}
+          {assets.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz demirbaş yok.</td></tr> : null}
         </tbody>
       </table>
 

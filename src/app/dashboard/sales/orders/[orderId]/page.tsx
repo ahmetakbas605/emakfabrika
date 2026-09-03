@@ -46,7 +46,7 @@ export default async function SalesOrderDetailPage({ params }: { params: Promise
         <h1 style={{ fontSize: 20, margin: 0 }}>{order.orderNo}</h1>
         <span style={{ fontWeight: 600 }}>{ORDER_STATUS_LABELS[order.status] ?? order.status}</span>
       </div>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>{party.party.legalName} · {order.orderDate} · {order.currencyCode}</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>{party.party.legalName} · {order.orderDate} · {order.currencyCode}</p>
 
       {order.status === 'DRAFT' || order.status === 'REVISION_REQUIRED' ? (
         <div style={{ marginBottom: 20 }}>
@@ -58,7 +58,7 @@ export default async function SalesOrderDetailPage({ params }: { params: Promise
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Kalemler</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Ürün</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Miktar</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Birim Fiyat</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Kalem Toplamı</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Sevk Edilen</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>Faturalanan</th>
@@ -66,13 +66,13 @@ export default async function SalesOrderDetailPage({ params }: { params: Promise
         </thead>
         <tbody>
           {lines.map((l) => (
-            <tr key={l.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={l.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{l.productName}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{l.quantity}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{l.unitPrice}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{l.lineTotal}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{l.shippedQuantity}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#666' }}>{l.invoicedQuantity}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{l.shippedQuantity}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--dim-on-surface-variant)' }}>{l.invoicedQuantity}</td>
             </tr>
           ))}
         </tbody>
@@ -80,12 +80,12 @@ export default async function SalesOrderDetailPage({ params }: { params: Promise
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Sevkiyatlar</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 8 }}>
-        <thead><tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}><th style={{ padding: '6px 8px' }}>No</th><th style={{ padding: '6px 8px' }}>Tarih</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}>İşlem</th></tr></thead>
+        <thead><tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}><th style={{ padding: '6px 8px' }}>No</th><th style={{ padding: '6px 8px' }}>Tarih</th><th style={{ padding: '6px 8px' }}>Durum</th><th style={{ padding: '6px 8px' }}>İşlem</th></tr></thead>
         <tbody>
           {shipments.map((s) => (
-            <tr key={s.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={s.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{s.shipmentNo}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{s.shipmentDate}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{s.shipmentDate}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{SHIPMENT_STATUS_LABELS[s.status] ?? s.status}</td>
               <td style={{ padding: '6px 8px' }}>
                 {s.status === 'DRAFT' ? <><DispatchShipmentButton shipmentId={s.id} /><CancelShipmentButton shipmentId={s.id} /></> : null}
@@ -93,19 +93,19 @@ export default async function SalesOrderDetailPage({ params }: { params: Promise
               </td>
             </tr>
           ))}
-          {shipments.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: '#999' }}>Henüz sevkiyat yok.</td></tr> : null}
+          {shipments.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz sevkiyat yok.</td></tr> : null}
         </tbody>
       </table>
       {canShip && shipmentLinesForForm.length > 0 ? <div style={{ marginBottom: 24 }}><CreateShipmentForm orderId={order.id} warehouses={warehouses.map((w) => ({ id: w.id, name: w.name }))} lines={shipmentLinesForForm} /></div> : null}
 
       <h2 style={{ fontSize: 15, marginBottom: 8 }}>Faturalar</h2>
       {orderInvoices.map(({ invoice, lines: invLines }) => (
-        <div key={invoice.id} style={{ border: '1px solid #eee', borderRadius: 4, padding: 10, marginBottom: 8 }}>
+        <div key={invoice.id} style={{ border: '1px solid var(--dim-border-soft)', borderRadius: 4, padding: 10, marginBottom: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 13 }}>
             <span style={{ fontFamily: 'monospace' }}>{invoice.invoiceNo}</span>
             <span style={{ fontWeight: 600 }}>{INVOICE_STATUS_LABELS[invoice.status] ?? invoice.status}</span>
           </div>
-          <ul style={{ fontSize: 12, color: '#666', paddingLeft: 18, marginBottom: 6 }}>
+          <ul style={{ fontSize: 12, color: 'var(--dim-on-surface-variant)', paddingLeft: 18, marginBottom: 6 }}>
             {invLines.map((l) => <li key={l.id}>{l.productName} — {l.quantity} × {l.unitPrice} (%{l.taxRatePercent} KDV)</li>)}
           </ul>
           {invoice.status === 'DRAFT' ? <><ApproveInvoiceForm invoiceId={invoice.id} /> <CancelInvoiceButton invoiceId={invoice.id} /></> : null}
@@ -121,8 +121,8 @@ async function SalesInvoiceCollections({ companyId, invoiceId, currencyCode }: {
   const [collections, summary] = await Promise.all([listCollections(companyId, invoiceId), getInvoiceCollectionSummary(companyId, invoiceId)]);
   return (
     <div style={{ marginTop: 8 }}>
-      <p style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>Fatura Toplamı: {summary.invoiceTotal} · Tahsil Edilen: {summary.collected} · Kalan: {summary.remaining}</p>
-      <ul style={{ fontSize: 12, color: '#666', paddingLeft: 18, marginBottom: 6 }}>
+      <p style={{ fontSize: 12, color: 'var(--dim-on-surface-variant)', marginBottom: 6 }}>Fatura Toplamı: {summary.invoiceTotal} · Tahsil Edilen: {summary.collected} · Kalan: {summary.remaining}</p>
+      <ul style={{ fontSize: 12, color: 'var(--dim-on-surface-variant)', paddingLeft: 18, marginBottom: 6 }}>
         {collections.map((c) => <li key={c.id}>{c.collectionDate} — {c.amount} {c.currencyCode} ({c.method})</li>)}
       </ul>
       {Number(summary.remaining) > 0 ? <CreateCollectionForm invoiceId={invoiceId} currencyCode={currencyCode} /> : null}

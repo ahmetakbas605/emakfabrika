@@ -26,7 +26,7 @@ export default async function TicketsPage({ params }: { params: Promise<{ depart
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Ticketlar</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Durum makinesi SERVICE-DESK.md §1'de tanımlı — geçersiz bir geçiş her zaman reddedilir.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Durum makinesi SERVICE-DESK.md §1'de tanımlı — geçersiz bir geçiş her zaman reddedilir.</p>
 
       {access.permissions.configure ? (
         <SchedulerStatusPanel departmentId={departmentId} lastRunAt={schedulerStatus.lastRunAt?.toISOString() ?? null} runCount={schedulerStatus.runCount} intervalMs={schedulerStatus.intervalMs} />
@@ -34,7 +34,7 @@ export default async function TicketsPage({ params }: { params: Promise<{ depart
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>No</th>
             <th style={{ padding: '6px 8px' }}>Başlık</th>
             <th style={{ padding: '6px 8px' }}>Kategori</th>
@@ -49,19 +49,19 @@ export default async function TicketsPage({ params }: { params: Promise<{ depart
           {tickets.map((t) => {
             const escalationLevel = escalationLevels.get(t.id);
             return (
-              <tr key={t.id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={t.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
                 <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}><Link href={`/dashboard/departments/${departmentId}/it/tickets/${t.id}`}>{t.ticketNo}</Link></td>
                 <td style={{ padding: '6px 8px' }}>{t.title}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{t.category || '—'}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{t.category || '—'}</td>
                 <td style={{ padding: '6px 8px' }}>{t.priority}</td>
                 <td style={{ padding: '6px 8px', fontWeight: 600 }}>{STATUS_LABELS[t.status] ?? t.status}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{t.requestedByName}</td>
-                <td style={{ padding: '6px 8px', color: '#666' }}>{t.slaDueAt ? new Date(t.slaDueAt).toLocaleString('tr-TR') : '—'}</td>
-                <td style={{ padding: '6px 8px', color: escalationLevel ? '#b00' : '#999' }}>{escalationLevel ? `Seviye ${escalationLevel}` : '—'}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{t.requestedByName}</td>
+                <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{t.slaDueAt ? new Date(t.slaDueAt).toLocaleString('tr-TR') : '—'}</td>
+                <td style={{ padding: '6px 8px', color: escalationLevel ? '#b00' : 'var(--dim-slate)' }}>{escalationLevel ? `Seviye ${escalationLevel}` : '—'}</td>
               </tr>
             );
           })}
-          {tickets.length === 0 ? <tr><td colSpan={8} style={{ padding: '8px', color: '#999' }}>Henüz ticket yok.</td></tr> : null}
+          {tickets.length === 0 ? <tr><td colSpan={8} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz ticket yok.</td></tr> : null}
         </tbody>
       </table>
 
@@ -72,7 +72,7 @@ export default async function TicketsPage({ params }: { params: Promise<{ depart
           <h2 style={{ fontSize: 16, marginBottom: 8 }}>SLA Politikaları</h2>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 12 }}>
             <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+              <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
                 <th style={{ padding: '6px 8px' }}>Ad</th>
                 <th style={{ padding: '6px 8px' }}>Öncelik</th>
                 <th style={{ padding: '6px 8px' }}>Yanıt (dk)</th>
@@ -82,15 +82,15 @@ export default async function TicketsPage({ params }: { params: Promise<{ depart
             </thead>
             <tbody>
               {slaPolicies.map((p) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
+                <tr key={p.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
                   <td style={{ padding: '6px 8px' }}>{p.name}</td>
                   <td style={{ padding: '6px 8px' }}>{p.priority}</td>
                   <td style={{ padding: '6px 8px' }}>{p.responseMinutes}</td>
                   <td style={{ padding: '6px 8px' }}>{p.resolutionHours}</td>
-                  <td style={{ padding: '6px 8px', color: '#666' }}>{p.escalationChain && p.escalationChain.length > 0 ? p.escalationChain.join(' → ') : '—'}</td>
+                  <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{p.escalationChain && p.escalationChain.length > 0 ? p.escalationChain.join(' → ') : '—'}</td>
                 </tr>
               ))}
-              {slaPolicies.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: '#999' }}>Henüz SLA politikası yok — ticket oluşturulunca SLA süresi hesaplanmaz.</td></tr> : null}
+              {slaPolicies.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz SLA politikası yok — ticket oluşturulunca SLA süresi hesaplanmaz.</td></tr> : null}
             </tbody>
           </table>
           <SlaPolicyForm departmentId={departmentId} />

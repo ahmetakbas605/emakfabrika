@@ -7,12 +7,12 @@ const REQUEST_STATUS_LABEL: Record<string, string> = { DRAFT: 'Taslak', SUBMITTE
 
 function Card({ label, value, href }: { label: string; value: number | string; href?: string }) {
   const inner = (
-    <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: 14, minWidth: 140 }}>
+    <div style={{ border: '1px solid var(--dim-border-soft)', borderRadius: 6, padding: 14, minWidth: 140 }}>
       <div style={{ fontSize: 22, fontWeight: 700 }}>{value}</div>
-      <div style={{ fontSize: 12, color: '#666' }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>{label}</div>
     </div>
   );
-  return href ? <Link href={href} style={{ textDecoration: 'none', color: '#111' }}>{inner}</Link> : inner;
+  return href ? <Link href={href} style={{ textDecoration: 'none', color: 'var(--dim-bone)' }}>{inner}</Link> : inner;
 }
 
 export default async function ProcurementDashboardPage() {
@@ -42,7 +42,7 @@ export default async function ProcurementDashboardPage() {
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Satınalma Kontrol Paneli</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>
         {session.isFactoryAdmin ? 'Şirket geneli görünüm.' : 'Erişiminiz olan departmanlar ve kendi talepleriniz.'}
       </p>
 
@@ -67,19 +67,19 @@ export default async function ProcurementDashboardPage() {
           <h2 style={{ fontSize: 16, marginBottom: 8 }}>Tedarikçi Bazlı Harcama (Top 5, Onaylanmış Faturalar)</h2>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, maxWidth: 480 }}>
             <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+              <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
                 <th style={{ padding: '6px 8px' }}>Tedarikçi</th>
                 <th style={{ padding: '6px 8px', textAlign: 'right' }}>Toplam Harcama</th>
               </tr>
             </thead>
             <tbody>
               {topSuppliers.map((s) => (
-                <tr key={s.supplierPartyId} style={{ borderBottom: '1px solid #eee' }}>
+                <tr key={s.supplierPartyId} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
                   <td style={{ padding: '6px 8px' }}>{s.supplierName}</td>
                   <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>{Number(s.totalSpend).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
                 </tr>
               ))}
-              {topSuppliers.length === 0 ? <tr><td colSpan={2} style={{ padding: '8px', color: '#999' }}>Henüz onaylanmış fatura yok.</td></tr> : null}
+              {topSuppliers.length === 0 ? <tr><td colSpan={2} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz onaylanmış fatura yok.</td></tr> : null}
             </tbody>
           </table>
         </>

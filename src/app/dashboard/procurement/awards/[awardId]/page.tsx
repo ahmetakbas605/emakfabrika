@@ -31,7 +31,7 @@ export default async function AwardDetailPage({ params }: { params: Promise<{ aw
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{award.awardNo}</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>{AWARD_STATUS_LABEL[award.status] ?? award.status} · Toplam: {Number(total).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>{AWARD_STATUS_LABEL[award.status] ?? award.status} · Toplam: {Number(total).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
         {canSubmit ? <SubmitAwardButton awardId={awardId} /> : null}
@@ -41,7 +41,7 @@ export default async function AwardDetailPage({ params }: { params: Promise<{ aw
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Ödül Satırları</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Kalem</th>
             <th style={{ padding: '6px 8px' }}>Tedarikçi</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Miktar</th>
@@ -51,7 +51,7 @@ export default async function AwardDetailPage({ params }: { params: Promise<{ aw
         </thead>
         <tbody>
           {lines.map((l) => (
-            <tr key={l.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={l.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{l.description}</td>
               <td style={{ padding: '6px 8px' }}>{l.supplierName}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{Number(l.awardedQty).toLocaleString('tr-TR')} {l.unitCode}</td>
@@ -67,11 +67,11 @@ export default async function AwardDetailPage({ params }: { params: Promise<{ aw
           <h2 style={{ fontSize: 16, marginBottom: 8 }}>Onay Süreci</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
             {approval.steps.map((step) => (
-              <div key={step.id} style={{ borderLeft: '2px solid #ddd', paddingLeft: 10, fontSize: 13 }}>
+              <div key={step.id} style={{ borderLeft: '2px solid var(--dim-border)', paddingLeft: 10, fontSize: 13 }}>
                 <span style={{ fontWeight: 600 }}>{step.stepOrder + 1}. adım — {APPROVAL_STEP_STATUS_LABEL[step.status] ?? step.status}</span>
-                <span style={{ color: '#666' }}> ({step.approvers.map((a) => a.userName).join(', ')})</span>
+                <span style={{ color: 'var(--dim-on-surface-variant)' }}> ({step.approvers.map((a) => a.userName).join(', ')})</span>
                 {step.actions.map((a, i) => (
-                  <p key={i} style={{ margin: '4px 0 0', color: '#666' }}>{a.actedByName}: {a.decision}{a.comment ? ` — ${a.comment}` : ''} ({fmt(a.createdAt)})</p>
+                  <p key={i} style={{ margin: '4px 0 0', color: 'var(--dim-on-surface-variant)' }}>{a.actedByName}: {a.decision}{a.comment ? ` — ${a.comment}` : ''} ({fmt(a.createdAt)})</p>
                 ))}
               </div>
             ))}
@@ -85,11 +85,11 @@ export default async function AwardDetailPage({ params }: { params: Promise<{ aw
           {canCreatePos ? <div style={{ marginBottom: 12 }}><CreatePurchaseOrdersButton awardId={awardId} /></div> : null}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {purchaseOrders.map((po) => (
-              <Link key={po.id} href={`/dashboard/procurement/purchase-orders/${po.id}`} style={{ fontSize: 13, color: '#111' }}>
+              <Link key={po.id} href={`/dashboard/procurement/purchase-orders/${po.id}`} style={{ fontSize: 13, color: 'var(--dim-bone)' }}>
                 {po.poNo} — {po.supplierName} ({PO_STATUS_LABEL[po.status] ?? po.status})
               </Link>
             ))}
-            {purchaseOrders.length === 0 ? <span style={{ color: '#999', fontSize: 13 }}>Henüz sipariş oluşturulmadı.</span> : null}
+            {purchaseOrders.length === 0 ? <span style={{ color: 'var(--dim-slate)', fontSize: 13 }}>Henüz sipariş oluşturulmadı.</span> : null}
           </div>
         </>
       ) : null}

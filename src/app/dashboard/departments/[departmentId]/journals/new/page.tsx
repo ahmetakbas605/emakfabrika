@@ -11,7 +11,7 @@ export default async function NewJournalPage({ params }: { params: Promise<{ dep
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Yeni Muhasebe Fişi</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Toplam borç, toplam alacağa eşit olmadan kaydedilemez (PDF madde 86).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Toplam borç, toplam alacağa eşit olmadan kaydedilemez (PDF madde 86).</p>
       <JournalForm
         departmentId={departmentId}
         accounts={accounts.map((a) => ({ code: a.code, name: a.name }))}

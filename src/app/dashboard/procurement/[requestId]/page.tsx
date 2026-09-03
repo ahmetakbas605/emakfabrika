@@ -25,7 +25,7 @@ export default async function ProcRequestDetailPage({ params }: { params: Promis
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{request.requestNo}</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>
         {REQUEST_TYPE_LABEL[request.requestType] ?? request.requestType} · {request.priority} · {STATUS_LABEL[request.status] ?? request.status}
         {request.estimatedTotal ? ` · Tahmini: ${Number(request.estimatedTotal).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ${request.currencyCode ?? ''}` : ''}
       </p>
@@ -39,24 +39,24 @@ export default async function ProcRequestDetailPage({ params }: { params: Promis
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Kalemler</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
         {lines.map((line) => (
-          <div key={line.id} style={{ border: '1px solid #eee', borderRadius: 4, padding: 10, fontSize: 13 }}>
+          <div key={line.id} style={{ border: '1px solid var(--dim-border-soft)', borderRadius: 4, padding: 10, fontSize: 13 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <div>
                 <b>{line.description}</b>
-                <span style={{ color: '#666' }}> — {Number(line.quantity).toLocaleString('tr-TR')} adet{line.preferredBrand ? ` · ${line.preferredBrand}` : ''}</span>
+                <span style={{ color: 'var(--dim-on-surface-variant)' }}> — {Number(line.quantity).toLocaleString('tr-TR')} adet{line.preferredBrand ? ` · ${line.preferredBrand}` : ''}</span>
               </div>
               <span>{STOCK_STATUS_LABEL[line.stockStatus] ?? line.stockStatus}</span>
             </div>
             {line.technicalSpec && typeof line.technicalSpec === 'object' && 'description' in line.technicalSpec ? (
-              <p style={{ color: '#666', margin: '6px 0 0' }}>{String((line.technicalSpec as { description: unknown }).description)}</p>
+              <p style={{ color: 'var(--dim-on-surface-variant)', margin: '6px 0 0' }}>{String((line.technicalSpec as { description: unknown }).description)}</p>
             ) : null}
-            {line.reservedQty && Number(line.reservedQty) > 0 ? <p style={{ color: '#080', margin: '6px 0 0', fontSize: 12 }}>Rezerve edilen: {Number(line.reservedQty).toLocaleString('tr-TR')}</p> : null}
-            {line.purchaseQty && Number(line.purchaseQty) > 0 ? <p style={{ color: '#b70', margin: '4px 0 0', fontSize: 12 }}>Satın alınacak: {Number(line.purchaseQty).toLocaleString('tr-TR')}</p> : null}
+            {line.reservedQty && Number(line.reservedQty) > 0 ? <p style={{ color: 'var(--dim-success)', margin: '6px 0 0', fontSize: 12 }}>Rezerve edilen: {Number(line.reservedQty).toLocaleString('tr-TR')}</p> : null}
+            {line.purchaseQty && Number(line.purchaseQty) > 0 ? <p style={{ color: 'var(--dim-warning)', margin: '4px 0 0', fontSize: 12 }}>Satın alınacak: {Number(line.purchaseQty).toLocaleString('tr-TR')}</p> : null}
 
             <div style={{ marginTop: 8 }}>
-              <span style={{ fontSize: 11, color: '#999' }}>Ek Dosyalar: </span>
+              <span style={{ fontSize: 11, color: 'var(--dim-slate)' }}>Ek Dosyalar: </span>
               {line.attachments.map((a) => <span key={a.id} style={{ fontSize: 11, marginRight: 8 }}>{a.fileName}</span>)}
-              {line.attachments.length === 0 ? <span style={{ fontSize: 11, color: '#999' }}>yok</span> : null}
+              {line.attachments.length === 0 ? <span style={{ fontSize: 11, color: 'var(--dim-slate)' }}>yok</span> : null}
             </div>
             <div style={{ marginTop: 6, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <LineAttachmentForm requestId={requestId} lineId={line.id} />
@@ -71,11 +71,11 @@ export default async function ProcRequestDetailPage({ params }: { params: Promis
           <h2 style={{ fontSize: 16, marginBottom: 8 }}>Onay Süreci</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {approval.steps.map((step) => (
-              <div key={step.id} style={{ borderLeft: '2px solid #ddd', paddingLeft: 10, fontSize: 13 }}>
+              <div key={step.id} style={{ borderLeft: '2px solid var(--dim-border)', paddingLeft: 10, fontSize: 13 }}>
                 <span style={{ fontWeight: 600 }}>{step.stepOrder + 1}. adım — {APPROVAL_STEP_STATUS_LABEL[step.status] ?? step.status}</span>
-                <span style={{ color: '#666' }}> ({step.approvers.map((a) => a.userName).join(', ')})</span>
+                <span style={{ color: 'var(--dim-on-surface-variant)' }}> ({step.approvers.map((a) => a.userName).join(', ')})</span>
                 {step.actions.map((a, i) => (
-                  <p key={i} style={{ margin: '4px 0 0', color: '#666' }}>{a.actedByName}: {a.decision}{a.comment ? ` — ${a.comment}` : ''} ({fmt(a.createdAt)})</p>
+                  <p key={i} style={{ margin: '4px 0 0', color: 'var(--dim-on-surface-variant)' }}>{a.actedByName}: {a.decision}{a.comment ? ` — ${a.comment}` : ''} ({fmt(a.createdAt)})</p>
                 ))}
               </div>
             ))}

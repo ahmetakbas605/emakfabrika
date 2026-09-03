@@ -24,11 +24,11 @@ export default async function StockItemsPage({ params }: { params: Promise<{ dep
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Stok Kartları</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Ağırlıklı ortalama maliyet — birim maliyet her girişte otomatik güncellenir.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Ağırlıklı ortalama maliyet — birim maliyet her girişte otomatik güncellenir.</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>SKU</th>
             <th style={{ padding: '6px 8px' }}>Ad</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Miktar</th>
@@ -39,16 +39,16 @@ export default async function StockItemsPage({ params }: { params: Promise<{ dep
         </thead>
         <tbody>
           {stockItems.map((s) => (
-            <tr key={s.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={s.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px', fontFamily: 'monospace' }}>{s.sku}</td>
               <td style={{ padding: '6px 8px' }}>{s.name}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{num(s.currentQty)}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{s.unit}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{s.unit}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{num(s.avgCost)} ₺</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{s.accountCode ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{s.accountCode ?? '—'}</td>
             </tr>
           ))}
-          {stockItems.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: '#999' }}>Henüz stok kartı yok.</td></tr> : null}
+          {stockItems.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz stok kartı yok.</td></tr> : null}
         </tbody>
       </table>
 
@@ -73,7 +73,7 @@ export default async function StockItemsPage({ params }: { params: Promise<{ dep
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Son Hareketler</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Tarih</th>
             <th style={{ padding: '6px 8px' }}>Stok Kartı</th>
             <th style={{ padding: '6px 8px' }}>Yön</th>
@@ -83,10 +83,10 @@ export default async function StockItemsPage({ params }: { params: Promise<{ dep
         </thead>
         <tbody>
           {movements.map((m) => (
-            <tr key={m.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={m.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{m.transactionDate}</td>
               <td style={{ padding: '6px 8px' }}>{itemBySku.get(m.stockItemId)?.sku ?? '-'}</td>
-              <td style={{ padding: '6px 8px', color: m.movementType === 'IN' ? '#080' : '#b00' }}>{m.movementType === 'IN' ? 'Giriş' : 'Çıkış'}</td>
+              <td style={{ padding: '6px 8px', color: m.movementType === 'IN' ? '#080' : 'var(--dim-danger)' }}>{m.movementType === 'IN' ? 'Giriş' : 'Çıkış'}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{num(m.quantity)}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{m.unitCost ? num(m.unitCost) + ' ₺' : '—'}</td>
             </tr>

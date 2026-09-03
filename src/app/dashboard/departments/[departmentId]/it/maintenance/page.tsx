@@ -20,11 +20,11 @@ export default async function MaintenancePage({ params }: { params: Promise<{ de
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Bakım Planları (Maintenance)</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Vadesi gelen planlar için otomatik work order üretimi bugün elle tetiklenir — gerçek bir zamanlayıcı henüz yok (MAINTENANCE.md §2).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Vadesi gelen planlar için otomatik work order üretimi bugün elle tetiklenir — gerçek bir zamanlayıcı henüz yok (MAINTENANCE.md §2).</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 12 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Başlık</th>
             <th style={{ padding: '6px 8px' }}>Varlık</th>
             <th style={{ padding: '6px 8px' }}>Tip</th>
@@ -35,16 +35,16 @@ export default async function MaintenancePage({ params }: { params: Promise<{ de
         </thead>
         <tbody>
           {plans.map((p) => (
-            <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={p.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{p.title}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{p.assetTag ?? 'Genel'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{p.assetTag ?? 'Genel'}</td>
               <td style={{ padding: '6px 8px' }}>{TYPE_LABELS[p.maintenanceType]}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{p.intervalValue > 1 ? `${p.intervalValue} ` : ''}{FREQ_LABELS[p.frequency]}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{p.intervalValue > 1 ? `${p.intervalValue} ` : ''}{FREQ_LABELS[p.frequency]}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{p.nextDueDate}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{p.assignedTechnicianName ?? '—'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{p.assignedTechnicianName ?? '—'}</td>
             </tr>
           ))}
-          {plans.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: '#999' }}>Henüz bakım planı yok.</td></tr> : null}
+          {plans.length === 0 ? <tr><td colSpan={6} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz bakım planı yok.</td></tr> : null}
         </tbody>
       </table>
 
@@ -59,7 +59,7 @@ export default async function MaintenancePage({ params }: { params: Promise<{ de
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Üretilmiş Bakım İşleri</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Plan</th>
             <th style={{ padding: '6px 8px' }}>Ticket</th>
             <th style={{ padding: '6px 8px' }}>Varlık</th>
@@ -69,15 +69,15 @@ export default async function MaintenancePage({ params }: { params: Promise<{ de
         </thead>
         <tbody>
           {generatedWorkOrders.map((w) => (
-            <tr key={w.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={w.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{w.planTitle}</td>
               <td style={{ padding: '6px 8px' }}><Link href={`/dashboard/departments/${departmentId}/it/field-service/${w.workOrderId}`}>{w.ticketNo}</Link></td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{w.assetTag ?? 'Genel'}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{w.scheduledDate}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{w.assetTag ?? 'Genel'}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{w.scheduledDate}</td>
               <td style={{ padding: '6px 8px', fontWeight: 600 }}>{w.ticketStatus}</td>
             </tr>
           ))}
-          {generatedWorkOrders.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: '#999' }}>Henüz üretilmiş bakım işi yok.</td></tr> : null}
+          {generatedWorkOrders.length === 0 ? <tr><td colSpan={5} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz üretilmiş bakım işi yok.</td></tr> : null}
         </tbody>
       </table>
     </div>

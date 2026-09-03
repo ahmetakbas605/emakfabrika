@@ -26,7 +26,7 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{tender.tenderNo} — {tender.title}</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>
         {TENDER_STATUS_LABEL[tender.status] ?? tender.status}
         {tender.bidSubmissionDeadline ? ` · Teklif son tarihi: ${new Date(tender.bidSubmissionDeadline).toLocaleString('tr-TR')}` : ''}
         {tender.bidOpeningAt ? ` · Planlanan açılış: ${new Date(tender.bidOpeningAt).toLocaleString('tr-TR')}` : ''}
@@ -40,18 +40,18 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
         {tender.status === 'DRAFT' ? <PublishTenderButton tenderId={tenderId} /> : null}
         {tender.status === 'PUBLISHED' ? <OpenTenderBiddingButton tenderId={tenderId} /> : null}
         {tender.status !== 'CANCELLED' && tender.status !== 'AWARDED' ? <CancelTenderButton tenderId={tenderId} /> : null}
-        {canSeeComparison ? <Link href={`/dashboard/procurement/tenders/${tenderId}/evaluate`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Değerlendirme</Link> : null}
+        {canSeeComparison ? <Link href={`/dashboard/procurement/tenders/${tenderId}/evaluate`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid var(--dim-border-soft)', borderRadius: 4, textDecoration: 'none', color: 'var(--dim-bone)' }}>Değerlendirme</Link> : null}
         {award ? (
-          <Link href={`/dashboard/procurement/awards/${award.id}`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Ödülü Görüntüle</Link>
+          <Link href={`/dashboard/procurement/awards/${award.id}`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid var(--dim-border-soft)', borderRadius: 4, textDecoration: 'none', color: 'var(--dim-bone)' }}>Ödülü Görüntüle</Link>
         ) : tender.status === 'OPENED' ? (
-          <Link href={`/dashboard/procurement/tenders/${tenderId}/award`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid #ccc', borderRadius: 4, textDecoration: 'none', color: '#111' }}>Ödül Oluştur</Link>
+          <Link href={`/dashboard/procurement/tenders/${tenderId}/award`} style={{ display: 'inline-block', padding: '7px 14px', border: '1px solid var(--dim-border-soft)', borderRadius: 4, textDecoration: 'none', color: 'var(--dim-bone)' }}>Ödül Oluştur</Link>
         ) : null}
       </div>
 
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Kalemler</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Açıklama</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Miktar</th>
             <th style={{ padding: '6px 8px' }}>Birim</th>
@@ -59,10 +59,10 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
         </thead>
         <tbody>
           {lines.map((l) => (
-            <tr key={l.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={l.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{l.description}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{Number(l.quantity).toLocaleString('tr-TR')}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{l.unitCode}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{l.unitCode}</td>
             </tr>
           ))}
         </tbody>
@@ -71,29 +71,29 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>{tender.openParticipation ? 'Katılımcılar' : 'Davetli Tedarikçiler'}</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Tedarikçi</th>
             <th style={{ padding: '6px 8px' }}>Durum</th>
           </tr>
         </thead>
         <tbody>
           {suppliers.map((s) => (
-            <tr key={s.id} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={s.id} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{s.supplierName}</td>
-              <td style={{ padding: '6px 8px', color: '#666' }}>{SUPPLIER_STATUS_LABEL[s.status] ?? s.status}</td>
+              <td style={{ padding: '6px 8px', color: 'var(--dim-on-surface-variant)' }}>{SUPPLIER_STATUS_LABEL[s.status] ?? s.status}</td>
             </tr>
           ))}
-          {suppliers.length === 0 ? <tr><td colSpan={2} style={{ padding: '8px', color: '#999' }}>Henüz katılımcı yok.</td></tr> : null}
+          {suppliers.length === 0 ? <tr><td colSpan={2} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz katılımcı yok.</td></tr> : null}
         </tbody>
       </table>
 
       <h2 style={{ fontSize: 16, marginBottom: 8 }}>Teklif Katılımı</h2>
-      <p style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>Kim teklif verdi — içerik (fiyat/miktar) açılışa kadar gizlidir.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', fontSize: 12, marginBottom: 8 }}>Kim teklif verdi — içerik (fiyat/miktar) açılışa kadar gizlidir.</p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
         {participation.map((p) => (
-          <span key={p.supplierPartyId} style={{ fontSize: 12, border: '1px solid #eee', borderRadius: 4, padding: '4px 8px' }}>{p.supplierName} (v{p.version})</span>
+          <span key={p.supplierPartyId} style={{ fontSize: 12, border: '1px solid var(--dim-border-soft)', borderRadius: 4, padding: '4px 8px' }}>{p.supplierName} (v{p.version})</span>
         ))}
-        {participation.length === 0 ? <span style={{ color: '#999', fontSize: 13 }}>Henüz teklif yok.</span> : null}
+        {participation.length === 0 ? <span style={{ color: 'var(--dim-slate)', fontSize: 13 }}>Henüz teklif yok.</span> : null}
       </div>
 
       {tender.status === 'PUBLISHED' ? (
@@ -105,13 +105,13 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
       {canSeeComparison ? (
         <>
           <h2 style={{ fontSize: 16, marginBottom: 8 }}>Teklif Karşılaştırması</h2>
-          <p style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>Her tedarikçinin EN SON teklif versiyonu kullanılır, en ucuzdan pahalıya sıralanır. Ağırlıklı skor için Değerlendirme sayfasına bakın.</p>
+          <p style={{ color: 'var(--dim-on-surface-variant)', fontSize: 12, marginBottom: 8 }}>Her tedarikçinin EN SON teklif versiyonu kullanılır, en ucuzdan pahalıya sıralanır. Ağırlıklı skor için Değerlendirme sayfasına bakın.</p>
           {comparison.map((row) => (
             <div key={row.tenderLineId} style={{ marginBottom: 16 }}>
               <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{row.description} ({Number(row.quantity).toLocaleString('tr-TR')})</p>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ textAlign: 'left', borderBottom: '1px solid #ccc' }}>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border-soft)' }}>
                     <th style={{ padding: '4px 8px' }}>Tedarikçi</th>
                     <th style={{ padding: '4px 8px', textAlign: 'right' }}>Birim Fiyat</th>
                     <th style={{ padding: '4px 8px', textAlign: 'right' }}>İndirim</th>
@@ -122,16 +122,16 @@ export default async function TenderDetailPage({ params }: { params: Promise<{ t
                 </thead>
                 <tbody>
                   {row.cells.map((c, i) => (
-                    <tr key={c.supplierPartyId} style={{ borderBottom: '1px solid #f0f0f0', background: i === 0 ? '#f4fbf4' : undefined }}>
+                    <tr key={c.supplierPartyId} style={{ borderBottom: '1px solid var(--dim-border-soft)', background: i === 0 ? '#f4fbf4' : undefined }}>
                       <td style={{ padding: '4px 8px' }}>{c.supplierName}{c.isAlternative ? ' (Alternatif)' : ''}</td>
                       <td style={{ padding: '4px 8px', textAlign: 'right' }}>{c.unitPrice}</td>
                       <td style={{ padding: '4px 8px', textAlign: 'right' }}>%{c.discountPercent}</td>
                       <td style={{ padding: '4px 8px', textAlign: 'right' }}>{c.netUnitPrice}</td>
                       <td style={{ padding: '4px 8px', textAlign: 'right', fontWeight: i === 0 ? 600 : 400 }}>{c.lineTotal}</td>
-                      <td style={{ padding: '4px 8px', color: '#666' }}>{c.deliveryDays ?? '—'} gün</td>
+                      <td style={{ padding: '4px 8px', color: 'var(--dim-on-surface-variant)' }}>{c.deliveryDays ?? '—'} gün</td>
                     </tr>
                   ))}
-                  {row.cells.length === 0 ? <tr><td colSpan={6} style={{ padding: '6px 8px', color: '#999' }}>Bu kalem için teklif yok.</td></tr> : null}
+                  {row.cells.length === 0 ? <tr><td colSpan={6} style={{ padding: '6px 8px', color: 'var(--dim-slate)' }}>Bu kalem için teklif yok.</td></tr> : null}
                 </tbody>
               </table>
             </div>

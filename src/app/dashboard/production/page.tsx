@@ -20,7 +20,7 @@ export default async function ProductionHomePage() {
   return (
     <div style={{ padding: '2rem' }}>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Üretim</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>BOM → Routing → Üretim Emri → İş Emri → Malzeme Çıkışı → Üretim → Mamul (Holding ERP Faz 2).</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>BOM → Routing → Üretim Emri → İş Emri → Malzeme Çıkışı → Üretim → Mamul (Holding ERP Faz 2).</p>
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
         <Stat label="Devam Eden Üretim Emri" value={activeOrders} />
@@ -38,9 +38,9 @@ export default async function ProductionHomePage() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: '10px 16px', minWidth: 120 }}>
+    <div style={{ border: '1px solid var(--dim-border-soft)', borderRadius: 6, padding: '10px 16px', minWidth: 120 }}>
       <div style={{ fontSize: 22, fontWeight: 700 }}>{value}</div>
-      <div style={{ fontSize: 12, color: '#666' }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>{label}</div>
     </div>
   );
 }

@@ -1,37 +1,35 @@
-import Link from 'next/link';
 import { requireFactoryAdmin } from '@/lib/dal';
+import { SubNav, type SubNavItem } from '@/components/shell/SubNav';
 
 // Faz 1 (ERP Genişletme) — Master Data hiçbir departmana ait değil (madde
 // 189-190: tek kaynak, TÜM departmanların/gelecekteki Satınalma-Satış'ın
 // üstüne kurulacağı ortak zemin), bu yüzden requireDepartmentAccess değil
 // requireFactoryAdmin ile korunuyor — dashboard/departments/[id]/... yapısının
 // DIŞINDA, kendi üst-seviye rotası.
+//
+// Görsel Yenileme Faz 2: bu layout'un kendi 200px'lik dikey kenar çubuğu
+// vardı. /dashboard/layout.tsx artık her sayfayı DimensionShell ile
+// sardığı için o çubuk ekranda İKİNCİ bir dikey menü sütunu oluyordu.
+// Menü kaybolmadan yatay şeride taşındı (bkz. components/shell/SubNav.tsx)
+// — Core Security'de yapılanın aynısı. `← Panele Dön` bağlantısı da
+// kaldırıldı: ana menü zaten her sayfada görünür durumda.
+
+const MASTER_DATA_NAV: SubNavItem[] = [
+  { href: '/dashboard/master-data/parties', label: 'Cariler', icon: 'users' },
+  { href: '/dashboard/master-data/products', label: 'Ürünler', icon: 'boxes' },
+  { href: '/dashboard/master-data/units', label: 'Birimler', icon: 'clipboard' },
+  { href: '/dashboard/master-data/currencies', label: 'Para Birimleri', icon: 'wallet' },
+  { href: '/dashboard/master-data/payment-terms', label: 'Ödeme Vadeleri', icon: 'calendarClock' },
+  { href: '/dashboard/master-data/price-lists', label: 'Fiyat Listeleri', icon: 'scroll' }
+];
+
 export default async function MasterDataLayout({ children }: { children: React.ReactNode }) {
   await requireFactoryAdmin();
 
-  const links = [
-    { href: '/dashboard/master-data/parties', label: 'Cariler' },
-    { href: '/dashboard/master-data/products', label: 'Ürünler' },
-    { href: '/dashboard/master-data/units', label: 'Birimler' },
-    { href: '/dashboard/master-data/currencies', label: 'Para Birimleri' },
-    { href: '/dashboard/master-data/payment-terms', label: 'Ödeme Vadeleri' },
-    { href: '/dashboard/master-data/price-lists', label: 'Fiyat Listeleri' }
-  ];
-
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <nav style={{ width: 200, borderRight: '1px solid #ddd', padding: '20px 12px' }}>
-        <Link href="/dashboard" style={{ fontSize: 13, color: '#666', textDecoration: 'none' }}>← Panele Dön</Link>
-        <h2 style={{ fontSize: 14, margin: '16px 0 8px', color: '#666' }}>Master Data</h2>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {links.map((l) => (
-            <li key={l.href}>
-              <Link href={l.href} style={{ display: 'block', padding: '6px 8px', fontSize: 14, textDecoration: 'none', color: '#111', borderRadius: 4 }}>{l.label}</Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      <main style={{ flex: 1, padding: '2rem' }}>{children}</main>
-    </div>
+    <>
+      <SubNav items={MASTER_DATA_NAV} />
+      {children}
+    </>
   );
 }

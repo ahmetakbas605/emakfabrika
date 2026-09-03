@@ -11,7 +11,7 @@ export default async function KbArticleDetailPage({ params }: { params: Promise<
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>{article.title}</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>{article.categoryName || 'Kategorisiz'} · {article.authorName} · {article.viewCount + 1} görüntülenme · Son güncelleme: {new Date(article.updatedAt).toLocaleDateString('tr-TR')}</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>{article.categoryName || 'Kategorisiz'} · {article.authorName} · {article.viewCount + 1} görüntülenme · Son güncelleme: {new Date(article.updatedAt).toLocaleDateString('tr-TR')}</p>
       <div style={{ whiteSpace: 'pre-wrap', fontSize: 14 }}>{article.content}</div>
     </div>
   );

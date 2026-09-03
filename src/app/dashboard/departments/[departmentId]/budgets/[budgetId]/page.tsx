@@ -15,11 +15,11 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ d
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 4 }}>Bütçe — Gerçekleşen Karşılaştırması</h1>
-      <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>Sapma = Planlanan − Gerçekleşen.</p>
+      <p style={{ color: 'var(--dim-on-surface-variant)', marginBottom: 20, fontSize: 13 }}>Sapma = Planlanan − Gerçekleşen.</p>
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #333' }}>
+          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--dim-border)' }}>
             <th style={{ padding: '6px 8px' }}>Hesap</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Planlanan</th>
             <th style={{ padding: '6px 8px', textAlign: 'right' }}>Gerçekleşen</th>
@@ -28,14 +28,14 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ d
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.accountCode} style={{ borderBottom: '1px solid #eee' }}>
+            <tr key={r.accountCode} style={{ borderBottom: '1px solid var(--dim-border-soft)' }}>
               <td style={{ padding: '6px 8px' }}>{r.accountCode} — {r.accountName}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{money(r.planned)}</td>
               <td style={{ padding: '6px 8px', textAlign: 'right' }}>{money(r.actual)}</td>
-              <td style={{ padding: '6px 8px', textAlign: 'right', color: Number(r.variance) < 0 ? '#b00' : '#080' }}>{money(r.variance)}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'right', color: Number(r.variance) < 0 ? '#b00' : 'var(--dim-success)' }}>{money(r.variance)}</td>
             </tr>
           ))}
-          {rows.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: '#999' }}>Henüz bütçe kalemi yok.</td></tr> : null}
+          {rows.length === 0 ? <tr><td colSpan={4} style={{ padding: '8px', color: 'var(--dim-slate)' }}>Henüz bütçe kalemi yok.</td></tr> : null}
         </tbody>
       </table>
 
