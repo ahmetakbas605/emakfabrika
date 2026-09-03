@@ -3335,6 +3335,94 @@ export const salesOrderLines = mysqlTable('sales_order_lines', {
 
 export const SALES_SHIPMENT_STATUSES = ['DRAFT', 'SHIPPED', 'DELIVERED', 'CANCELLED'] as const;
 
+// ==================================================================
+// KANTAR — Pazarlama Faz 2.
+//
+// Kullanıcının tarifi (2026-09-03), BİREBİR:
+//  - "kg'lı ürünler kantara tabidir" → net kilo faturaya giden miktarı
+//    BELİRLER. Sipariş miktarı tahmindir, gerçek miktar kantardan gelir.
+//  - "adetli ürünler kantara girmez AMA adetli üründe de karayolları
+//    kanunlarına göre aracın uygun tonajı aşıp aşmadığını belirten bir
+//    kantar fişi verilmelidir" → aynı fiş, farklı AMAÇ: miktar değil,
+//    yasal tonaj kontrolü. purpose alanı bu ikisini ayırır.
+//  - "boş dolu tartım" → dara (boş) ve brüt (dolu) ayrı okunur, net
+//    ikisinin farkıdır. Hangi sırayla tartıldığı sahada değişir
+//    (giriş dolu / çıkış boş ya da tersi), o yüzden ikisi de saklanır.
+//  - "talep, şu anki, eksik diyen bir ekran" → sipariş satırındaki
+//    talep ile o satıra yazılan net toplamı karşılaştıran görünüm.
+//    Sorgu ile üretilir, ayrı tablo tutulmaz (tek kaynak: tartım fişi).
+//  - "ileride belli bir tolerans tanımlanabilir" → tolerans ALANI
+//    kantar tanımında şimdiden var, varsayılan 0 (kapalı).
+//
+// FİŞ SİLİNMEZ: faturaya dayanak olan mali bir belge. İptal (cancel) ve
+// düzeltme/ters kayıt (correct_weighing) AYRI yetkiler — düzeltme
+// faturaya giden miktarı değiştirir.
+// ==================================================================
+export const WEIGHBRIDGE_TICKET_PURPOSES = ['SALES_QUANTITY', 'ROAD_LEGAL_CHECK'] as const;
+export const WEIGHBRIDGE_TICKET_STATUSES = ['DRAFT', 'COMPLETED', 'CANCELLED', 'REVERSED'] as const;
+export const WEIGHBRIDGE_DIRECTIONS = ['OUTBOUND', 'INBOUND'] as const;
+
+export const weighbridges = mysqlTable('weighbridges', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  // "pazarlamaya bağlı bir veya birden çok kantar" — departmana bağlı.
+  departmentId: char('department_id', { length: 36 }).notNull().references(() => departments.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  location: varchar('location', { length: 255 }).notNull().default(''),
+  // Kantarın azami tartım kapasitesi (kg) — bilgi amaçlı.
+  capacityKg: decimal('capacity_kg', { precision: 20, scale: 3 }),
+  // Karayolları azami yüklü ağırlık sınırı (kg). Adetli üründe de fiş
+  // kesilmesinin SEBEBİ bu: aracın bu sınırı aşıp aşmadığı.
+  roadLegalLimitKg: decimal('road_legal_limit_kg', { precision: 20, scale: 3 }),
+  // Sipariş miktarı ile net arasında kabul edilebilir sapma (%).
+  // Varsayılan 0 = tolerans kapalı, her sapma raporlanır.
+  tolerancePercent: decimal('tolerance_percent', { precision: 6, scale: 3 }).notNull().default('0'),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_weighbridge_company_code').on(table.companyId, table.code)]);
+
+export const weighbridgeTickets = mysqlTable('weighbridge_tickets', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  weighbridgeId: char('weighbridge_id', { length: 36 }).notNull().references(() => weighbridges.id),
+  ticketNo: varchar('ticket_no', { length: 32 }).notNull(),
+  purpose: mysqlEnum('purpose', WEIGHBRIDGE_TICKET_PURPOSES).notNull(),
+  direction: mysqlEnum('direction', WEIGHBRIDGE_DIRECTIONS).notNull().default('OUTBOUND'),
+  status: mysqlEnum('status', WEIGHBRIDGE_TICKET_STATUSES).notNull().default('DRAFT'),
+
+  plateNo: varchar('plate_no', { length: 20 }).notNull(),
+  driverName: varchar('driver_name', { length: 255 }).notNull().default(''),
+  carrierName: varchar('carrier_name', { length: 255 }).notNull().default(''),
+
+  // Cari ve ürün opsiyonel: yasal tonaj kontrolü için gelen bir araçta
+  // henüz sipariş bağlanmamış olabilir.
+  partyId: char('party_id', { length: 36 }).references(() => parties.id),
+  productId: char('product_id', { length: 36 }).references(() => products.id),
+  // Miktarı BU sipariş satırına yazar (SALES_QUANTITY amacında).
+  orderLineId: char('order_line_id', { length: 36 }).references(() => salesOrderLines.id),
+
+  // Boş/dolu tartım. Net = brüt - dara, sunucuda hesaplanır.
+  grossKg: decimal('gross_kg', { precision: 20, scale: 3 }),
+  tareKg: decimal('tare_kg', { precision: 20, scale: 3 }),
+  netKg: decimal('net_kg', { precision: 20, scale: 3 }),
+  firstWeighedAt: timestamp('first_weighed_at'),
+  secondWeighedAt: timestamp('second_weighed_at'),
+
+  // Yasal tonaj sonucu — kantarın roadLegalLimitKg'sine göre hesaplanır.
+  // null = limit tanımlı değil, kontrol yapılamadı.
+  roadLegalOk: boolean('road_legal_ok'),
+
+  notes: varchar('notes', { length: 1000 }).notNull().default(''),
+  // Ters kayıtta: bu fiş hangi fişi düzeltiyor.
+  reversalOfTicketId: char('reversal_of_ticket_id', { length: 36 }),
+  cancelReason: varchar('cancel_reason', { length: 500 }).notNull().default(''),
+
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at')
+}, (table) => [uniqueIndex('udx_weighbridge_ticket_company_no').on(table.companyId, table.ticketNo)]);
+
 export const salesShipments = mysqlTable('sales_shipments', {
   id: char('id', { length: 36 }).primaryKey(),
   companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),

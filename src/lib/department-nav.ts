@@ -196,6 +196,12 @@ export function departmentNav(departmentId: string, departmentTypeCode: string):
             { href: '/dashboard/sales/invoices', label: 'Faturalar', icon: 'scroll' },
             { href: '/dashboard/sales/complaints', label: 'Şikâyetler', icon: 'alert' }
           ]
+        },
+        {
+          // Faz 2 — kantar departmana bağlı, o yüzden rota departman
+          // altında (satış ekranlarının aksine, onlar üst seviyede).
+          label: 'Kantar',
+          items: [{ href: `${base}/marketing/weighbridge`, label: 'Tartım & Gerçekleşme', icon: 'gauge' }]
         }
       ];
 
