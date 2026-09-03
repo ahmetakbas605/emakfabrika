@@ -7,7 +7,7 @@ export default async function DepartmentLayout({ children, params }: { children:
   const { access } = await requireDepartmentAccess(departmentId);
   // Menü tablosu artık lib/department-nav.ts'te — departman ANA
   // SAYFASI da aynı listeyi kart olarak gösteriyor, kopyalanmasın.
-  const nav = departmentNav(departmentId, access.departmentTypeCode);
+  const navGroups = departmentNav(departmentId, access.departmentTypeCode);
 
   return (
     <>
@@ -23,7 +23,7 @@ export default async function DepartmentLayout({ children, params }: { children:
         <span className="dim-technical ml-3" style={{ color: 'var(--dim-slate)' }}>{access.roleName}</span>
       </div>
 
-      {nav.length > 0 ? <SubNav items={nav.map((item) => ({ href: item.href, label: item.label }))} /> : null}
+      {navGroups.length > 0 ? <SubNav groups={navGroups} /> : null}
 
       {children}
     </>

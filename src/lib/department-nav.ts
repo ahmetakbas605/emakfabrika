@@ -1,87 +1,148 @@
 // Bir departmanın türüne göre menüsü — TEK KAYNAK.
 //
-// Daha önce bu tablo dashboard/departments/[departmentId]/layout.tsx'in
-// içinde gömülüydü. Departman ana sayfası eklenince (aynı listeyi kart
-// olarak göstermesi gerekiyor) iki yerde durması gerekti; kopyalamak
-// yerine buraya taşındı. Yeni bir departman türü eklendiğinde YALNIZCA
-// bu dosyaya bir satır eklenir.
+// Faz 4: gruplama kullanıcının kendi verdiği "HOLDING ERP MENÜ AĞACI"
+// belgesindeki alt birimlere göre yeniden düzenlendi. Grup adları onun
+// yazdığı gibi (Donanım/Yazılım, Finans/Vezne/Stok Muhasebe/Genel
+// Muhasebe, İK Operasyon/İSG), yorumlanmadan.
+//
+// İKİ KURAL:
+//  1. Hiçbir mevcut ekran DÜŞÜRÜLMEDİ. Ağaçta adı geçmeyen ekranlar
+//     (IT'de Dashboard/İzleme/Yedekleme/Uyumluluk) silinmedi, "IT
+//     Yönetim" başlığı altında duruyor — menüden çıkarmak onları
+//     erişilemez yapardı, ki bu tam da Faz 3'te düzeltilen hataydı.
+//  2. Hiçbir OLMAYAN ekran uydurulmadı. Ağaçta olup uygulamada karşılığı
+//     bulunmayanlar (İşyeri Hekimi, Garaj, Güvenlik, Odacılar) buraya
+//     YAZILMADI — 404 veren bir menü, eksik menüden kötüdür.
 //
 // PDF madde 8, 70: "Muhasebe kullanıcısı için sistem son derece kolay/
 // hızlı/bilgi yoğun olmalı, gereksiz animasyon YOK."
 
-import type { IconName } from '@/components/shell/icons';
+import type { SubNavGroup } from '@/components/shell/SubNav';
 
-export interface DepartmentNavItem {
-  href: string;
-  label: string;
-  icon?: IconName;
-}
+export type DepartmentNavGroup = SubNavGroup;
 
-export function departmentNav(departmentId: string, departmentTypeCode: string): DepartmentNavItem[] {
+export function departmentNav(departmentId: string, departmentTypeCode: string): DepartmentNavGroup[] {
   const base = `/dashboard/departments/${departmentId}`;
+
   switch (departmentTypeCode) {
     case 'ACCOUNTING':
       return [
-        { href: `${base}/accounts`, label: 'Hesap Planı', icon: 'clipboard' },
-        { href: `${base}/journals`, label: 'Muhasebe Fişleri', icon: 'scroll' },
-        { href: `${base}/kasa`, label: 'Kasa', icon: 'wallet' },
-        { href: `${base}/banka`, label: 'Banka', icon: 'landmark' },
-        { href: `${base}/checks`, label: 'Çek/Senet', icon: 'scroll' },
-        { href: `${base}/cost-centers`, label: 'Masraf Merkezi', icon: 'chart' },
-        { href: `${base}/budgets`, label: 'Bütçe', icon: 'chart' },
-        { href: `${base}/fixed-assets`, label: 'Demirbaş', icon: 'boxes' },
-        { href: `${base}/periods`, label: 'Dönemler', icon: 'calendarClock' },
-        { href: `${base}/reports/trial-balance`, label: 'Mizan', icon: 'chart' },
-        { href: `${base}/reports/balance-sheet`, label: 'Bilanço', icon: 'chart' },
-        { href: `${base}/reports/income-statement`, label: 'Gelir Tablosu', icon: 'chart' }
+        {
+          label: 'Genel Muhasebe',
+          items: [
+            { href: `${base}/accounts`, label: 'Hesap Planı', icon: 'clipboard' },
+            { href: `${base}/journals`, label: 'Muhasebe Fişleri', icon: 'scroll' },
+            { href: `${base}/periods`, label: 'Dönem Sonu', icon: 'calendarClock' }
+          ]
+        },
+        {
+          label: 'Vezne',
+          items: [{ href: `${base}/kasa`, label: 'Kasa', icon: 'wallet' }]
+        },
+        {
+          label: 'Finans',
+          items: [
+            { href: `${base}/banka`, label: 'Banka', icon: 'landmark' },
+            { href: `${base}/checks`, label: 'Çek/Senet', icon: 'scroll' },
+            { href: `${base}/budgets`, label: 'Bütçe', icon: 'chart' },
+            { href: `${base}/cost-centers`, label: 'Masraf Merkezleri', icon: 'chart' },
+            { href: `${base}/reports/trial-balance`, label: 'Mizan', icon: 'chart' },
+            { href: `${base}/reports/balance-sheet`, label: 'Bilanço', icon: 'chart' },
+            { href: `${base}/reports/income-statement`, label: 'Gelir Tablosu', icon: 'chart' }
+          ]
+        },
+        {
+          // Ağaçta Demirbaş "Stok Muhasebe" altında; o alt birim ayrı bir
+          // departman TÜRÜ (WAREHOUSE) olarak duruyor, ama /fixed-assets
+          // rotası muhasebe departmanının altında. Rotayı taşımak veri
+          // modeline dokunmak olurdu — ekran burada, adı ağaçtaki gibi.
+          label: 'Stok Muhasebe',
+          items: [{ href: `${base}/fixed-assets`, label: 'Demirbaş', icon: 'boxes' }]
+        }
       ];
+
     case 'WAREHOUSE':
       return [
-        { href: `${base}/warehouses`, label: 'Depolar', icon: 'building' },
-        { href: `${base}/stock-items`, label: 'Stok Kartları', icon: 'boxes' },
-        { href: `${base}/transfers`, label: 'Transferler', icon: 'truck' },
-        { href: `${base}/reservations`, label: 'Rezervasyonlar', icon: 'clipboardCheck' }
+        {
+          label: 'Stok Muhasebe',
+          items: [
+            { href: `${base}/warehouses`, label: 'Depolar', icon: 'building' },
+            { href: `${base}/stock-items`, label: 'Stok Kartları', icon: 'boxes' },
+            { href: `${base}/transfers`, label: 'Transferler', icon: 'truck' },
+            { href: `${base}/reservations`, label: 'Rezervasyonlar', icon: 'clipboardCheck' }
+          ]
+        }
       ];
+
     case 'IT':
       return [
-        { href: `${base}/it/dashboard`, label: 'Dashboard', icon: 'dashboard' },
-        { href: `${base}/it/assets`, label: 'Varlıklar', icon: 'boxes' },
-        { href: `${base}/it/cmdb`, label: 'CMDB', icon: 'gitBranch' },
-        { href: `${base}/it/tickets`, label: 'Ticketlar', icon: 'inbox' },
-        { href: `${base}/it/field-service`, label: 'Saha İşleri', icon: 'wrench' },
-        { href: `${base}/it/maintenance`, label: 'Bakım', icon: 'wrench' },
-        { href: `${base}/it/licensing`, label: 'Lisans/Garanti/Sözleşme', icon: 'scroll' },
-        { href: `${base}/it/network`, label: 'IPAM/Ağ', icon: 'plug' },
-        { href: `${base}/it/network-diagram`, label: 'Ağ Diyagramı', icon: 'gitBranch' },
-        { href: `${base}/it/monitoring`, label: 'İzleme', icon: 'activity' },
-        { href: `${base}/it/backup`, label: 'Yedekleme', icon: 'archive' },
-        { href: `${base}/it/compliance`, label: 'Uyumluluk', icon: 'shield' },
-        { href: `${base}/it/credentials`, label: 'Kimlik Kasası', icon: 'key' },
-        { href: `${base}/it/servers`, label: 'Sunucu/VM', icon: 'building' },
-        { href: `${base}/it/knowledge-base`, label: 'Bilgi Bankası', icon: 'fileSearch' },
-        { href: `${base}/it/incidents`, label: 'Incidentlar', icon: 'alert' },
-        { href: `${base}/it/problems`, label: 'Problemler', icon: 'fileWarning' },
-        { href: `${base}/it/changes`, label: 'Değişiklikler', icon: 'pen' }
+        {
+          label: 'Donanım',
+          items: [
+            { href: `${base}/it/assets`, label: 'Varlıklar', icon: 'boxes' },
+            { href: `${base}/it/cmdb`, label: 'CMDB', icon: 'gitBranch' },
+            { href: `${base}/it/servers`, label: 'Sunucu/VM', icon: 'building' },
+            { href: `${base}/it/network`, label: 'IPAM/Ağ', icon: 'plug' },
+            { href: `${base}/it/network-diagram`, label: 'Ağ Diyagramı', icon: 'gitBranch' },
+            { href: `${base}/it/maintenance`, label: 'Donanım Bakım', icon: 'wrench' },
+            { href: `${base}/it/field-service`, label: 'Saha İşleri', icon: 'wrench' }
+          ]
+        },
+        {
+          label: 'Yazılım',
+          items: [
+            { href: `${base}/it/tickets`, label: 'Ticketlar', icon: 'inbox' },
+            { href: `${base}/it/licensing`, label: 'Lisans/Garanti/Sözleşme', icon: 'scroll' },
+            { href: `${base}/it/credentials`, label: 'Kimlik Kasası', icon: 'key' },
+            { href: `${base}/it/knowledge-base`, label: 'Bilgi Bankası', icon: 'fileSearch' },
+            { href: `${base}/it/incidents`, label: 'Incidentlar', icon: 'alert' },
+            { href: `${base}/it/problems`, label: 'Problemler', icon: 'fileWarning' },
+            { href: `${base}/it/changes`, label: 'Değişiklikler', icon: 'pen' }
+          ]
+        },
+        {
+          // Ağaçta adı geçmiyordu — düşürmek yerine kendi başlığına alındı.
+          label: 'IT Yönetim',
+          items: [
+            { href: `${base}/it/dashboard`, label: 'Dashboard', icon: 'dashboard' },
+            { href: `${base}/it/monitoring`, label: 'İzleme', icon: 'activity' },
+            { href: `${base}/it/backup`, label: 'Yedekleme', icon: 'archive' },
+            { href: `${base}/it/compliance`, label: 'Uyumluluk', icon: 'shield' }
+          ]
+        }
       ];
+
     case 'HR':
       return [
-        { href: `${base}/hr/employees`, label: 'Çalışanlar', icon: 'users' },
-        { href: `${base}/hr/pdks`, label: 'PDKS', icon: 'calendarClock' },
-        { href: `${base}/hr/leave`, label: 'İzin Yönetimi', icon: 'palmtree' },
-        { href: `${base}/hr/access`, label: 'Erişim Kontrolü', icon: 'fingerprint' }
+        {
+          label: 'İK Operasyon',
+          items: [
+            { href: `${base}/hr/employees`, label: 'Çalışanlar', icon: 'users' },
+            { href: `${base}/hr/pdks`, label: 'PDKS', icon: 'calendarClock' },
+            { href: `${base}/hr/leave`, label: 'İzin Yönetimi', icon: 'palmtree' },
+            { href: `${base}/hr/access`, label: 'Erişim Kontrolü', icon: 'fingerprint' }
+          ]
+        },
+        {
+          // Ağaçta İSG bu birimin altında. Ekran departman-kapsamlı DEĞİL,
+          // üst seviye bir rota (/dashboard/safety) — bağlantı olarak
+          // buraya kondu, sayfa taşınmadı.
+          label: 'İSG',
+          items: [{ href: '/dashboard/safety', label: 'İş Sağlığı ve Güvenliği', icon: 'hardHat' }]
+        }
       ];
+
     default:
       return [];
   }
 }
 
-// Departman türünün okunabilir adı. Menüsü OLAN türler yukarıda; burada
-// listelenenler kullanıcıya "bu departmanın ekranları henüz yok" derken
-// tür adını gösterebilmek için.
+// Departman türünün okunabilir adı — kullanıcının ağacındaki birim
+// adlarıyla hizalı.
 const TYPE_LABELS: Record<string, string> = {
-  ACCOUNTING: 'Muhasebe',
-  WAREHOUSE: 'Depo',
-  IT: 'Bilgi İşlem',
+  ACCOUNTING: 'Muhasebe & Finans',
+  WAREHOUSE: 'Stok Muhasebe',
+  IT: 'Bilgi Sistemleri',
   HR: 'İnsan Kaynakları'
 };
 
