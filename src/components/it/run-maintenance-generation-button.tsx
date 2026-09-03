@@ -13,7 +13,7 @@ export function RunMaintenanceGenerationButton({ departmentId }: { departmentId:
   return (
     <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Bugün İçin Bakım İşlerini Oluştur'}</button>
-      {state?.success ? <span style={{ color: '#080', fontSize: 13 }}>{state.success}</span> : null}
+      {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 13 }}>{state.success}</span> : null}
     </form>
   );
 }

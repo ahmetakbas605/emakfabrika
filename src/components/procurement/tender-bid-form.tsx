@@ -25,7 +25,7 @@ export function TenderBidForm({ tenderId, tenderLines, suppliers }: { tenderId: 
   );
 
   return (
-    <form action={formAction} style={{ border: '1px solid #ddd', padding: 14, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <form action={formAction} style={{ border: '1px solid var(--dim-border-soft)', padding: 14, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <input type="hidden" name="tenderId" value={tenderId} />
       <input type="hidden" name="linesJson" value={linesJson} />
       <h4 style={{ fontSize: 13, margin: 0 }}>Teklif Gir (kapalı zarf — açılışa kadar gizli kalır)</h4>
@@ -57,8 +57,8 @@ export function TenderBidForm({ tenderId, tenderLines, suppliers }: { tenderId: 
 
       <div>
         <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer' }}>{pending ? '...' : 'Teklifi Kaydet'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
       </div>
     </form>
   );
@@ -70,7 +70,7 @@ export function OpenTenderBiddingButton({ tenderId }: { tenderId: string }) {
     <form action={formAction} style={{ display: 'inline-flex', flexDirection: 'column', gap: 4 }}>
       <input type="hidden" name="tenderId" value={tenderId} />
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Teklifleri Aç'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }

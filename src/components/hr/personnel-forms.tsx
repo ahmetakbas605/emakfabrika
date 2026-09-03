@@ -15,7 +15,7 @@ export function ContactForm({ departmentId, employeeId }: { departmentId: string
       </select>
       <input name="value" required placeholder="0555 000 00 00" style={{ padding: 6, width: 180 }} />
       <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer' }}>{pending ? '...' : 'Ekle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
     </form>
   );
 }
@@ -35,7 +35,7 @@ export function AddressForm({ departmentId, employeeId }: { departmentId: string
       <input name="district" placeholder="İlçe" style={{ padding: 6, width: 100 }} />
       <input name="postalCode" placeholder="Posta Kodu" style={{ padding: 6, width: 100 }} />
       <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer' }}>{pending ? '...' : 'Ekle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
     </form>
   );
 }
@@ -49,7 +49,7 @@ export function EmergencyContactForm({ departmentId, employeeId }: { departmentI
       <input name="relationship" placeholder="Yakınlık (Eş, Anne, ...)" style={{ padding: 6, width: 150 }} />
       <input name="phone" required placeholder="0555 000 00 00" style={{ padding: 6, width: 150 }} />
       <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer' }}>{pending ? '...' : 'Ekle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
     </form>
   );
 }
@@ -60,12 +60,12 @@ export function TerminateForm({ departmentId, employeeId }: { departmentId: stri
   return (
     <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>İşten Ayrılış Tarihi</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>İşten Ayrılış Tarihi</label>
         <input name="terminationDate" type="date" required style={{ padding: 6 }} />
       </div>
-      <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer', color: '#b00' }}>{pending ? '...' : 'İşten Ayrıldı Olarak İşaretle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
-      {state?.success ? <span style={{ color: '#080', fontSize: 12, width: '100%' }}>{state.success}</span> : null}
+      <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer', color: 'var(--dim-danger)' }}>{pending ? '...' : 'İşten Ayrıldı Olarak İşaretle'}</button>
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
+      {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, width: '100%' }}>{state.success}</span> : null}
     </form>
   );
 }
@@ -80,8 +80,8 @@ export function LinkUserForm({ departmentId, employeeId, users }: { departmentId
         {users.map((u) => <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>)}
       </select>
       <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer' }}>{pending ? '...' : 'Bağla'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
-      {state?.success ? <span style={{ color: '#080', fontSize: 12, width: '100%' }}>{state.success}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
+      {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, width: '100%' }}>{state.success}</span> : null}
     </form>
   );
 }

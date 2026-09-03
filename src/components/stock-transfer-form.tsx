@@ -27,31 +27,31 @@ export function StockTransferForm({
   }
 
   return (
-    <form action={formAction} style={{ border: '1px solid #ddd', padding: 12, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <form action={formAction} style={{ border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <input type="hidden" name="linesJson" value={JSON.stringify(lines.filter((l) => l.stockItemId && l.quantity))} />
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Kaynak Depo</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Kaynak Depo</label>
           <select name="sourceWarehouseId" required style={{ padding: 6 }}>
             <option value="">Seçin</option>
             {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
           </select>
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Hedef Depo</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Hedef Depo</label>
           <select name="destinationWarehouseId" required style={{ padding: 6 }}>
             <option value="">Seçin</option>
             {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
           </select>
         </div>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Not</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Not</label>
           <input name="notes" style={{ padding: 6, width: '100%' }} />
         </div>
       </div>
 
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>Satırlar</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)', marginBottom: 4 }}>Satırlar</label>
         {lines.map((line, i) => (
           <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
             <select value={line.stockItemId} onChange={(e) => updateLine(i, { stockItemId: e.target.value })} style={{ padding: 6, minWidth: 200 }}>
@@ -67,8 +67,8 @@ export function StockTransferForm({
 
       <div>
         <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? 'Oluşturuluyor...' : 'Transfer Oluştur'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 10 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 10 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 10 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 10 }}>{state.success}</span> : null}
       </div>
     </form>
   );

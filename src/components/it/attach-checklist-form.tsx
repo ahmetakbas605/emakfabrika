@@ -15,7 +15,7 @@ export function AttachChecklistForm({ departmentId, workOrderId, templates }: { 
         {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
       </select>
       <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer' }}>{pending ? '...' : 'Checklist Ekle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }

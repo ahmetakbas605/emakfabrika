@@ -16,13 +16,13 @@ export function CreateInvoiceFromOrderForm({ orderId, partyId, currencyCode, lin
   );
 
   return (
-    <form action={formAction} style={{ border: '1px solid #ddd', padding: 12, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <form action={formAction} style={{ border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <input type="hidden" name="orderId" value={orderId} />
       <input type="hidden" name="partyId" value={partyId} />
       <input type="hidden" name="currencyCode" value={currencyCode} />
       <input type="hidden" name="linesJson" value={linesJson} />
       <h4 style={{ fontSize: 13, margin: 0 }}>Yeni Fatura Hazırla</h4>
-      <div><label style={{ display: 'block', fontSize: 11, color: '#666' }}>Fatura Tarihi</label><input name="invoiceDate" type="date" required style={{ padding: 5 }} /></div>
+      <div><label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Fatura Tarihi</label><input name="invoiceDate" type="date" required style={{ padding: 5 }} /></div>
       <table style={{ fontSize: 12, borderCollapse: 'collapse' }}>
         <thead><tr><th style={{ textAlign: 'left', padding: '2px 6px' }}>Ürün</th><th style={{ padding: '2px 6px' }}>Kalan</th><th style={{ padding: '2px 6px' }}>Fatura Miktarı</th></tr></thead>
         <tbody>
@@ -37,8 +37,8 @@ export function CreateInvoiceFromOrderForm({ orderId, partyId, currencyCode, lin
       </table>
       <div>
         <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer', fontSize: 12 }}>{pending ? '...' : 'Fatura Oluştur (Taslak)'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 8 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 11, marginLeft: 8 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11, marginLeft: 8 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 11, marginLeft: 8 }}>{state.success}</span> : null}
       </div>
     </form>
   );
@@ -53,7 +53,7 @@ export function ApproveInvoiceForm({ invoiceId }: { invoiceId: string }) {
       <input name="receivableAccountCode" placeholder="Alıcılar hesabı (ops.)" style={{ padding: '2px 4px', fontSize: 11, width: 120 }} />
       <input name="taxAccountCode" placeholder="KDV hesabı (ops.)" style={{ padding: '2px 4px', fontSize: 11, width: 100 }} />
       <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 12, cursor: 'pointer' }}>{pending ? '...' : 'Onayla'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{state.error}</span> : null}
     </form>
   );
 }
@@ -63,8 +63,8 @@ export function CancelInvoiceButton({ invoiceId }: { invoiceId: string }) {
   return (
     <form action={formAction} style={{ display: 'inline-block' }}>
       <input type="hidden" name="invoiceId" value={invoiceId} />
-      <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 12, cursor: 'pointer', color: '#b00' }}>{pending ? '...' : 'İptal'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 4 }}>{state.error}</span> : null}
+      <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 12, cursor: 'pointer', color: 'var(--dim-danger)' }}>{pending ? '...' : 'İptal'}</button>
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11, marginLeft: 4 }}>{state.error}</span> : null}
     </form>
   );
 }

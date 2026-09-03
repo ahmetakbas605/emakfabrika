@@ -26,7 +26,7 @@ export function CheckTransitionForm({
   const action = transitionCheckAction.bind(null, departmentId);
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
   const options = (direction === 'RECEIVED' ? RECEIVED_TRANSITIONS : ISSUED_TRANSITIONS)[status] ?? [];
-  if (options.length === 0) return <span style={{ color: '#999', fontSize: 12 }}>—</span>;
+  if (options.length === 0) return <span style={{ color: 'var(--dim-slate)', fontSize: 12 }}>—</span>;
 
   return (
     <form action={formAction} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
@@ -39,7 +39,7 @@ export function CheckTransitionForm({
         {accounts.map((a) => <option key={a.code} value={a.code}>{a.code} — {a.name}</option>)}
       </select>
       <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 12, cursor: 'pointer' }}>{pending ? '...' : 'Uygula'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{state.error}</span> : null}
     </form>
   );
 }

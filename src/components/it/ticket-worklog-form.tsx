@@ -13,7 +13,7 @@ export function TicketWorkLogForm({ departmentId, ticketId }: { departmentId: st
       <input name="minutesSpent" type="number" min={1} placeholder="Dakika" required style={{ padding: 6, width: 90 }} />
       <input name="note" placeholder="Not (opsiyonel)" style={{ padding: 6, flex: 1, minWidth: 160 }} />
       <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer' }}>{pending ? '...' : 'İş Kaydı Ekle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }

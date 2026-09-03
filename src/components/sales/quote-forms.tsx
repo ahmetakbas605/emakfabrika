@@ -24,37 +24,37 @@ export function CreateQuoteForm({ parties, products }: { parties: { id: string; 
   );
 
   return (
-    <form action={formAction} style={{ border: '1px solid #ddd', padding: 16, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <form action={formAction} style={{ border: '1px solid var(--dim-border-soft)', padding: 16, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <input type="hidden" name="linesJson" value={linesJson} />
       <h3 style={{ fontSize: 14, margin: 0 }}>Yeni Teklif</h3>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Cari</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Cari</label>
           <select name="partyId" required style={{ padding: 6, minWidth: 160 }}>
             <option value="">Seçin</option>
             {parties.map((p) => <option key={p.id} value={p.id}>{p.legalName}</option>)}
           </select>
         </div>
-        <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Teklif Tarihi</label><input name="quoteDate" type="date" required style={{ padding: 6 }} /></div>
-        <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Geçerlilik Tarihi</label><input name="validUntil" type="date" style={{ padding: 6 }} /></div>
-        <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Para Birimi</label><input name="currencyCode" defaultValue="TRY" required style={{ padding: 6, width: 70 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Teklif Tarihi</label><input name="quoteDate" type="date" required style={{ padding: 6 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Geçerlilik Tarihi</label><input name="validUntil" type="date" style={{ padding: 6 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Para Birimi</label><input name="currencyCode" defaultValue="TRY" required style={{ padding: 6, width: 70 }} /></div>
       </div>
 
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 6 }}>Kalemler</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)', marginBottom: 6 }}>Kalemler</label>
         {lines.map((line, i) => (
           <div key={i} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 6 }}>
             <div style={{ minWidth: 180 }}>
-              <label style={{ display: 'block', fontSize: 11, color: '#666' }}>Ürün</label>
+              <label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Ürün</label>
               <select value={line.productId} onChange={(e) => updateLine(i, { productId: e.target.value })} style={{ padding: 5, width: '100%' }}>
                 <option value="">Seçin</option>
                 {products.map((p) => <option key={p.id} value={p.id}>{p.sku} — {p.name}</option>)}
               </select>
             </div>
-            <div><label style={{ display: 'block', fontSize: 11, color: '#666' }}>Miktar</label><input value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} style={{ padding: 5, width: 70 }} /></div>
-            <div><label style={{ display: 'block', fontSize: 11, color: '#666' }}>Birim Fiyat</label><input value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} style={{ padding: 5, width: 90 }} /></div>
-            <div><label style={{ display: 'block', fontSize: 11, color: '#666' }}>İskonto %</label><input value={line.discountPercent} onChange={(e) => updateLine(i, { discountPercent: e.target.value })} style={{ padding: 5, width: 70 }} /></div>
-            <div><label style={{ display: 'block', fontSize: 11, color: '#666' }}>KDV %</label><input value={line.taxRatePercent} onChange={(e) => updateLine(i, { taxRatePercent: e.target.value })} placeholder="ürün varsayılanı" style={{ padding: 5, width: 90 }} /></div>
+            <div><label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Miktar</label><input value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} style={{ padding: 5, width: 70 }} /></div>
+            <div><label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Birim Fiyat</label><input value={line.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} style={{ padding: 5, width: 90 }} /></div>
+            <div><label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>İskonto %</label><input value={line.discountPercent} onChange={(e) => updateLine(i, { discountPercent: e.target.value })} style={{ padding: 5, width: 70 }} /></div>
+            <div><label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>KDV %</label><input value={line.taxRatePercent} onChange={(e) => updateLine(i, { taxRatePercent: e.target.value })} placeholder="ürün varsayılanı" style={{ padding: 5, width: 90 }} /></div>
             {lines.length > 1 ? <button type="button" onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== i))} style={{ cursor: 'pointer' }}>Kaldır</button> : null}
           </div>
         ))}
@@ -63,8 +63,8 @@ export function CreateQuoteForm({ parties, products }: { parties: { id: string; 
 
       <div>
         <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Teklif Oluştur'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 10 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 10 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 10 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 10 }}>{state.success}</span> : null}
       </div>
     </form>
   );
@@ -93,8 +93,8 @@ export function QuoteStatusButtons({ quoteId, status }: { quoteId: string; statu
           <button type="submit" disabled={convertPending} style={{ padding: '2px 8px', fontSize: 12, cursor: 'pointer' }}>{convertPending ? '...' : 'Siparişe Dönüştür'}</button>
         </form>
       ) : null}
-      {statusState?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{statusState.error}</span> : null}
-      {convertState?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{convertState.error}</span> : null}
+      {statusState?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{statusState.error}</span> : null}
+      {convertState?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{convertState.error}</span> : null}
     </div>
   );
 }

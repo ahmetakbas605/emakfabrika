@@ -23,7 +23,7 @@ export function OrgAssignmentForm({ userId, positions, users, currentPositionId,
         {users.filter((u) => u.id !== userId).map((u) => <option key={u.id} value={u.id}>{u.fullName}</option>)}
       </select>
       <button type="submit" disabled={pending} style={{ padding: '4px 8px', cursor: 'pointer', fontSize: 12 }}>{pending ? '...' : 'Kaydet'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{state.error}</span> : null}
     </form>
   );
 }

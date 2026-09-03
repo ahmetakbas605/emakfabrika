@@ -44,7 +44,7 @@ export function AwardCreateForm({ rfqId, lines }: { rfqId: string; lines: AwardL
       <input type="hidden" name="linesJson" value={JSON.stringify(flatLines)} />
 
       {lines.map((line) => (
-        <div key={line.rfqLineId} style={{ border: '1px solid #ddd', borderRadius: 6, padding: 10 }}>
+        <div key={line.rfqLineId} style={{ border: '1px solid var(--dim-border-soft)', borderRadius: 6, padding: 10 }}>
           <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>{line.description} ({Number(line.quantity).toLocaleString('tr-TR')} {line.unitCode})</p>
           {(rowsByLine[line.rfqLineId] ?? []).map((row, idx) => (
             <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4, fontSize: 12 }}>
@@ -64,8 +64,8 @@ export function AwardCreateForm({ rfqId, lines }: { rfqId: string; lines: AwardL
 
       <div>
         <button type="submit" disabled={pending || flatLines.length === 0} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Ödül Taslağı Oluştur'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
       </div>
     </form>
   );
@@ -77,7 +77,7 @@ export function SubmitAwardButton({ awardId }: { awardId: string }) {
     <form action={formAction} style={{ display: 'inline-flex', flexDirection: 'column', gap: 4 }}>
       <input type="hidden" name="awardId" value={awardId} />
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Onaya Gönder'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }
@@ -88,7 +88,7 @@ export function CancelAwardButton({ awardId }: { awardId: string }) {
     <form action={formAction} style={{ display: 'inline-flex', flexDirection: 'column', gap: 4 }}>
       <input type="hidden" name="awardId" value={awardId} />
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'İptal Et'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }

@@ -18,7 +18,7 @@ export function ProblemStatusForm({ departmentId, problemId, currentStatus, curr
       </select>
       <input name="rootCause" defaultValue={currentRootCause ?? ''} placeholder="Kök neden" style={{ padding: 3, fontSize: 12, width: 140 }} />
       <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 12, cursor: 'pointer' }}>{pending ? '...' : 'Güncelle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{state.error}</span> : null}
     </form>
   );
 }

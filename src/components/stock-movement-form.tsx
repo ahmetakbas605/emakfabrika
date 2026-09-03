@@ -25,40 +25,40 @@ export function StockMovementForm({
   const selectedItem = stockItems.find((s) => s.id === stockItemId);
 
   return (
-    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid #ddd', padding: 12, borderRadius: 6 }}>
+    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6 }}>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Depo</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Depo</label>
         <select name="warehouseId" required style={{ padding: 6 }}>
           {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
         </select>
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Stok Kartı</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Stok Kartı</label>
         <select name="stockItemId" required value={stockItemId} onChange={(e) => setStockItemId(e.target.value)} style={{ padding: 6, minWidth: 180 }}>
           <option value="">Seçin...</option>
           {stockItems.map((s) => <option key={s.id} value={s.id}>{s.sku} — {s.name}</option>)}
         </select>
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Yön</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Yön</label>
         <select name="movementType" value={movementType} onChange={(e) => setMovementType(e.target.value as 'IN' | 'OUT')} style={{ padding: 6 }}>
           <option value="IN">Giriş</option>
           <option value="OUT">Çıkış</option>
         </select>
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Miktar</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Miktar</label>
         <input name="quantity" type="number" step="any" min={0.01} required style={{ padding: 6, width: 100 }} />
       </div>
       {movementType === 'IN' ? (
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Birim Maliyet</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Birim Maliyet</label>
           <input name="unitCost" type="number" step="any" min={0.01} required style={{ padding: 6, width: 110 }} />
         </div>
       ) : null}
       {selectedItem?.accountingAccountId ? (
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Karşı Hesap (muhasebeleştirmek için)</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Karşı Hesap (muhasebeleştirmek için)</label>
           <select name="counterAccountCode" style={{ padding: 6, minWidth: 180 }}>
             <option value="">Muhasebeleştirme yok</option>
             {accounts.map((a) => <option key={a.code} value={a.code}>{a.code} — {a.name}</option>)}
@@ -66,12 +66,12 @@ export function StockMovementForm({
         </div>
       ) : null}
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Tarih</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Tarih</label>
         <input name="transactionDate" type="date" defaultValue={todayIso()} required style={{ padding: 6 }} />
       </div>
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? 'Kaydediliyor...' : 'Hareketi Kaydet'}</button>
-      {state?.error ? <p style={{ color: '#b00', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
-      {state?.success ? <p style={{ color: '#080', fontSize: 13, width: '100%' }}>{state.success}</p> : null}
+      {state?.error ? <p style={{ color: 'var(--dim-danger)', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
+      {state?.success ? <p style={{ color: 'var(--dim-success)', fontSize: 13, width: '100%' }}>{state.success}</p> : null}
     </form>
   );
 }

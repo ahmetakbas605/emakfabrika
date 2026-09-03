@@ -8,10 +8,10 @@ export function WhLocationForm({ departmentId, warehouseId, locations }: { depar
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
 
   return (
-    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid #ddd', padding: 12, borderRadius: 6 }}>
+    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6 }}>
       <input type="hidden" name="warehouseId" value={warehouseId} />
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Tür</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Tür</label>
         <select name="locationType" style={{ padding: 6 }}>
           <option value="ZONE">Bölge</option>
           <option value="AISLE">Koridor</option>
@@ -21,22 +21,22 @@ export function WhLocationForm({ departmentId, warehouseId, locations }: { depar
         </select>
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Kod</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Kod</label>
         <input name="code" required style={{ padding: 6, width: 100 }} placeholder="A-01" />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Ad</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Ad</label>
         <input name="name" style={{ padding: 6, width: 140 }} />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Üst Konum</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Üst Konum</label>
         <select name="parentLocationId" style={{ padding: 6 }}>
           <option value="">— (kök seviye)</option>
           {locations.map((l) => <option key={l.id} value={l.id}>{l.code}</option>)}
         </select>
       </div>
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Konum Ekle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
     </form>
   );
 }

@@ -2792,6 +2792,48 @@ export const LEAVE_TYPES = ['ANNUAL', 'SICK', 'UNPAID', 'ABSENCE', 'MATERNITY', 
 // motoruna devrediliyor (madde 174, 184-190).
 export const LEAVE_REQUEST_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'REVISION_REQUIRED', 'CANCELLED'] as const;
 
+// ==================================================================
+// İŞYERİ HEKİMİ — kullanıcının menü ağacındaki İK > İşyeri Hekimi dalı
+// (Muayene, Sağlık Raporları, Periyodik Takipler).
+//
+// employeeQualifications ile AYNI desen: üç kayıt türü TEK tabloda,
+// recordType ile ayrışır. Ayrı üç tablo açmak aynı alanları (çalışan,
+// tarih, kurum, hekim, sonuç, ek belge) üç kez tekrarlardı.
+//
+// KVKK: sağlık verisi ÖZEL NİTELİKLİ kişisel veridir
+// (DATA_CLASSIFICATIONS'taki SPECIAL_CATEGORY). Bu yüzden okuma
+// tarafında 'view' YETMEZ, 'view_sensitive' aranır — maaş/TC kimlik ile
+// AYNI kural (bkz. lib/security/masking.ts, permissions.ts:15).
+// ==================================================================
+export const OCCUPATIONAL_HEALTH_RECORD_TYPES = ['EXAMINATION', 'HEALTH_REPORT', 'PERIODIC_FOLLOWUP'] as const;
+// İSG mevzuatındaki muayene sebepleri.
+export const OCCUPATIONAL_HEALTH_EXAM_KINDS = ['PRE_EMPLOYMENT', 'PERIODIC', 'RETURN_TO_WORK', 'JOB_CHANGE', 'COMPLAINT', 'OTHER'] as const;
+// İşe uygunluk kararı — "kısıtlı uygun" gerçek hayatta çok yaygın
+// (ör. yüksekte çalışamaz), bu yüzden ikili bir bayrak DEĞİL.
+export const OCCUPATIONAL_HEALTH_RESULTS = ['PENDING', 'FIT', 'FIT_WITH_RESTRICTION', 'TEMPORARILY_UNFIT', 'UNFIT'] as const;
+export const OCCUPATIONAL_HEALTH_STATUSES = ['ACTIVE', 'ARCHIVED'] as const;
+
+export const occupationalHealthRecords = mysqlTable('occupational_health_records', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  employeeId: char('employee_id', { length: 36 }).notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  recordType: mysqlEnum('record_type', OCCUPATIONAL_HEALTH_RECORD_TYPES).notNull(),
+  examKind: mysqlEnum('exam_kind', OCCUPATIONAL_HEALTH_EXAM_KINDS).notNull().default('OTHER'),
+  title: varchar('title', { length: 255 }).notNull(),
+  physicianName: varchar('physician_name', { length: 255 }).notNull().default(''),
+  institution: varchar('institution', { length: 255 }).notNull().default(''),
+  performedAt: date('performed_at', { mode: 'string' }),
+  // Periyodik takibin bir sonraki tarihi. Süresi geçenleri listelemek
+  // employeeQualifications'ın expiryDate sorgusuyla AYNI mantık.
+  nextDueDate: date('next_due_date', { mode: 'string' }),
+  result: mysqlEnum('result', OCCUPATIONAL_HEALTH_RESULTS).notNull().default('PENDING'),
+  // Kısıtlama metni: "yüksekte çalışamaz", "gece vardiyası yok" gibi.
+  restrictionNote: varchar('restriction_note', { length: 500 }).notNull().default(''),
+  notes: varchar('notes', { length: 1000 }).notNull().default(''),
+  status: mysqlEnum('status', OCCUPATIONAL_HEALTH_STATUSES).notNull().default('ACTIVE'),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
 export const leaveRequests = mysqlTable('leave_requests', {
   id: char('id', { length: 36 }).primaryKey(),
   companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),

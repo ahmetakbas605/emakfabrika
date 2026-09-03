@@ -20,7 +20,7 @@ export function GoodsReceiptForm({ poId, lines, warehouses, stockItems }: { poId
     .map((r) => ({ poLineId: r.poLineId, receivedQty: r.receivedQty, warehouseId: r.warehouseId || undefined, stockItemId: r.stockItemId || undefined, counterAccountCode: r.counterAccountCode || undefined }));
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 10, border: '1px solid #ddd', borderRadius: 6, padding: 14 }}>
+    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 10, border: '1px solid var(--dim-border-soft)', borderRadius: 6, padding: 14 }}>
       <input type="hidden" name="poId" value={poId} />
       <input type="hidden" name="linesJson" value={JSON.stringify(flatLines)} />
       <h4 style={{ fontSize: 13, margin: 0 }}>Mal Kabul</h4>
@@ -46,8 +46,8 @@ export function GoodsReceiptForm({ poId, lines, warehouses, stockItems }: { poId
 
       <div>
         <button type="submit" disabled={pending || flatLines.length === 0} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Mal Kabulü Kaydet'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
       </div>
     </form>
   );
@@ -69,7 +69,7 @@ export function VendorInvoiceForm({ poId, currencyCode, lines }: { poId: string;
     .map((r) => ({ poLineId: r.poLineId, invoicedQty: r.invoicedQty, invoicedUnitPrice: r.invoicedUnitPrice }));
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 10, border: '1px solid #ddd', borderRadius: 6, padding: 14 }}>
+    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 10, border: '1px solid var(--dim-border-soft)', borderRadius: 6, padding: 14 }}>
       <input type="hidden" name="poId" value={poId} />
       <input type="hidden" name="currencyCode" value={currencyCode} />
       <input type="hidden" name="linesJson" value={JSON.stringify(flatLines)} />
@@ -89,8 +89,8 @@ export function VendorInvoiceForm({ poId, currencyCode, lines }: { poId: string;
 
       <div>
         <button type="submit" disabled={pending || flatLines.length === 0} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Faturayı Kaydet'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
       </div>
     </form>
   );
@@ -104,8 +104,8 @@ export function ApproveInvoiceForm({ invoiceId }: { invoiceId: string }) {
       <input name="clearingAccountCode" placeholder="GR/IR clearing hesap kodu (opsiyonel)" style={{ padding: 5, fontSize: 12, width: 220 }} />
       <input name="payableAccountCode" placeholder="Satıcılar hesap kodu (opsiyonel)" style={{ padding: 5, fontSize: 12, width: 200 }} />
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Onayla'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
-      {state?.success ? <span style={{ color: '#080', fontSize: 12 }}>{state.success}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12 }}>{state.success}</span> : null}
     </form>
   );
 }
@@ -116,7 +116,7 @@ export function CancelInvoiceButton({ invoiceId }: { invoiceId: string }) {
     <form action={formAction} style={{ display: 'inline-flex', flexDirection: 'column', gap: 4 }}>
       <input type="hidden" name="invoiceId" value={invoiceId} />
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'İptal Et'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }

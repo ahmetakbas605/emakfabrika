@@ -15,7 +15,7 @@ export function ChecklistItemToggle({ departmentId, workOrderId, itemId, label, 
         <input type="checkbox" name="checked" defaultChecked={checked} onChange={(e) => e.currentTarget.form?.requestSubmit()} disabled={pending} />
         {label}
       </label>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{state.error}</span> : null}
     </form>
   );
 }

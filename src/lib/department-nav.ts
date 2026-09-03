@@ -129,6 +129,13 @@ export function departmentNav(departmentId: string, departmentTypeCode: string):
           // buraya kondu, sayfa taşınmadı.
           label: 'İSG',
           items: [{ href: '/dashboard/safety', label: 'İş Sağlığı ve Güvenliği', icon: 'hardHat' }]
+        },
+        {
+          // Ağaçtaki üçüncü alt birim. Ekran YOKTU, bu fazda yazıldı
+          // (Muayene / Sağlık Raporu / Periyodik Takip tek sayfada,
+          // kayıt türüyle ayrışıyor).
+          label: 'İşyeri Hekimi',
+          items: [{ href: `${base}/hr/occupational-health`, label: 'Muayene & Sağlık Raporları', icon: 'activity' }]
         }
       ];
 

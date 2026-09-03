@@ -12,7 +12,7 @@ export function ReopenTicketForm({ departmentId, ticketId }: { departmentId: str
       <input type="hidden" name="ticketId" value={ticketId} />
       <input name="note" placeholder="Yeniden açma nedeni (opsiyonel)" style={{ padding: 6, flex: 1, minWidth: 200 }} />
       <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer' }}>{pending ? '...' : 'Yeniden Aç'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }

@@ -8,7 +8,7 @@ export function TicketAiAssistant({ departmentId, ticketId }: { departmentId: st
   const [state, formAction, pending] = useActionState<AiFormState, FormData>(action, undefined);
 
   return (
-    <div style={{ border: '1px solid #ddd', padding: 12, borderRadius: 6, marginBottom: 20 }}>
+    <div style={{ border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6, marginBottom: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: state ? 10 : 0 }}>
         <span style={{ fontSize: 13, fontWeight: 600 }}>AI Asistan</span>
         <form action={formAction}>
@@ -16,10 +16,10 @@ export function TicketAiAssistant({ departmentId, ticketId }: { departmentId: st
         </form>
       </div>
 
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
 
       {state?.result && !state.result.configured ? (
-        <p style={{ color: '#999', fontSize: 12 }}>AI asistanı yapılandırılmamış (GROQ_API_KEY veya ANTHROPIC_API_KEY .env&apos;de tanımlı değil).</p>
+        <p style={{ color: 'var(--dim-slate)', fontSize: 12 }}>AI asistanı yapılandırılmamış (GROQ_API_KEY veya ANTHROPIC_API_KEY .env&apos;de tanımlı değil).</p>
       ) : null}
 
       {state?.result?.configured ? (
@@ -39,10 +39,10 @@ export function TicketAiAssistant({ departmentId, ticketId }: { departmentId: st
                 ))}
               </ul>
             ) : (
-              <span style={{ color: '#999' }}> benzer ticket bulunamadı.</span>
+              <span style={{ color: 'var(--dim-slate)' }}> benzer ticket bulunamadı.</span>
             )}
           </div>
-          <span style={{ color: '#999', fontSize: 11 }}>Sağlayıcı: {state.result.provider}</span>
+          <span style={{ color: 'var(--dim-slate)', fontSize: 11 }}>Sağlayıcı: {state.result.provider}</span>
         </div>
       ) : null}
     </div>

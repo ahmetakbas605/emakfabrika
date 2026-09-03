@@ -14,30 +14,30 @@ export function RelationshipForm({ departmentId, cis }: { departmentId: string; 
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
 
   return (
-    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid #ddd', padding: 12, borderRadius: 6 }}>
+    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6 }}>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Kaynak CI</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Kaynak CI</label>
         <select name="sourceCiId" required style={{ padding: 6, minWidth: 160 }}>
           <option value="">Seçin...</option>
           {cis.map((c) => <option key={c.id} value={c.id}>{c.ciKey} — {c.name}</option>)}
         </select>
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>İlişki</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>İlişki</label>
         <select name="relationshipType" required style={{ padding: 6 }}>
           {RELATIONSHIP_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Hedef CI</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Hedef CI</label>
         <select name="targetCiId" required style={{ padding: 6, minWidth: 160 }}>
           <option value="">Seçin...</option>
           {cis.map((c) => <option key={c.id} value={c.id}>{c.ciKey} — {c.name}</option>)}
         </select>
       </div>
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? 'Ekleniyor...' : 'İlişki Ekle'}</button>
-      {state?.error ? <p style={{ color: '#b00', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
-      {state?.success ? <p style={{ color: '#080', fontSize: 13, width: '100%' }}>{state.success}</p> : null}
+      {state?.error ? <p style={{ color: 'var(--dim-danger)', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
+      {state?.success ? <p style={{ color: 'var(--dim-success)', fontSize: 13, width: '100%' }}>{state.success}</p> : null}
     </form>
   );
 }

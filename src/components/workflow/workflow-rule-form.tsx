@@ -33,27 +33,27 @@ export function WorkflowRuleForm({ positions, users }: { positions: { id: string
   );
 
   return (
-    <form action={formAction} style={{ border: '1px solid #ddd', padding: 16, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <form action={formAction} style={{ border: '1px solid var(--dim-border-soft)', padding: 16, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <input type="hidden" name="chainJson" value={chainJson} />
       <h3 style={{ fontSize: 14, margin: 0 }}>Yeni Onay Kuralı</h3>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Belge Türü</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Belge Türü</label>
           <input name="documentType" required style={{ padding: 6, width: 220 }} placeholder="PROCUREMENT_REQUISITION" />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Kural Adı</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Kural Adı</label>
           <input name="name" required style={{ padding: 6, width: 220 }} placeholder="Düşük tutar" />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Öncelik</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Öncelik</label>
           <input name="priority" type="number" style={{ padding: 6, width: 80 }} placeholder="0" />
         </div>
       </div>
 
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>Koşullar (boş = her zaman eşleşir)</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)', marginBottom: 4 }}>Koşullar (boş = her zaman eşleşir)</label>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input name="minAmount" placeholder="Min tutar" style={{ padding: 6, width: 110 }} />
           <input name="maxAmount" placeholder="Maks tutar" style={{ padding: 6, width: 110 }} />
@@ -67,10 +67,10 @@ export function WorkflowRuleForm({ positions, users }: { positions: { id: string
       </div>
 
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>Onay Zinciri (sırayla)</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)', marginBottom: 4 }}>Onay Zinciri (sırayla)</label>
         {chain.map((step, i) => (
           <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: '#999', width: 18 }}>{i + 1}.</span>
+            <span style={{ fontSize: 12, color: 'var(--dim-slate)', width: 18 }}>{i + 1}.</span>
             <select value={step.approverType} onChange={(e) => updateStep(i, { approverType: e.target.value as ChainStep['approverType'], approverValue: '' })} style={{ padding: 6 }}>
               <option value="POSITION">Pozisyon</option>
               <option value="SPECIFIC_USER">Belirli Kullanıcı</option>
@@ -102,8 +102,8 @@ export function WorkflowRuleForm({ positions, users }: { positions: { id: string
 
       <div>
         <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? 'Oluşturuluyor...' : 'Kural Oluştur'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 10 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 10 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 10 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 10 }}>{state.success}</span> : null}
       </div>
     </form>
   );

@@ -28,33 +28,33 @@ export function TicketForm({ departmentId, assets }: { departmentId: string; ass
   }
 
   return (
-    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid #ddd', padding: 12, borderRadius: 6, maxWidth: 480 }}>
+    <form action={formAction} style={{ display: 'flex', flexDirection: 'column', gap: 8, border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6, maxWidth: 480 }}>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Başlık</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Başlık</label>
         <input name="title" value={title} onChange={(e) => setTitle(e.target.value)} onBlur={applySuggestion} required style={{ padding: 6, width: '100%' }} />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Açıklama</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Açıklama</label>
         <textarea name="description" value={description} onChange={(e) => setDescription(e.target.value)} onBlur={applySuggestion} rows={3} style={{ padding: 6, width: '100%' }} />
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <div style={{ flex: 1 }}>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Kategori {suggested ? '(önerildi)' : ''}</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Kategori {suggested ? '(önerildi)' : ''}</label>
           <input name="category" value={category} onChange={(e) => setCategory(e.target.value)} style={{ padding: 6, width: '100%' }} />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Öncelik {suggested ? '(önerildi)' : ''}</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Öncelik {suggested ? '(önerildi)' : ''}</label>
           <select name="priority" value={priority} onChange={(e) => setPriority(e.target.value)} style={{ padding: 6 }}>
             {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
       </div>
-      <label style={{ fontSize: 12, color: '#666', display: 'flex', gap: 4, alignItems: 'center' }}>
+      <label style={{ fontSize: 12, color: 'var(--dim-on-surface-variant)', display: 'flex', gap: 4, alignItems: 'center' }}>
         <input type="checkbox" name="ticketType" value="FIELD_SERVICE" /> Saha işi (teknisyen fiziksel olarak gidecek)
       </label>
       {assets.length > 0 ? (
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>İlgili Varlık (opsiyonel)</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>İlgili Varlık (opsiyonel)</label>
           <select name="relatedAssetId" style={{ padding: 6, width: '100%' }}>
             <option value="">Seçilmedi</option>
             {assets.map((a) => <option key={a.id} value={a.id}>{a.assetTag} — {a.name}</option>)}
@@ -62,8 +62,8 @@ export function TicketForm({ departmentId, assets }: { departmentId: string; ass
         </div>
       ) : null}
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer', alignSelf: 'flex-start' }}>{pending ? 'Oluşturuluyor...' : 'Ticket Oluştur'}</button>
-      {state?.error ? <p style={{ color: '#b00', fontSize: 13 }}>{state.error}</p> : null}
-      {state?.success ? <p style={{ color: '#080', fontSize: 13 }}>{state.success}</p> : null}
+      {state?.error ? <p style={{ color: 'var(--dim-danger)', fontSize: 13 }}>{state.error}</p> : null}
+      {state?.success ? <p style={{ color: 'var(--dim-success)', fontSize: 13 }}>{state.success}</p> : null}
     </form>
   );
 }

@@ -15,16 +15,16 @@ export function SchedulerStatusPanel({
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
 
   return (
-    <div style={{ border: '1px solid #ddd', padding: 12, borderRadius: 6, marginBottom: 20, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-      <div style={{ fontSize: 13, color: '#666' }}>
+    <div style={{ border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6, marginBottom: 20, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ fontSize: 13, color: 'var(--dim-on-surface-variant)' }}>
         Zamanlayıcı — her {Math.round(intervalMs / 1000 / 60)} dakikada bir otomatik çalışır (SLA eskalasyonu + bakım üretimi).<br />
         Son çalışma: {lastRunAt ? new Date(lastRunAt).toLocaleString('tr-TR') : 'henüz çalışmadı'} · Toplam {runCount} tur.
       </div>
       <form action={formAction}>
         <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer' }}>{pending ? '...' : 'Şimdi Çalıştır'}</button>
       </form>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
-      {state?.success ? <span style={{ color: '#080', fontSize: 12 }}>{state.success}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12 }}>{state.success}</span> : null}
     </div>
   );
 }

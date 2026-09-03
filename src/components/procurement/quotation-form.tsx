@@ -19,7 +19,7 @@ export function QuotationForm({ rfqId, rfqLines, suppliers }: { rfqId: string; r
   );
 
   return (
-    <form action={formAction} style={{ border: '1px solid #ddd', padding: 14, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <form action={formAction} style={{ border: '1px solid var(--dim-border-soft)', padding: 14, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <input type="hidden" name="rfqId" value={rfqId} />
       <input type="hidden" name="linesJson" value={linesJson} />
       <h4 style={{ fontSize: 13, margin: 0 }}>Teklif Gir</h4>
@@ -50,8 +50,8 @@ export function QuotationForm({ rfqId, rfqLines, suppliers }: { rfqId: string; r
 
       <div>
         <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer' }}>{pending ? '...' : 'Teklifi Kaydet'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
       </div>
     </form>
   );
@@ -63,7 +63,7 @@ export function SendRfqButton({ rfqId }: { rfqId: string }) {
     <form action={formAction} style={{ display: 'inline-flex', flexDirection: 'column', gap: 4 }}>
       <input type="hidden" name="rfqId" value={rfqId} />
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Tedarikçilere Gönder'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }
@@ -74,7 +74,7 @@ export function CloseRfqButton({ rfqId }: { rfqId: string }) {
     <form action={formAction} style={{ display: 'inline-flex', flexDirection: 'column', gap: 4 }}>
       <input type="hidden" name="rfqId" value={rfqId} />
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Teklif Toplamayı Kapat'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }

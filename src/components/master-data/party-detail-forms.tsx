@@ -6,10 +6,10 @@ import { addPartyAddressAction, addPartyContactAction, type FormState } from '@/
 export function PartyAddressForm({ partyId }: { partyId: string }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(addPartyAddressAction, undefined);
   return (
-    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid #ddd', padding: 12, borderRadius: 6 }}>
+    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6 }}>
       <input type="hidden" name="partyId" value={partyId} />
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Tür</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Tür</label>
         <select name="addressType" style={{ padding: 6 }}>
           <option value="OTHER">Diğer</option>
           <option value="BILLING">Fatura</option>
@@ -17,23 +17,23 @@ export function PartyAddressForm({ partyId }: { partyId: string }) {
         </select>
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Etiket</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Etiket</label>
         <input name="label" style={{ padding: 6, width: 140 }} />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Adres</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Adres</label>
         <input name="addressLine" style={{ padding: 6, width: 260 }} />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>İl</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>İl</label>
         <input name="city" style={{ padding: 6, width: 120 }} />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>İlçe</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>İlçe</label>
         <input name="district" style={{ padding: 6, width: 120 }} />
       </div>
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? 'Ekleniyor...' : 'Adres Ekle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
     </form>
   );
 }
@@ -41,26 +41,26 @@ export function PartyAddressForm({ partyId }: { partyId: string }) {
 export function PartyContactForm({ partyId }: { partyId: string }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(addPartyContactAction, undefined);
   return (
-    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid #ddd', padding: 12, borderRadius: 6 }}>
+    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6 }}>
       <input type="hidden" name="partyId" value={partyId} />
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Ad Soyad</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Ad Soyad</label>
         <input name="fullName" required style={{ padding: 6, width: 180 }} />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Unvan</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Unvan</label>
         <input name="title" style={{ padding: 6, width: 140 }} />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>E-posta</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>E-posta</label>
         <input name="email" type="email" style={{ padding: 6, width: 200 }} />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Telefon</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Telefon</label>
         <input name="phone" style={{ padding: 6, width: 140 }} />
       </div>
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? 'Ekleniyor...' : 'Yetkili Ekle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
     </form>
   );
 }

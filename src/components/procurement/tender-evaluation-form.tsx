@@ -30,7 +30,7 @@ export function TenderTechnicalEvaluationForm({ tenderId, tenderBidLineId, initi
       {needsReason ? <input name="reason" defaultValue={initial?.reason ?? ''} placeholder="Gerekçe (zorunlu)" style={{ padding: 4, fontSize: 12 }} /> : null}
       <div>
         <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 11, cursor: 'pointer' }}>{pending ? '...' : 'Kaydet'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 6 }}>{state.error}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11, marginLeft: 6 }}>{state.error}</span> : null}
       </div>
     </form>
   );
@@ -47,7 +47,7 @@ export function TenderCommercialEvaluationForm({ tenderId, tenderBidId, initial 
       <input name="notes" defaultValue={initial?.notes ?? ''} placeholder="Not" style={{ padding: 4, fontSize: 12 }} />
       <div>
         <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 11, cursor: 'pointer' }}>{pending ? '...' : 'Kaydet'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 6 }}>{state.error}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11, marginLeft: 6 }}>{state.error}</span> : null}
       </div>
     </form>
   );

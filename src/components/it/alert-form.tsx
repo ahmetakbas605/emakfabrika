@@ -8,16 +8,16 @@ export function AlertForm({ departmentId, targets }: { departmentId: string; tar
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
 
   return (
-    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid #ddd', padding: 12, borderRadius: 6 }}>
+    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6 }}>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Hedef</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Hedef</label>
         <select name="targetId" required style={{ padding: 6, minWidth: 160 }}>
           <option value="">Seçin...</option>
           {targets.map((t) => <option key={t.id} value={t.id}>{t.assetTag}</option>)}
         </select>
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Önem</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Önem</label>
         <select name="severity" style={{ padding: 6 }}>
           <option value="CRITICAL">CRITICAL</option>
           <option value="HIGH">HIGH</option>
@@ -26,10 +26,10 @@ export function AlertForm({ departmentId, targets }: { departmentId: string; tar
           <option value="INFO">INFO</option>
         </select>
       </div>
-      <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Mesaj</label><input name="message" required style={{ padding: 6, minWidth: 200 }} /></div>
+      <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Mesaj</label><input name="message" required style={{ padding: 6, minWidth: 200 }} /></div>
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Alert Oluştur'}</button>
-      {state?.error ? <p style={{ color: '#b00', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
-      {state?.success ? <p style={{ color: '#080', fontSize: 13, width: '100%' }}>{state.success}</p> : null}
+      {state?.error ? <p style={{ color: 'var(--dim-danger)', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
+      {state?.success ? <p style={{ color: 'var(--dim-success)', fontSize: 13, width: '100%' }}>{state.success}</p> : null}
     </form>
   );
 }

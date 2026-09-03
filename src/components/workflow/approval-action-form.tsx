@@ -13,7 +13,7 @@ export function ApprovalActionForm({ stepId, users, documentType, warehouses }: 
       <input type="hidden" name="stepId" value={stepId} />
       {documentType === 'SALES_ORDER' && warehouses && warehouses.length > 0 ? (
         <div>
-          <label style={{ display: 'block', fontSize: 10, color: '#666' }}>Onaylanırsa stok rezerve edilecek depo (opsiyonel)</label>
+          <label style={{ display: 'block', fontSize: 10, color: 'var(--dim-on-surface-variant)' }}>Onaylanırsa stok rezerve edilecek depo (opsiyonel)</label>
           <select name="warehouseId" style={{ padding: 4, fontSize: 11 }}>
             <option value="">— rezervasyon yapma —</option>
             {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -43,7 +43,7 @@ export function ApprovalActionForm({ stepId, users, documentType, warehouses }: 
           <button type="submit" disabled={pending} style={{ padding: '5px 10px', cursor: 'pointer', fontSize: 12 }}>Devret</button>
         </div>
       ) : null}
-      {state?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{state.error}</span> : null}
     </form>
   );
 }

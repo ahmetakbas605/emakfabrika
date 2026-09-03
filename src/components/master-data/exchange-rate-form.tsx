@@ -7,23 +7,23 @@ export function ExchangeRateForm({ currencies }: { currencies: { code: string; n
   const [state, formAction, pending] = useActionState<FormState, FormData>(recordExchangeRateAction, undefined);
   const today = new Date().toISOString().slice(0, 10);
   return (
-    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid #ddd', padding: 12, borderRadius: 6 }}>
+    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6 }}>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Para Birimi</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Para Birimi</label>
         <select name="currencyCode" required style={{ padding: 6 }}>
           {currencies.filter((c) => c.code !== 'TRY').map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
         </select>
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Tarih</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Tarih</label>
         <input name="rateDate" type="date" defaultValue={today} required style={{ padding: 6 }} />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Kur (TRY karşılığı)</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Kur (TRY karşılığı)</label>
         <input name="rate" required style={{ padding: 6, width: 120 }} placeholder="34.50" />
       </div>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Tür</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Tür</label>
         <select name="rateType" style={{ padding: 6 }}>
           <option value="EFFECTIVE">Efektif</option>
           <option value="BUY">Alış</option>
@@ -33,8 +33,8 @@ export function ExchangeRateForm({ currencies }: { currencies: { code: string; n
         </select>
       </div>
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? 'Kaydediliyor...' : 'Kur Ekle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
-      {state?.success ? <span style={{ color: '#080', fontSize: 12, width: '100%' }}>{state.success}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, width: '100%' }}>{state.error}</span> : null}
+      {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, width: '100%' }}>{state.success}</span> : null}
     </form>
   );
 }

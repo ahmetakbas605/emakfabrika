@@ -49,34 +49,34 @@ export function RfqCreateForm({
   const suppliersJson = JSON.stringify([...selectedSuppliers]);
 
   return (
-    <form action={formAction} style={{ border: '1px solid #ddd', padding: 16, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <form action={formAction} style={{ border: '1px solid var(--dim-border-soft)', padding: 16, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <input type="hidden" name="linesJson" value={linesJson} />
       <input type="hidden" name="suppliersJson" value={suppliersJson} />
       <h3 style={{ fontSize: 14, margin: 0 }}>Yeni RFQ (Teklif Talebi)</h3>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Başlık</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Başlık</label>
           <input name="title" required style={{ padding: 6, width: 240 }} />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Teklif Son Tarihi</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Teklif Son Tarihi</label>
           <input name="quotationDeadline" type="datetime-local" style={{ padding: 6 }} />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Teslimat Yeri</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Teslimat Yeri</label>
           <input name="deliveryLocation" style={{ padding: 6, width: 160 }} />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Ödeme Koşulu</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Ödeme Koşulu</label>
           <input name="paymentTerms" style={{ padding: 6, width: 140 }} />
         </div>
       </div>
 
       {queueItems.length > 0 ? (
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>Satınalma Kuyruğundan Seç (madde 47-50 — farklı taleplerden satırlar birleştirilebilir)</label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 200, overflowY: 'auto', border: '1px solid #eee', padding: 8, borderRadius: 4 }}>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)', marginBottom: 4 }}>Satınalma Kuyruğundan Seç (madde 47-50 — farklı taleplerden satırlar birleştirilebilir)</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 200, overflowY: 'auto', border: '1px solid var(--dim-border-soft)', padding: 8, borderRadius: 4 }}>
             {queueItems.map((q) => (
               <label key={q.lineId} style={{ fontSize: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
                 <input type="checkbox" checked={selectedQueueIds.has(q.lineId)} onChange={() => toggleQueueItem(q.lineId)} />
@@ -88,7 +88,7 @@ export function RfqCreateForm({
       ) : null}
 
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>Doğrudan Kalem Ekle (bir talebe bağlı değil)</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)', marginBottom: 4 }}>Doğrudan Kalem Ekle (bir talebe bağlı değil)</label>
         {manualLines.map((line, i) => (
           <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'center' }}>
             <input value={line.description} onChange={(e) => updateManualLine(i, { description: e.target.value })} placeholder="Açıklama" style={{ padding: 5, flex: 1 }} />
@@ -103,7 +103,7 @@ export function RfqCreateForm({
       </div>
 
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 4 }}>Davet Edilecek Tedarikçiler</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)', marginBottom: 4 }}>Davet Edilecek Tedarikçiler</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {suppliers.map((s) => (
             <label key={s.id} style={{ fontSize: 12, display: 'flex', gap: 4, alignItems: 'center' }}>
@@ -111,14 +111,14 @@ export function RfqCreateForm({
               {s.legalName}
             </label>
           ))}
-          {suppliers.length === 0 ? <span style={{ fontSize: 12, color: '#b00' }}>Önce Master Data → Cariler'de tedarikçi rolüyle bir cari kartı oluşturun.</span> : null}
+          {suppliers.length === 0 ? <span style={{ fontSize: 12, color: 'var(--dim-danger)' }}>Önce Master Data → Cariler'de tedarikçi rolüyle bir cari kartı oluşturun.</span> : null}
         </div>
       </div>
 
       <div>
         <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? 'Oluşturuluyor...' : 'RFQ Oluştur'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 10 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 10 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 10 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 10 }}>{state.success}</span> : null}
       </div>
     </form>
   );

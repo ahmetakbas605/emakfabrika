@@ -16,19 +16,19 @@ export function CreateShipmentForm({ orderId, warehouses, lines }: { orderId: st
   );
 
   return (
-    <form action={formAction} style={{ border: '1px solid #ddd', padding: 12, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <form action={formAction} style={{ border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <input type="hidden" name="orderId" value={orderId} />
       <input type="hidden" name="linesJson" value={linesJson} />
       <h4 style={{ fontSize: 13, margin: 0 }}>Yeni Sevkiyat Hazırla</h4>
       <div style={{ display: 'flex', gap: 8 }}>
         <div>
-          <label style={{ display: 'block', fontSize: 11, color: '#666' }}>Depo</label>
+          <label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Depo</label>
           <select name="warehouseId" required style={{ padding: 5, minWidth: 140 }}>
             <option value="">Seçin</option>
             {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
           </select>
         </div>
-        <div><label style={{ display: 'block', fontSize: 11, color: '#666' }}>Sevkiyat Tarihi</label><input name="shipmentDate" type="date" required style={{ padding: 5 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Sevkiyat Tarihi</label><input name="shipmentDate" type="date" required style={{ padding: 5 }} /></div>
       </div>
       <table style={{ fontSize: 12, borderCollapse: 'collapse' }}>
         <thead><tr><th style={{ textAlign: 'left', padding: '2px 6px' }}>Ürün</th><th style={{ padding: '2px 6px' }}>Kalan</th><th style={{ padding: '2px 6px' }}>Sevk Miktarı</th></tr></thead>
@@ -44,8 +44,8 @@ export function CreateShipmentForm({ orderId, warehouses, lines }: { orderId: st
       </table>
       <div>
         <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer', fontSize: 12 }}>{pending ? '...' : 'Sevkiyat Hazırla'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 8 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 11, marginLeft: 8 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11, marginLeft: 8 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 11, marginLeft: 8 }}>{state.success}</span> : null}
       </div>
     </form>
   );
@@ -57,7 +57,7 @@ export function DispatchShipmentButton({ shipmentId }: { shipmentId: string }) {
     <form action={formAction} style={{ display: 'inline-block', marginRight: 6 }}>
       <input type="hidden" name="shipmentId" value={shipmentId} />
       <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 12, cursor: 'pointer' }}>{pending ? '...' : 'Sevk Et'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 4 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11, marginLeft: 4 }}>{state.error}</span> : null}
     </form>
   );
 }
@@ -68,7 +68,7 @@ export function MarkShipmentDeliveredButton({ shipmentId }: { shipmentId: string
     <form action={formAction} style={{ display: 'inline-block', marginRight: 6 }}>
       <input type="hidden" name="shipmentId" value={shipmentId} />
       <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 12, cursor: 'pointer' }}>{pending ? '...' : 'Teslim Edildi'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 4 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11, marginLeft: 4 }}>{state.error}</span> : null}
     </form>
   );
 }
@@ -78,8 +78,8 @@ export function CancelShipmentButton({ shipmentId }: { shipmentId: string }) {
   return (
     <form action={formAction} style={{ display: 'inline-block' }}>
       <input type="hidden" name="shipmentId" value={shipmentId} />
-      <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 12, cursor: 'pointer', color: '#b00' }}>{pending ? '...' : 'İptal'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 4 }}>{state.error}</span> : null}
+      <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 12, cursor: 'pointer', color: 'var(--dim-danger)' }}>{pending ? '...' : 'İptal'}</button>
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11, marginLeft: 4 }}>{state.error}</span> : null}
     </form>
   );
 }

@@ -15,7 +15,7 @@ export function AssignAssetForm({ departmentId, assetId, users }: { departmentId
         {users.map((u) => <option key={u.id} value={u.id}>{u.fullName}</option>)}
       </select>
       <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 12, cursor: 'pointer' }}>{pending ? '...' : 'Ata'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{state.error}</span> : null}
     </form>
   );
 }

@@ -21,51 +21,51 @@ export function CreateBomForm({ products, units }: { products: { id: string; sku
   );
 
   return (
-    <form action={formAction} style={{ border: '1px solid #ddd', padding: 16, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <form action={formAction} style={{ border: '1px solid var(--dim-border-soft)', padding: 16, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <input type="hidden" name="linesJson" value={linesJson} />
       <h3 style={{ fontSize: 14, margin: 0 }}>Yeni BOM (Ürün Ağacı)</h3>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Üretilen Ürün</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Üretilen Ürün</label>
           <select name="productId" required style={{ padding: 6, minWidth: 180 }}>
             <option value="">Seçin</option>
             {products.map((p) => <option key={p.id} value={p.id}>{p.sku} — {p.name}</option>)}
           </select>
         </div>
-        <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>BOM Kodu</label><input name="code" required style={{ padding: 6, width: 120 }} /></div>
-        <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Ad</label><input name="name" required style={{ padding: 6, width: 160 }} /></div>
-        <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Baz Miktar</label><input name="baseQuantity" type="number" step="0.01" defaultValue="1" style={{ padding: 6, width: 80 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>BOM Kodu</label><input name="code" required style={{ padding: 6, width: 120 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Ad</label><input name="name" required style={{ padding: 6, width: 160 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Baz Miktar</label><input name="baseQuantity" type="number" step="0.01" defaultValue="1" style={{ padding: 6, width: 80 }} /></div>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Baz Birim</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Baz Birim</label>
           <select name="unitId" required style={{ padding: 6, minWidth: 90 }}>
             <option value="">Seçin</option>
             {units.map((u) => <option key={u.id} value={u.id}>{u.code}</option>)}
           </select>
         </div>
-        <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Geçerlilik Başlangıcı</label><input name="effectiveFrom" type="date" style={{ padding: 6 }} /></div>
-        <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Geçerlilik Bitişi</label><input name="effectiveTo" type="date" style={{ padding: 6 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Geçerlilik Başlangıcı</label><input name="effectiveFrom" type="date" style={{ padding: 6 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Geçerlilik Bitişi</label><input name="effectiveTo" type="date" style={{ padding: 6 }} /></div>
       </div>
 
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 6 }}>Bileşenler</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)', marginBottom: 6 }}>Bileşenler</label>
         {lines.map((line, i) => (
           <div key={i} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 6 }}>
             <div style={{ minWidth: 180 }}>
-              <label style={{ display: 'block', fontSize: 11, color: '#666' }}>Bileşen Ürün</label>
+              <label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Bileşen Ürün</label>
               <select value={line.componentProductId} onChange={(e) => updateLine(i, { componentProductId: e.target.value })} style={{ padding: 5, width: '100%' }}>
                 <option value="">Seçin</option>
                 {products.map((p) => <option key={p.id} value={p.id}>{p.sku} — {p.name}</option>)}
               </select>
             </div>
-            <div><label style={{ display: 'block', fontSize: 11, color: '#666' }}>Miktar</label><input value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} style={{ padding: 5, width: 80 }} /></div>
+            <div><label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Miktar</label><input value={line.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} style={{ padding: 5, width: 80 }} /></div>
             <div>
-              <label style={{ display: 'block', fontSize: 11, color: '#666' }}>Birim</label>
+              <label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Birim</label>
               <select value={line.unitId} onChange={(e) => updateLine(i, { unitId: e.target.value })} style={{ padding: 5 }}>
                 <option value="">Seçin</option>
                 {units.map((u) => <option key={u.id} value={u.id}>{u.code}</option>)}
               </select>
             </div>
-            <div><label style={{ display: 'block', fontSize: 11, color: '#666' }}>Fire %</label><input value={line.scrapPercent} onChange={(e) => updateLine(i, { scrapPercent: e.target.value })} style={{ padding: 5, width: 70 }} /></div>
+            <div><label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Fire %</label><input value={line.scrapPercent} onChange={(e) => updateLine(i, { scrapPercent: e.target.value })} style={{ padding: 5, width: 70 }} /></div>
             {lines.length > 1 ? <button type="button" onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== i))} style={{ cursor: 'pointer' }}>Kaldır</button> : null}
           </div>
         ))}
@@ -74,8 +74,8 @@ export function CreateBomForm({ products, units }: { products: { id: string; sku
 
       <div>
         <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'BOM Oluştur'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 10 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 10 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 10 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 10 }}>{state.success}</span> : null}
       </div>
     </form>
   );

@@ -6,21 +6,21 @@ import { createOpportunityAction, setOpportunityStageAction, type FormState } fr
 export function CreateOpportunityForm({ parties }: { parties: { id: string; legalName: string }[] }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(createOpportunityAction, undefined);
   return (
-    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid #ddd', padding: 12, borderRadius: 6 }}>
+    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6 }}>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Cari</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Cari</label>
         <select name="partyId" required style={{ padding: 6, minWidth: 160 }}>
           <option value="">Seçin</option>
           {parties.map((p) => <option key={p.id} value={p.id}>{p.legalName}</option>)}
         </select>
       </div>
-      <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Fırsat Adı</label><input name="name" required style={{ padding: 6, width: 180 }} /></div>
-      <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Tahmini Değer</label><input name="estimatedValue" type="number" step="0.01" style={{ padding: 6, width: 100 }} /></div>
-      <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Para Birimi</label><input name="currencyCode" defaultValue="TRY" style={{ padding: 6, width: 60 }} /></div>
-      <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Beklenen Kapanış</label><input name="expectedCloseDate" type="date" style={{ padding: 6 }} /></div>
+      <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Fırsat Adı</label><input name="name" required style={{ padding: 6, width: 180 }} /></div>
+      <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Tahmini Değer</label><input name="estimatedValue" type="number" step="0.01" style={{ padding: 6, width: 100 }} /></div>
+      <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Para Birimi</label><input name="currencyCode" defaultValue="TRY" style={{ padding: 6, width: 60 }} /></div>
+      <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Beklenen Kapanış</label><input name="expectedCloseDate" type="date" style={{ padding: 6 }} /></div>
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Fırsat Oluştur'}</button>
-      {state?.error ? <p style={{ color: '#b00', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
-      {state?.success ? <p style={{ color: '#080', fontSize: 13, width: '100%' }}>{state.success}</p> : null}
+      {state?.error ? <p style={{ color: 'var(--dim-danger)', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
+      {state?.success ? <p style={{ color: 'var(--dim-success)', fontSize: 13, width: '100%' }}>{state.success}</p> : null}
     </form>
   );
 }
@@ -37,7 +37,7 @@ export function OpportunityStageButtons({ opportunityId, currentStage }: { oppor
       </select>
       <input name="lostReason" placeholder="Kayıp gerekçesi (LOST için)" style={{ padding: '2px 4px', fontSize: 12, width: 140 }} />
       <button type="submit" disabled={pending} style={{ padding: '2px 8px', fontSize: 12, cursor: 'pointer' }}>{pending ? '...' : 'Güncelle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{state.error}</span> : null}
     </form>
   );
 }

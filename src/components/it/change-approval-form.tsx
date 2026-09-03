@@ -24,8 +24,8 @@ export function ChangeApprovalForm({ departmentId, changeId, canApprove, canSche
           <button type="submit" disabled={schedulePending} style={{ padding: '3px 8px', fontSize: 12, cursor: 'pointer' }}>Planla</button>
         </form>
       ) : null}
-      {approveState?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{approveState.error}</span> : null}
-      {scheduleState?.error ? <span style={{ color: '#b00', fontSize: 11 }}>{scheduleState.error}</span> : null}
+      {approveState?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{approveState.error}</span> : null}
+      {scheduleState?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{scheduleState.error}</span> : null}
     </div>
   );
 }

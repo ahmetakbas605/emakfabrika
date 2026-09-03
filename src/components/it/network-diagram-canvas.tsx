@@ -34,7 +34,7 @@ function toFlowNodes(nodes: DiagramNode[]): Node[] {
     id: n.id,
     position: { x: n.positionX, y: n.positionY },
     data: { label: `${NODE_TYPE_LABELS[n.nodeType] ?? n.nodeType}${n.assetTag ? ` — ${n.assetTag}` : n.label ? ` — ${n.label}` : ''}` },
-    style: { border: '1px solid #666', borderRadius: 6, padding: 6, fontSize: 12, background: '#fff' }
+    style: { border: '1px solid var(--dim-border)', borderRadius: 6, padding: 6, fontSize: 12, background: 'var(--dim-frosted-soft)' }
   }));
 }
 function toFlowEdges(links: DiagramLink[]): Edge[] {
@@ -65,7 +65,7 @@ export function NetworkDiagramCanvas({
     const id = crypto.randomUUID();
     const asset = assets.find((a) => a.id === newNodeAsset);
     const label = `${NODE_TYPE_LABELS[newNodeType]}${asset ? ` — ${asset.assetTag}` : newNodeLabel ? ` — ${newNodeLabel}` : ''}`;
-    setNodes((nds) => [...nds, { id, position: { x: 80 + (nds.length % 6) * 140, y: 80 + Math.floor(nds.length / 6) * 100 }, data: { label }, style: { border: '1px solid #666', borderRadius: 6, padding: 6, fontSize: 12, background: '#fff' } }]);
+    setNodes((nds) => [...nds, { id, position: { x: 80 + (nds.length % 6) * 140, y: 80 + Math.floor(nds.length / 6) * 100 }, data: { label }, style: { border: '1px solid var(--dim-border)', borderRadius: 6, padding: 6, fontSize: 12, background: 'var(--dim-frosted-soft)' } }]);
     setNodeMeta((m) => new Map(m).set(id, { nodeType: newNodeType, linkedAssetId: newNodeAsset || undefined, label: newNodeLabel }));
     setNewNodeAsset('');
     setNewNodeLabel('');
@@ -86,32 +86,32 @@ export function NetworkDiagramCanvas({
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid #ddd', padding: 12, borderRadius: 6, marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6, marginBottom: 12 }}>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Düğüm Tipi</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Düğüm Tipi</label>
           <select value={newNodeType} onChange={(e) => setNewNodeType(e.target.value)} style={{ padding: 6 }}>
             {NODE_TYPES.map((t) => <option key={t} value={t}>{NODE_TYPE_LABELS[t]}</option>)}
           </select>
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Varlık (opsiyonel)</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Varlık (opsiyonel)</label>
           <select value={newNodeAsset} onChange={(e) => setNewNodeAsset(e.target.value)} style={{ padding: 6, minWidth: 160 }}>
             <option value="">Seçilmedi</option>
             {assets.map((a) => <option key={a.id} value={a.id}>{a.assetTag} — {a.name}</option>)}
           </select>
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Etiket (varlıksız düğümler için)</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Etiket (varlıksız düğümler için)</label>
           <input value={newNodeLabel} onChange={(e) => setNewNodeLabel(e.target.value)} placeholder="ör. İnternet Bağlantısı" style={{ padding: 6 }} />
         </div>
         <button type="button" onClick={addNode} style={{ padding: '7px 14px', cursor: 'pointer' }}>Düğüm Ekle</button>
         <button type="button" onClick={handleSave} disabled={saving} style={{ padding: '7px 14px', cursor: 'pointer', marginLeft: 'auto' }}>{saving ? 'Kaydediliyor...' : 'Diyagramı Kaydet (yeni versiyon)'}</button>
       </div>
-      {message?.error ? <p style={{ color: '#b00', fontSize: 13, marginBottom: 8 }}>{message.error}</p> : null}
-      {message?.success ? <p style={{ color: '#080', fontSize: 13, marginBottom: 8 }}>{message.success}</p> : null}
-      <p style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>Düğümleri sürükleyerek yerleştirin, bir düğümün kenarından diğerine sürükleyerek bağlantı oluşturun. Bir bağlantıyı seçip Delete tuşuna basarak silebilirsiniz.</p>
+      {message?.error ? <p style={{ color: 'var(--dim-danger)', fontSize: 13, marginBottom: 8 }}>{message.error}</p> : null}
+      {message?.success ? <p style={{ color: 'var(--dim-success)', fontSize: 13, marginBottom: 8 }}>{message.success}</p> : null}
+      <p style={{ fontSize: 12, color: 'var(--dim-slate)', marginBottom: 8 }}>Düğümleri sürükleyerek yerleştirin, bir düğümün kenarından diğerine sürükleyerek bağlantı oluşturun. Bir bağlantıyı seçip Delete tuşuna basarak silebilirsiniz.</p>
 
-      <div style={{ height: 500, border: '1px solid #ddd', borderRadius: 6 }}>
+      <div style={{ height: 500, border: '1px solid var(--dim-border-soft)', borderRadius: 6 }}>
         <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} fitView deleteKeyCode={['Backspace', 'Delete']}>
           <Background />
           <Controls />

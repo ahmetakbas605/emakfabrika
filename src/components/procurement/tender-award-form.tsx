@@ -43,7 +43,7 @@ export function TenderAwardCreateForm({ tenderId, lines }: { tenderId: string; l
       <input type="hidden" name="linesJson" value={JSON.stringify(flatLines)} />
 
       {lines.map((line) => (
-        <div key={line.tenderLineId} style={{ border: '1px solid #ddd', borderRadius: 6, padding: 10 }}>
+        <div key={line.tenderLineId} style={{ border: '1px solid var(--dim-border-soft)', borderRadius: 6, padding: 10 }}>
           <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>{line.description} ({Number(line.quantity).toLocaleString('tr-TR')} {line.unitCode})</p>
           {(rowsByLine[line.tenderLineId] ?? []).map((row, idx) => (
             <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4, fontSize: 12 }}>
@@ -63,8 +63,8 @@ export function TenderAwardCreateForm({ tenderId, lines }: { tenderId: string; l
 
       <div>
         <button type="submit" disabled={pending || flatLines.length === 0} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Ödül Taslağı Oluştur'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
       </div>
     </form>
   );

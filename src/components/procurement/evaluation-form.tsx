@@ -17,7 +17,7 @@ export function ScoringWeightsForm({ weights }: { weights: { priceWeight: string
   const total = [values.priceWeight, values.technicalWeight, values.deliveryWeight, values.commercialWeight].reduce((acc, v) => acc + (Number(v) || 0), 0);
 
   return (
-    <form action={formAction} style={{ border: '1px solid #ddd', padding: 14, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 420 }}>
+    <form action={formAction} style={{ border: '1px solid var(--dim-border-soft)', padding: 14, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 420 }}>
       <h4 style={{ fontSize: 13, margin: 0 }}>Skorlama Ağırlıkları</h4>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <label style={{ fontSize: 12, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -37,11 +37,11 @@ export function ScoringWeightsForm({ weights }: { weights: { priceWeight: string
           <input name="commercialWeight" type="number" step="0.01" value={values.commercialWeight} onChange={(e) => setValues((v) => ({ ...v, commercialWeight: e.target.value }))} style={{ padding: 5, width: 80 }} />
         </label>
       </div>
-      <p style={{ fontSize: 12, color: total === 100 ? '#080' : '#b00', margin: 0 }}>Toplam: %{total}{total !== 100 ? ' (100 olmalı)' : ''}</p>
+      <p style={{ fontSize: 12, color: total === 100 ? '#080' : 'var(--dim-danger)', margin: 0 }}>Toplam: %{total}{total !== 100 ? ' (100 olmalı)' : ''}</p>
       <div>
         <button type="submit" disabled={pending} style={{ padding: '6px 12px', cursor: 'pointer' }}>{pending ? '...' : 'Kaydet'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 8 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 8 }}>{state.success}</span> : null}
       </div>
     </form>
   );
@@ -63,7 +63,7 @@ export function TechnicalEvaluationForm({ rfqId, quotationLineId, initial }: { r
       {needsReason ? <input name="reason" defaultValue={initial?.reason ?? ''} placeholder="Gerekçe (zorunlu)" style={{ padding: 4, fontSize: 12 }} /> : null}
       <div>
         <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 11, cursor: 'pointer' }}>{pending ? '...' : 'Kaydet'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 6 }}>{state.error}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11, marginLeft: 6 }}>{state.error}</span> : null}
       </div>
     </form>
   );
@@ -80,7 +80,7 @@ export function CommercialEvaluationForm({ rfqId, quotationId, initial }: { rfqI
       <input name="notes" defaultValue={initial?.notes ?? ''} placeholder="Not" style={{ padding: 4, fontSize: 12 }} />
       <div>
         <button type="submit" disabled={pending} style={{ padding: '3px 8px', fontSize: 11, cursor: 'pointer' }}>{pending ? '...' : 'Kaydet'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 6 }}>{state.error}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11, marginLeft: 6 }}>{state.error}</span> : null}
       </div>
     </form>
   );

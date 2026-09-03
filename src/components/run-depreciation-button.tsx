@@ -27,7 +27,7 @@ export function RunDepreciationButton({ departmentId, fixedAssetId }: { departme
       <button type="button" onClick={handleClick} disabled={pending} style={{ padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
         {pending ? '...' : 'Bu Ayın Amortismanını İşle'}
       </button>
-      {error ? <span style={{ color: '#b00', fontSize: 11, marginLeft: 6 }}>{error}</span> : null}
+      {error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11, marginLeft: 6 }}>{error}</span> : null}
     </span>
   );
 }

@@ -9,7 +9,7 @@ export function SubmitRequestButton({ requestId }: { requestId: string }) {
     <form action={formAction} style={{ display: 'inline-flex', flexDirection: 'column', gap: 4 }}>
       <input type="hidden" name="requestId" value={requestId} />
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Onaya Gönder'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }
@@ -20,7 +20,7 @@ export function CancelRequestButton({ requestId }: { requestId: string }) {
     <form action={formAction} style={{ display: 'inline-flex', flexDirection: 'column', gap: 4 }}>
       <input type="hidden" name="requestId" value={requestId} />
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'İptal Et'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }
@@ -37,7 +37,7 @@ export function LineStockStatusForm({ requestId, lineId, currentStatus }: { requ
         {Object.entries(STOCK_STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
       </select>
       <button type="submit" disabled={pending} style={{ padding: '3px 6px', cursor: 'pointer', fontSize: 11 }}>{pending ? '...' : 'Düzelt'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 10 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 10 }}>{state.error}</span> : null}
     </form>
   );
 }
@@ -50,7 +50,7 @@ export function LineAttachmentForm({ requestId, lineId }: { requestId: string; l
       <input type="hidden" name="lineId" value={lineId} />
       <input type="file" name="file" required style={{ fontSize: 11 }} />
       <button type="submit" disabled={pending} style={{ padding: '3px 8px', cursor: 'pointer', fontSize: 11 }}>{pending ? '...' : 'Ekle'}</button>
-      {state?.error ? <span style={{ color: '#b00', fontSize: 10 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 10 }}>{state.error}</span> : null}
     </form>
   );
 }

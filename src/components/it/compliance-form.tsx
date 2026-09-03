@@ -8,7 +8,7 @@ const STATUS_OPTIONS = ['COMPLIANT', 'NON_COMPLIANT', 'UNKNOWN'];
 function StatusSelect({ name, label }: { name: string; label: string }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 12, color: '#666' }}>{label}</label>
+      <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>{label}</label>
       <select name={name} style={{ padding: 6 }}>
         {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
       </select>
@@ -21,9 +21,9 @@ export function ComplianceForm({ departmentId, assets }: { departmentId: string;
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
 
   return (
-    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid #ddd', padding: 12, borderRadius: 6 }}>
+    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', border: '1px solid var(--dim-border-soft)', padding: 12, borderRadius: 6 }}>
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Varlık</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Varlık</label>
         <select name="assetId" required style={{ padding: 6, minWidth: 160 }}>
           <option value="">Seçin...</option>
           {assets.map((a) => <option key={a.id} value={a.id}>{a.assetTag} — {a.name}</option>)}
@@ -35,8 +35,8 @@ export function ComplianceForm({ departmentId, assets }: { departmentId: string;
       <StatusSelect name="patchStatus" label="Yama" />
       <StatusSelect name="osSupportStatus" label="OS Desteği" />
       <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Kayıt Ekle'}</button>
-      {state?.error ? <p style={{ color: '#b00', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
-      {state?.success ? <p style={{ color: '#080', fontSize: 13, width: '100%' }}>{state.success}</p> : null}
+      {state?.error ? <p style={{ color: 'var(--dim-danger)', fontSize: 13, width: '100%' }}>{state.error}</p> : null}
+      {state?.success ? <p style={{ color: 'var(--dim-success)', fontSize: 13, width: '100%' }}>{state.success}</p> : null}
     </form>
   );
 }

@@ -66,11 +66,11 @@ export function JournalForm({
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Tarih</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Tarih</label>
           <input name="journalDate" type="date" defaultValue={todayIso()} required style={{ padding: 6 }} />
         </div>
         <div style={{ flex: 1 }}>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Açıklama</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Açıklama</label>
           <input name="description" style={{ padding: 6, width: '100%' }} placeholder="Opsiyonel" />
         </div>
       </div>
@@ -97,16 +97,16 @@ export function JournalForm({
       ))}
       <button type="button" onClick={addRow} style={{ padding: '6px 12px', marginTop: 4, cursor: 'pointer' }}>+ Kalem Ekle</button>
 
-      <div style={{ marginTop: 16, borderTop: '1px solid #ddd', paddingTop: 10, fontSize: 13 }}>
+      <div style={{ marginTop: 16, borderTop: '1px solid var(--dim-border-soft)', paddingTop: 10, fontSize: 13 }}>
         <span>Toplam Borç: <strong>{totalDebit.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</strong></span>
         <span style={{ marginLeft: 20 }}>Toplam Alacak: <strong>{totalCredit.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</strong></span>
-        {!balanced ? <span style={{ marginLeft: 20, color: '#b00' }}>Dengesiz — kaydedilemez</span> : <span style={{ marginLeft: 20, color: '#080' }}>Dengeli</span>}
+        {!balanced ? <span style={{ marginLeft: 20, color: 'var(--dim-danger)' }}>Dengesiz — kaydedilemez</span> : <span style={{ marginLeft: 20, color: 'var(--dim-success)' }}>Dengeli</span>}
       </div>
 
       <button type="submit" disabled={pending || !balanced} style={{ padding: '9px 18px', marginTop: 14, cursor: 'pointer' }}>
         {pending ? 'Kaydediliyor...' : 'Fişi Kaydet'}
       </button>
-      {state?.error ? <p style={{ color: '#b00', fontSize: 13, marginTop: 8 }}>{state.error}</p> : null}
+      {state?.error ? <p style={{ color: 'var(--dim-danger)', fontSize: 13, marginTop: 8 }}>{state.error}</p> : null}
     </form>
   );
 }

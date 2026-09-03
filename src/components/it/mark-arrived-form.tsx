@@ -39,10 +39,10 @@ export function MarkArrivedForm({ departmentId, workOrderId }: { departmentId: s
       <input type="hidden" name="latitude" value={coords?.lat ?? ''} />
       <input type="hidden" name="longitude" value={coords?.lng ?? ''} />
       <button type="button" onClick={captureLocation} disabled={locating} style={{ padding: '6px 12px', cursor: 'pointer' }}>{locating ? 'Konum alınıyor...' : 'Konumumu Al'}</button>
-      {coords ? <span style={{ fontSize: 12, color: '#666' }}>{Number(coords.lat).toFixed(5)}, {Number(coords.lng).toFixed(5)}</span> : null}
+      {coords ? <span style={{ fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>{Number(coords.lat).toFixed(5)}, {Number(coords.lng).toFixed(5)}</span> : null}
       <button type="submit" disabled={pending || !coords} style={{ padding: '6px 12px', cursor: 'pointer' }}>{pending ? '...' : 'Vardım'}</button>
-      {locError ? <span style={{ color: '#b00', fontSize: 12 }}>{locError}</span> : null}
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {locError ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{locError}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }

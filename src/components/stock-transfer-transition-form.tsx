@@ -19,7 +19,7 @@ export function StockTransferTransitionForm({ departmentId, transferId, nextStat
           {TRANSFER_STATUS_LABEL[s] ?? s}
         </button>
       ))}
-      {state?.error ? <span style={{ color: '#b00', fontSize: 12 }}>{state.error}</span> : null}
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12 }}>{state.error}</span> : null}
     </form>
   );
 }

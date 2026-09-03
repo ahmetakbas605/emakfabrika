@@ -21,36 +21,36 @@ export function CreateRoutingForm({ products, workCenters }: { products: { id: s
   );
 
   return (
-    <form action={formAction} style={{ border: '1px solid #ddd', padding: 16, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <form action={formAction} style={{ border: '1px solid var(--dim-border-soft)', padding: 16, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <input type="hidden" name="operationsJson" value={operationsJson} />
       <h3 style={{ fontSize: 14, margin: 0 }}>Yeni Routing (Rota)</h3>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#666' }}>Üretilen Ürün</label>
+          <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Üretilen Ürün</label>
           <select name="productId" required style={{ padding: 6, minWidth: 180 }}>
             <option value="">Seçin</option>
             {products.map((p) => <option key={p.id} value={p.id}>{p.sku} — {p.name}</option>)}
           </select>
         </div>
-        <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Routing Kodu</label><input name="code" required style={{ padding: 6, width: 120 }} /></div>
-        <div><label style={{ display: 'block', fontSize: 12, color: '#666' }}>Ad</label><input name="name" required style={{ padding: 6, width: 160 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Routing Kodu</label><input name="code" required style={{ padding: 6, width: 120 }} /></div>
+        <div><label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)' }}>Ad</label><input name="name" required style={{ padding: 6, width: 160 }} /></div>
       </div>
 
       <div>
-        <label style={{ display: 'block', fontSize: 12, color: '#666', marginBottom: 6 }}>Operasyonlar (sıralı)</label>
+        <label style={{ display: 'block', fontSize: 12, color: 'var(--dim-on-surface-variant)', marginBottom: 6 }}>Operasyonlar (sıralı)</label>
         {ops.map((op, i) => (
           <div key={i} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 6 }}>
-            <span style={{ fontSize: 12, color: '#999', width: 16 }}>{i + 1}.</span>
+            <span style={{ fontSize: 12, color: 'var(--dim-slate)', width: 16 }}>{i + 1}.</span>
             <div>
-              <label style={{ display: 'block', fontSize: 11, color: '#666' }}>İş Merkezi</label>
+              <label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>İş Merkezi</label>
               <select value={op.workCenterId} onChange={(e) => updateOp(i, { workCenterId: e.target.value })} style={{ padding: 5, minWidth: 140 }}>
                 <option value="">Seçin</option>
                 {workCenters.map((w) => <option key={w.id} value={w.id}>{w.code} — {w.name}</option>)}
               </select>
             </div>
-            <div><label style={{ display: 'block', fontSize: 11, color: '#666' }}>Operasyon Adı</label><input value={op.name} onChange={(e) => updateOp(i, { name: e.target.value })} style={{ padding: 5, width: 150 }} /></div>
-            <div><label style={{ display: 'block', fontSize: 11, color: '#666' }}>Hazırlık (dk)</label><input value={op.setupTimeMinutes} onChange={(e) => updateOp(i, { setupTimeMinutes: e.target.value })} style={{ padding: 5, width: 70 }} /></div>
-            <div><label style={{ display: 'block', fontSize: 11, color: '#666' }}>Birim Süre (dk)</label><input value={op.runTimeMinutesPerUnit} onChange={(e) => updateOp(i, { runTimeMinutesPerUnit: e.target.value })} style={{ padding: 5, width: 80 }} /></div>
+            <div><label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Operasyon Adı</label><input value={op.name} onChange={(e) => updateOp(i, { name: e.target.value })} style={{ padding: 5, width: 150 }} /></div>
+            <div><label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Hazırlık (dk)</label><input value={op.setupTimeMinutes} onChange={(e) => updateOp(i, { setupTimeMinutes: e.target.value })} style={{ padding: 5, width: 70 }} /></div>
+            <div><label style={{ display: 'block', fontSize: 11, color: 'var(--dim-on-surface-variant)' }}>Birim Süre (dk)</label><input value={op.runTimeMinutesPerUnit} onChange={(e) => updateOp(i, { runTimeMinutesPerUnit: e.target.value })} style={{ padding: 5, width: 80 }} /></div>
             {ops.length > 1 ? <button type="button" onClick={() => setOps((prev) => prev.filter((_, idx) => idx !== i))} style={{ cursor: 'pointer' }}>Kaldır</button> : null}
           </div>
         ))}
@@ -59,8 +59,8 @@ export function CreateRoutingForm({ products, workCenters }: { products: { id: s
 
       <div>
         <button type="submit" disabled={pending} style={{ padding: '7px 14px', cursor: 'pointer' }}>{pending ? '...' : 'Routing Oluştur'}</button>
-        {state?.error ? <span style={{ color: '#b00', fontSize: 12, marginLeft: 10 }}>{state.error}</span> : null}
-        {state?.success ? <span style={{ color: '#080', fontSize: 12, marginLeft: 10 }}>{state.success}</span> : null}
+        {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 12, marginLeft: 10 }}>{state.error}</span> : null}
+        {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 12, marginLeft: 10 }}>{state.success}</span> : null}
       </div>
     </form>
   );
