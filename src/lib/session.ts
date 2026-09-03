@@ -1,4 +1,5 @@
 import 'server-only';
+import crypto from 'crypto';
 import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
 
@@ -108,6 +109,24 @@ export async function verifyMfaPendingToken(token: string): Promise<MfaPendingPa
 // link" DEĞİL.
 const HANDOFF_TOKEN_SECONDS = 60;
 
+// Güvenlik denetimi 2026-09-03, bulgu 2.2 — yukarıdaki yorum "tek bir HTTP
+// yönlendirmesi boyunca yaşamalı" diyordu ama gerçek bir tek-kullanımlık
+// (replay) koruması YOKTU: aynı token 60 saniyelik pencere içinde birden
+// fazla kez kullanılabilirdi (paylaşılan makine geçmişi/proxy logu gibi bir
+// sızıntı olursa). Tek fabrika sunucusu (cluster YOK, TENANT-ARCHITECTURE.md)
+// olduğu için bir DB tablosu yerine bellek-içi bir "tüketildi" kümesi yeterli
+// ve daha az riskli (yeni migration yok) — jti 60 saniyeden fazla anlamlı
+// olmadığı için sunucu yeniden başlarsa küme sıfırlanması kabul edilebilir
+// bir artık risk (aynı dar pencere zaten JWT'nin kendi süresiyle de sınırlı).
+const consumedHandoffJtis = new Map<string, number>();
+
+function pruneConsumedHandoffJtis(): void {
+  const now = Date.now();
+  for (const [jti, expiresAt] of consumedHandoffJtis) {
+    if (expiresAt < now) consumedHandoffJtis.delete(jti);
+  }
+}
+
 export interface ExternalHandoffPayload {
   userId: string;
   companyId: string;
@@ -116,6 +135,7 @@ export interface ExternalHandoffPayload {
 export async function signExternalHandoffToken(payload: ExternalHandoffPayload): Promise<string> {
   return new SignJWT({ ...payload, purpose: 'external_handoff' })
     .setProtectedHeader({ alg: 'HS256' })
+    .setJti(crypto.randomUUID())
     .setIssuedAt()
     .setExpirationTime(`${HANDOFF_TOKEN_SECONDS}s`)
     .sign(getSecretKey());
@@ -124,7 +144,12 @@ export async function signExternalHandoffToken(payload: ExternalHandoffPayload):
 export async function verifyExternalHandoffToken(token: string): Promise<ExternalHandoffPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey(), { algorithms: ['HS256'] });
-    if (payload.purpose !== 'external_handoff' || typeof payload.userId !== 'string' || typeof payload.companyId !== 'string') return null;
+    if (payload.purpose !== 'external_handoff' || typeof payload.userId !== 'string' || typeof payload.companyId !== 'string' || typeof payload.jti !== 'string') return null;
+
+    pruneConsumedHandoffJtis();
+    if (consumedHandoffJtis.has(payload.jti)) return null; // tekrar kullanım (replay) — reddedildi
+    consumedHandoffJtis.set(payload.jti, Date.now() + HANDOFF_TOKEN_SECONDS * 1000);
+
     return { userId: payload.userId, companyId: payload.companyId };
   } catch {
     return null;

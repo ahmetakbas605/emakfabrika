@@ -3,7 +3,7 @@ import { eq, and, ne, gt } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { userSessions, users } from '@/db/schema';
 import { newId } from '@/lib/id';
-import { generateSessionToken, tokensMatch } from '@/lib/auth';
+import { generateSessionToken, hashToken, tokensMatch } from '@/lib/auth';
 
 const SESSION_DAYS = 7;
 
@@ -15,12 +15,15 @@ export interface CreateSessionInput {
   deviceLabel?: string;
 }
 
+// Güvenlik denetimi 2026-09-03, bulgu 2.1 — DB'ye HAM token değil,
+// hash(rawToken) yazılır (bkz. lib/auth.ts:hashToken). Çağırana (çereze)
+// dönen sessionToken hâlâ ham değer — yalnızca DEPOLAMA değişti.
 export async function createUserSession(input: CreateSessionInput): Promise<{ sessionId: string; sessionToken: string }> {
   const sessionId = newId();
   const sessionToken = generateSessionToken();
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
   await db.insert(userSessions).values({
-    id: sessionId, companyId: input.companyId, userId: input.userId, sessionToken,
+    id: sessionId, companyId: input.companyId, userId: input.userId, sessionToken: hashToken(sessionToken),
     ip: input.ip, userAgent: input.userAgent ?? '', deviceLabel: input.deviceLabel ?? '', expiresAt
   });
   return { sessionId, sessionToken };
@@ -31,7 +34,7 @@ export async function validateUserSession(sessionId: string, rawToken: string) {
   if (!row) return null;
   if (row.revoked) return null;
   if (row.expiresAt.getTime() < Date.now()) return null;
-  if (!tokensMatch(rawToken, row.sessionToken)) return null;
+  if (!tokensMatch(hashToken(rawToken), row.sessionToken)) return null;
   return row;
 }
 

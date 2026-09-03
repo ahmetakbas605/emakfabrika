@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import * as z from 'zod';
 import { issueExternalHandoffToken } from '@/lib/integration/external-auth';
+import { tokensMatch } from '@/lib/auth';
 
 const Schema = z.object({ email: z.string().trim().toLowerCase().email(), password: z.string().min(1) });
 
@@ -12,8 +13,12 @@ const Schema = z.object({ email: z.string().trim().toLowerCase().email(), passwo
 // geri yönlendirerek kullanıcının şifreyi İKİNCİ KEZ girmesine gerek
 // kalmadan (MFA etkin değilse) doğrudan oturumunu açar.
 export async function POST(request: Request) {
+  // Güvenlik denetimi 2026-09-03, bulgu 2.3 — düz `!==` yerine sabit-zamanlı
+  // karşılaştırma (tokensMatch, lib/auth.ts) — bu paylaşılan sır ağ üzerinden
+  // gelen bir başlıkla kıyaslanıyor, dize eşitliğinin ilk-farklı-baytta kısa
+  // devre yapması teorik bir zamanlama yan-kanalı bırakıyordu.
   const sharedSecret = process.env.EXTERNAL_AUTH_SHARED_SECRET;
-  if (!sharedSecret || request.headers.get('x-internal-api-key') !== sharedSecret) {
+  if (!sharedSecret || !tokensMatch(request.headers.get('x-internal-api-key') || '', sharedSecret)) {
     return NextResponse.json({ error: 'Yetkisiz.' }, { status: 401 });
   }
 

@@ -148,7 +148,8 @@ export async function actOnLeaveStep(companyId: string, input: ActOnLeaveStepInp
   await db.transaction(async (tx: Tx) => {
     const [step] = await tx.select({ instanceId: approvalSteps.instanceId }).from(approvalSteps).where(eq(approvalSteps.id, input.stepId)).limit(1);
     if (!step) throw new HrError('Onay adımı bulunamadı.');
-    const [instance] = await tx.select({ documentId: approvalInstances.documentId, documentType: approvalInstances.documentType }).from(approvalInstances).where(eq(approvalInstances.id, step.instanceId)).limit(1);
+    // Güvenlik denetimi 2026-09-03, bulgu 2.7 — companyId filtresi eklendi.
+    const [instance] = await tx.select({ documentId: approvalInstances.documentId, documentType: approvalInstances.documentType }).from(approvalInstances).where(and(eq(approvalInstances.id, step.instanceId), eq(approvalInstances.companyId, companyId))).limit(1);
     if (!instance || instance.documentType !== 'LEAVE') throw new HrError('Bu adım bir izin talebine ait değil.');
     const leaveRequestId = instance.documentId;
 

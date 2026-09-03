@@ -268,7 +268,9 @@ export async function actOnRequisitionStep(companyId: string, input: ActOnRequis
   await db.transaction(async (tx) => {
     const [step] = await tx.select({ instanceId: approvalSteps.instanceId }).from(approvalSteps).where(eq(approvalSteps.id, input.stepId)).limit(1);
     if (!step) throw new ProcurementError('Onay adımı bulunamadı.');
-    const [instance] = await tx.select({ documentId: approvalInstances.documentId, documentType: approvalInstances.documentType }).from(approvalInstances).where(eq(approvalInstances.id, step.instanceId)).limit(1);
+    // Güvenlik denetimi 2026-09-03, bulgu 2.7 — companyId filtresi eklendi
+    // (şirket-dışı bir adımın varlığını/türünü sızdıran oracle kapatıldı).
+    const [instance] = await tx.select({ documentId: approvalInstances.documentId, documentType: approvalInstances.documentType }).from(approvalInstances).where(and(eq(approvalInstances.id, step.instanceId), eq(approvalInstances.companyId, companyId))).limit(1);
     if (!instance || instance.documentType !== 'PROCUREMENT_REQUISITION') throw new ProcurementError('Bu adım bir satınalma talebine ait değil.');
     const requestId = instance.documentId;
 

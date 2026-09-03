@@ -53,6 +53,12 @@ async function main() {
     const redeemed = validToken ? await verifyExternalHandoffToken(validToken) : null;
     check('üretilen token doğru userId/companyId ile ÇÖZÜLEBİLDİ', redeemed?.userId === activeUserId && redeemed?.companyId === companyId);
 
+    // Güvenlik denetimi 2026-09-03, bulgu 2.2 — AYNI token ikinci kez
+    // kullanılmaya çalışılırsa (replay) artık reddedilmeli, imza/süre hâlâ
+    // geçerli olsa bile (jti tüketildi-kümesi, lib/session.ts).
+    const replayed = validToken ? await verifyExternalHandoffToken(validToken) : 'ATLANDI';
+    check('AYNI token İKİNCİ kez kullanılınca reddedildi (replay koruması)', replayed === null);
+
     check('doğru e-posta + yanlış şifre → null', (await issueExternalHandoffToken(email, 'YanlisSifre')) === null);
     check('var olmayan e-posta → null (hata FIRLATMADAN)', (await issueExternalHandoffToken('yok-boyle-biri@test.local', 'herhangi')) === null);
     check('pasifleştirilmiş kullanıcı, şifre doğru olsa bile → null', (await issueExternalHandoffToken(inactiveEmail, 'DogruSifre123!')) === null);

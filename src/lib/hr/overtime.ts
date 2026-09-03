@@ -76,7 +76,8 @@ export async function actOnOvertimeStep(companyId: string, input: ActOnOvertimeS
   await db.transaction(async (tx: Tx) => {
     const [step] = await tx.select({ instanceId: approvalSteps.instanceId }).from(approvalSteps).where(eq(approvalSteps.id, input.stepId)).limit(1);
     if (!step) throw new HrError('Onay adımı bulunamadı.');
-    const [instance] = await tx.select({ documentId: approvalInstances.documentId, documentType: approvalInstances.documentType }).from(approvalInstances).where(eq(approvalInstances.id, step.instanceId)).limit(1);
+    // Güvenlik denetimi 2026-09-03, bulgu 2.7 — companyId filtresi eklendi.
+    const [instance] = await tx.select({ documentId: approvalInstances.documentId, documentType: approvalInstances.documentType }).from(approvalInstances).where(and(eq(approvalInstances.id, step.instanceId), eq(approvalInstances.companyId, companyId))).limit(1);
     if (!instance || instance.documentType !== 'OVERTIME') throw new HrError('Bu adım bir fazla mesai talebine ait değil.');
     const overtimeRequestId = instance.documentId;
 

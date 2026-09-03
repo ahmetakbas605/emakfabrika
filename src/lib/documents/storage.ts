@@ -46,10 +46,26 @@ export async function saveFile(companyId: string, entityType: string, entityId: 
   return key;
 }
 
+// Güvenlik denetimi 2026-09-03, bulgu 2.8 — bugün TEK çağıran
+// (lib/documents/attachments.ts) storageKey'i her zaman veritabanından
+// (saveFile'ın kendi ürettiği, temizlenmiş bir değer) okuyor, yani
+// saldırgan girdisi buraya bugün ULAŞMIYOR. Ama bu iki fonksiyon kendi
+// başına path-traversal'a karşı hiçbir doğrulama yapmıyordu — ileride
+// yeni bir çağıran (ör. bir indirme ekranı) bu detayı unutursa savunma
+// derinliği yoktu. resolvedPath, UPLOADS_ROOT'un dışına ÇIKARSA reddedilir.
+function resolveWithinUploadsRoot(storageKey: string): string {
+  const resolved = path.resolve(UPLOADS_ROOT, storageKey);
+  const rootWithSep = path.resolve(UPLOADS_ROOT) + path.sep;
+  if (resolved !== path.resolve(UPLOADS_ROOT) && !resolved.startsWith(rootWithSep)) {
+    throw new Error('Geçersiz depolama anahtarı (UPLOADS_ROOT dışına çıkıyor).');
+  }
+  return resolved;
+}
+
 export async function readFileByKey(storageKey: string): Promise<Buffer> {
-  return readFile(path.join(UPLOADS_ROOT, storageKey));
+  return readFile(resolveWithinUploadsRoot(storageKey));
 }
 
 export async function deleteFileByKey(storageKey: string): Promise<void> {
-  await unlink(path.join(UPLOADS_ROOT, storageKey)).catch(() => {});
+  await unlink(resolveWithinUploadsRoot(storageKey)).catch(() => {});
 }

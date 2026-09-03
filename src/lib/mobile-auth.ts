@@ -2,7 +2,7 @@ import 'server-only';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { users, companies, departments, userDevices } from '@/db/schema';
-import { verifyPassword, generateSessionToken, tokensMatch } from '@/lib/auth';
+import { verifyPassword, generateSessionToken, hashToken, tokensMatch, DUMMY_PASSWORD_HASH } from '@/lib/auth';
 import { getUserDepartmentAccess, listUserDepartmentAccess, PERMISSION_KEYS, type DepartmentAccess, type PermissionKey } from '@/lib/permissions';
 import { newId } from '@/lib/id';
 import { writeAuditLog } from '@/lib/security/audit';
@@ -18,6 +18,9 @@ const FULL_PERMISSIONS: Record<PermissionKey, boolean> = Object.fromEntries(PERM
 const MOBILE_SESSION_MIN_DAYS = 1;
 const MOBILE_SESSION_MAX_DAYS = 90;
 const FAILED_LOGIN_LIMIT = 5;
+// Güvenlik denetimi 2026-09-03, bulgu 2.5 — actions/auth.ts İLE AYNI
+// gerekçe/değişiklik: kalıcı active:false yerine geçici lockedUntil.
+const LOCKOUT_MINUTES = 15;
 
 export interface MobileUser {
   id: string;
@@ -51,11 +54,24 @@ export async function mobileLogin(email: string, password: string, rememberDays:
     .where(eq(users.email, email))
     .limit(1);
 
-  if (!found || !verifyPassword(password, found.user.passwordHash)) {
+  // Güvenlik denetimi 2026-09-03, bulgu 2.6 — actions/auth.ts:login İLE AYNI
+  // zamanlama-eşitleme düzeltmesi.
+  const passwordOk = verifyPassword(password, found?.user.passwordHash ?? DUMMY_PASSWORD_HASH);
+
+  // Bulgu 2.5 — actions/auth.ts:login İLE AYNI geçici kilit kontrolü.
+  if (found?.user.lockedUntil && found.user.lockedUntil.getTime() > Date.now()) {
+    const minutesLeft = Math.ceil((found.user.lockedUntil.getTime() - Date.now()) / 60000);
+    return { ok: false, status: 423, error: `Çok fazla hatalı deneme — hesap geçici olarak kilitli. ${minutesLeft} dakika sonra tekrar deneyin.` };
+  }
+
+  if (!found || !passwordOk) {
     if (found) {
       const attempts = found.user.failedLoginAttempts + 1;
-      const shouldLock = attempts >= FAILED_LOGIN_LIMIT && found.user.active;
-      await db.update(users).set({ failedLoginAttempts: attempts, ...(shouldLock ? { active: false } : {}) }).where(eq(users.id, found.user.id));
+      const shouldLock = attempts >= FAILED_LOGIN_LIMIT;
+      await db.update(users).set({
+        failedLoginAttempts: shouldLock ? 0 : attempts,
+        ...(shouldLock ? { lockedUntil: new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000) } : {})
+      }).where(eq(users.id, found.user.id));
     }
     return { ok: false, status: 401, error: 'E-posta veya şifre hatalı.' };
   }
@@ -64,7 +80,10 @@ export async function mobileLogin(email: string, password: string, rememberDays:
   const rawToken = generateSessionToken();
   const days = Math.min(Math.max(Math.round(rememberDays) || 30, MOBILE_SESSION_MIN_DAYS), MOBILE_SESSION_MAX_DAYS);
   const mobileSessionExpiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-  await db.update(users).set({ mobileSessionToken: rawToken, mobileSessionExpiresAt, failedLoginAttempts: 0 }).where(eq(users.id, found.user.id));
+  // Güvenlik denetimi 2026-09-03, bulgu 2.1 — web tarafıyla AYNI değişiklik:
+  // DB'ye hash(rawToken) yazılır, istemciye (encodeMobileToken ile) hâlâ ham
+  // token döner.
+  await db.update(users).set({ mobileSessionToken: hashToken(rawToken), mobileSessionExpiresAt, failedLoginAttempts: 0, lockedUntil: null }).where(eq(users.id, found.user.id));
 
   // Core Security Faz 4 (mobil kısmı) — yalnızca GÖRÜNÜRLÜK/iptal listesi
   // için (madde 16), gerçek doğrulama hâlâ users.mobileSessionToken'a
@@ -99,7 +118,7 @@ export async function resolveMobileUser(authorizationHeader: string | null): Pro
     .limit(1);
   if (!row) return null;
   const { user, companyName, holdingId } = row;
-  if (!user.mobileSessionToken || !tokensMatch(decoded.rawToken, user.mobileSessionToken)) return null;
+  if (!user.mobileSessionToken || !tokensMatch(hashToken(decoded.rawToken), user.mobileSessionToken)) return null;
   if (!user.mobileSessionExpiresAt || user.mobileSessionExpiresAt.getTime() < Date.now()) return null;
   if (!user.active) return null;
 

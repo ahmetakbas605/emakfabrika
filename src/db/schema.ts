@@ -104,6 +104,16 @@ export const users = mysqlTable('users', {
   // 5 hatalı denemede otomatik pasifleştirme — emakerp'in aynı kuralı
   // (lib/security-log.ts), burada IP kara listesi olmadan sadeleştirilmiş hâli.
   failedLoginAttempts: int('failed_login_attempts').notNull().default(0),
+  // Güvenlik denetimi 2026-09-03, bulgu 2.5 — eskiden 5. hatalı denemede
+  // `active` KALICI olarak false yapılıyordu (hiçbir otomatik açılma/geri-
+  // çekilme yoktu VE bir yönetici bunu geri açan bir ekran da YOKTU —
+  // bilinen bir e-posta adresine sahip HERKES o hesabı kasıtlı olarak
+  // süresiz kilitleyebilirdi). `active`'ten AYRI bir alan: `active`
+  // artık SADECE yöneticinin kasıtlı pasifleştirmesini taşır, bu alan
+  // yalnızca GEÇİCİ başarısız-deneme kilidini (actions/auth.ts,
+  // lib/mobile-auth.ts) — süre dolunca kullanıcı normal şekilde tekrar
+  // deneyebilir.
+  lockedUntil: timestamp('locked_until'),
   // Bu fabrikadaki en yüksek yetki — emakerp'in tek-kiracı içindeki ADMIN
   // rolüyle aynı fikir, platform-geneli bir SUPER_ADMIN kavramı YOK (bkz.
   // TENANT-ARCHITECTURE.md — platform seviyesi emakerp'te yaşıyor).
