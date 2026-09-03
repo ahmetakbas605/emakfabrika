@@ -23,9 +23,11 @@ import { DimensionShell, type NavGroup } from '@/components/shell/DimensionShell
 // tanımlı değil. Gizlemek yerine göstermek, yanlış tarafa hata yapmak
 // demek: yetkisiz kullanıcı sayfaya girince zaten /dashboard'a döner.
 //
-// Menüde OLMAYAN üç klasör bilinçli: departments/ yalnızca
-// [departmentId] içeriyor (liste sayfası yok, link 404 olurdu), hr/ ve
-// workflow/ ise index'siz — onlar alt sayfalarıyla listelendi.
+// Faz 3: departments/ ARTIK menüde. Eskiden liste sayfası da departman
+// ana sayfası da yoktu (link 404 veriyordu); ikisi de eklendi, çünkü o
+// ağaç bir birimin işinin TAMAMI (Muhasebe/Depo/IT/İK, 47 sayfa).
+// Menüde hâlâ olmayan hr/ ve workflow/ index'siz — alt sayfalarıyla
+// listelendiler.
 // ==================================================================
 
 const NAV: NavGroup[] = [
@@ -34,7 +36,11 @@ const NAV: NavGroup[] = [
     items: [
       { href: '/dashboard', label: 'Panel', icon: 'dashboard' },
       { href: '/dashboard/approvals', label: 'Onay Kutusu', icon: 'inbox' },
-      { href: '/dashboard/bi', label: 'Yönetim Panosu', icon: 'chart' }
+      { href: '/dashboard/bi', label: 'Yönetim Panosu', icon: 'chart' },
+      // Departman ağacının GİRİŞ KAPISI. Faz 2'de menüde yoktu ve o
+      // ağaca (Muhasebe/Depo/IT/İK — 47 sayfa) girmenin tek yolu ana
+      // paneldeki kutuydu; üstelik hedef sayfa da yoktu, 404 veriyordu.
+      { href: '/dashboard/departments', label: 'Departmanlar', icon: 'building' }
     ]
   },
   {
