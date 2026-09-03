@@ -2,6 +2,7 @@ import { requireDepartmentAccess } from '@/lib/dal';
 import { listParties } from '@/lib/master-data/parties';
 import { listProducts } from '@/lib/master-data/products';
 import { listCurrencies } from '@/lib/master-data/currency';
+import { listUnits } from '@/lib/master-data/units';
 import { listContractLines, listContracts } from '@/lib/marketing/contracts';
 import { allowedActions } from '@/lib/marketing/contract-flow';
 import { contractTotal } from '@/lib/marketing/contract-flow';
@@ -9,7 +10,8 @@ import {
   ContractActionForm,
   ContractCreateForm,
   ContractLineForm,
-  CreateOrderFromContractForm
+  CreateOrderFromContractForm,
+  RequestSubProductForm
 } from '@/components/marketing/contract-forms';
 
 // Anlaşmalar — Pazarlama Faz 1.
@@ -55,11 +57,12 @@ export default async function MarketingContractsPage({ params }: { params: Promi
   const { departmentId } = await params;
   const { session, access } = await requireDepartmentAccess(departmentId);
 
-  const [contracts, parties, products, currencies] = await Promise.all([
+  const [contracts, parties, products, currencies, units] = await Promise.all([
     listContracts(session.companyId, departmentId),
     listParties(session.companyId),
     listProducts(session.companyId),
-    listCurrencies()
+    listCurrencies(),
+    listUnits(session.companyId)
   ]);
 
   const contractLines = await Promise.all(
@@ -161,6 +164,24 @@ export default async function MarketingContractsPage({ params }: { params: Promi
                   <CreateOrderFromContractForm departmentId={departmentId} contractId={contract.id} />
                 ) : null}
               </div>
+
+              {/* Kullanıcının isteği: "müteahhit firma ihtiyacı olursa
+                  alt ürünlerde onları ayarlar" -> "Satınalma
+                  departmanına talep açılsın". Yalnızca bu bayrakla
+                  işaretlenmiş sözleşmelerde görünür — diğer
+                  sözleşmelerde bu butonun anlamı yok. */}
+              {contract.counterpartyIsContractor && canCreate ? (
+                <div style={{ marginTop: 12, borderTop: '1px solid var(--dim-border-faint)', paddingTop: 12 }}>
+                  <span className="dim-metric" style={{ color: 'var(--dim-slate)' }}>Müteahhit — Alt Ürün Talebi</span>
+                  <div style={{ marginTop: 6 }}>
+                    <RequestSubProductForm
+                      departmentId={departmentId}
+                      contractId={contract.id}
+                      unitOptions={units.map((u) => ({ id: u.id, code: u.code }))}
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
           );
         })}

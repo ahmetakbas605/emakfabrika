@@ -2,6 +2,7 @@ import 'server-only';
 import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import {
+  departments,
   marketingContractLines,
   marketingContracts,
   parties,
@@ -11,6 +12,7 @@ import {
 import { newId } from '@/lib/id';
 import { nextDocumentNo } from '@/lib/numbering';
 import { createOrder } from '@/lib/sales/orders';
+import { createProcRequest } from '@/lib/procurement/requisition';
 import { MarketingError } from './errors';
 import {
   canCreateOrder,
@@ -220,6 +222,63 @@ export async function createOrderFromContract(
       quantity: Number(l.quantity),
       unitPrice: Number(l.unitPrice)
     }))
+  });
+}
+
+// Satınalma köprüsü — Pazarlama Faz 4.
+//
+// Kullanıcının tarifi: "müteahhit firma ihtiyacı olursa alt ürünlerde
+// onları ayarlar" ve soruldu, cevaplandı: "Satınalma departmanına talep
+// açılsın" (Pazarlama doğrudan tedarikçiyle çalışmaz).
+//
+// counterpartyIsContractor bayrağı olmayan bir sözleşmeden talep
+// AÇILAMAZ — bu bayrak tam olarak bunun için var (Faz 1'de eklendi).
+// Talep MEVCUT lib/procurement/requisition.ts:createProcRequest ile
+// açılır; Satınalma'nın kendi onay/RFQ/mal kabul akışı HİÇ değişmez,
+// kopya bir satınalma mantığı YAZILMADI (createOrder'ı çağırmakla AYNI
+// disiplin).
+export interface RequestSubProductInput {
+  description: string;
+  quantity: string;
+  unitId: string;
+  estimatedUnitPrice?: string;
+}
+
+export async function requestSubProductFromContract(
+  companyId: string,
+  userId: string,
+  contractId: string,
+  input: RequestSubProductInput
+): Promise<string> {
+  const contract = await loadContract(companyId, contractId);
+  if (!contract.counterpartyIsContractor) {
+    throw new MarketingError('Bu sözleşmenin karşı tarafı müteahhit olarak işaretlenmemiş — Satınalma talebi yalnızca müteahhit sözleşmelerinden açılabilir.');
+  }
+
+  // Satınalma departmanı ŞİRKET BAZINDA tek (createDepartment ile birden
+  // fazla PROCUREMENT departmanı teorik olarak açılabilir, ama Faz 0'da
+  // her şirkete TEK tane açıldı) — ilk eşleşen kullanılır.
+  const [procurementDept] = await db
+    .select({ id: departments.id })
+    .from(departments)
+    .where(and(eq(departments.companyId, companyId), eq(departments.departmentTypeCode, 'PROCUREMENT')))
+    .limit(1);
+  if (!procurementDept) {
+    throw new MarketingError('Şirkette Satınalma departmanı tanımlı değil.');
+  }
+
+  return createProcRequest(companyId, userId, {
+    departmentId: procurementDept.id,
+    currencyCode: contract.currencyCode,
+    justification: `${contract.contractNo} nolu Pazarlama sözleşmesi ("${contract.title}") — müteahhit için alt ürün talebi.`,
+    lines: [
+      {
+        description: input.description,
+        quantity: input.quantity,
+        unitId: input.unitId,
+        estimatedUnitPrice: input.estimatedUnitPrice
+      }
+    ]
   });
 }
 

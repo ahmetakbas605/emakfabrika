@@ -5,6 +5,7 @@ import {
   addContractLineAction,
   createContractAction,
   createOrderFromContractAction,
+  requestSubProductFromContractAction,
   transitionContractAction,
   type FormState
 } from '@/actions/marketing-contracts';
@@ -175,6 +176,35 @@ export function ContractActionForm({
         {pending ? '...' : ACTION_LABELS[actionName]}
       </button>
       {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{state.error}</span> : null}
+    </form>
+  );
+}
+
+export function RequestSubProductForm({
+  departmentId,
+  contractId,
+  unitOptions
+}: {
+  departmentId: string;
+  contractId: string;
+  unitOptions: { id: string; code: string }[];
+}) {
+  const action = requestSubProductFromContractAction.bind(null, departmentId, contractId);
+  const [state, formAction, pending] = useActionState<FormState, FormData>(action, undefined);
+  return (
+    <form action={formAction} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+      <input name="description" required placeholder="Alt ürün açıklaması" style={{ padding: 6, minWidth: 180 }} />
+      <input name="quantity" type="number" step="0.001" required placeholder="Miktar" style={{ padding: 6, width: 90 }} />
+      <select name="unitId" required style={{ padding: 6, minWidth: 100 }}>
+        <option value="">Birim</option>
+        {unitOptions.map((u) => <option key={u.id} value={u.id}>{u.code}</option>)}
+      </select>
+      <input name="estimatedUnitPrice" type="number" step="0.000001" placeholder="Tahmini Fiyat (ops.)" style={{ padding: 6, width: 140 }} />
+      <button type="submit" disabled={pending} style={{ padding: '6px 12px', fontSize: 12 }}>
+        {pending ? '...' : 'Satınalma Talebi Aç'}
+      </button>
+      {state?.error ? <span style={{ color: 'var(--dim-danger)', fontSize: 11 }}>{state.error}</span> : null}
+      {state?.success ? <span style={{ color: 'var(--dim-success)', fontSize: 11 }}>{state.success}</span> : null}
     </form>
   );
 }

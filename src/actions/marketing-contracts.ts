@@ -7,6 +7,7 @@ import {
   addContractLine,
   createContract,
   createOrderFromContract,
+  requestSubProductFromContract,
   transitionContract
 } from '@/lib/marketing/contracts';
 import { MarketingError } from '@/lib/marketing/errors';
@@ -146,6 +147,42 @@ export async function transitionContractAction(
   }
   revalidatePath(`/dashboard/departments/${departmentId}/marketing/contracts`);
   return { success: 'Sözleşme durumu güncellendi.' };
+}
+
+const RequestSubProductSchema = z.object({
+  description: z.string().trim().min(1, 'Açıklama gerekli.'),
+  quantity: z.string().trim().min(1, 'Miktar gerekli.'),
+  unitId: z.string().trim().min(1, 'Birim seçin.'),
+  estimatedUnitPrice: z.string().trim().optional()
+});
+
+// Kullanıcının isteğiyle Satınalma'ya talep açmak 'create' yetkisi ister
+// — sözleşmeyi hazırlayan personel (SALES_USER'da bu izin var) alt ürün
+// ihtiyacını FARK ettiğinde, onay beklemeden talebi başlatabilir; onay
+// zaten Satınalma'nın KENDİ akışında (proc_requests) ayrıca var.
+export async function requestSubProductFromContractAction(
+  departmentId: string,
+  contractId: string,
+  _prevState: FormState,
+  formData: FormData
+): Promise<FormState> {
+  const { session } = await requireDepartmentAccess(departmentId, 'create');
+
+  const parsed = RequestSubProductSchema.safeParse({
+    description: formData.get('description'),
+    quantity: formData.get('quantity'),
+    unitId: formData.get('unitId'),
+    estimatedUnitPrice: optionalField(formData, 'estimatedUnitPrice')
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Geçersiz form.' };
+
+  try {
+    await requestSubProductFromContract(session.companyId, session.id, contractId, parsed.data);
+  } catch (err) {
+    return { error: err instanceof MarketingError ? err.message : 'Satınalma talebi açılamadı.' };
+  }
+  revalidatePath(`/dashboard/departments/${departmentId}/marketing/contracts`);
+  return { success: 'Satınalma talebi açıldı.' };
 }
 
 export async function createOrderFromContractAction(
