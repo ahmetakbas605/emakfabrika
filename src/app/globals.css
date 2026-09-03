@@ -29,6 +29,14 @@
    aynısı.
    ================================================================== */
 :root {
+  /* Açılır listeler (select popup), tarih seçici, kaydırma çubuğu gibi
+     yüzeyleri TARAYICI/İŞLETİM SİSTEMİ çizer — bunlar CSS ile tam
+     biçimlendirilemez, yalnızca color-scheme'i izlerler. Bu satır KÖKTE
+     olmak zorunda: select elemanının kendisine yazmak açılan LİSTEYİ
+     düzeltmiyordu (kullanıcı ekran görüntüsüyle bildirdi — koyu arayüzde
+     bembeyaz açılır liste). */
+  color-scheme: dark;
+
   /* --- Yüzeyler (Stitch: Surfaces tablosu) --- */
   --dim-void: #0a0a0a;          /* seviye 0 — sayfa zemini */
   --dim-surface: #131313;       /* gövde yüzeyi */
@@ -419,6 +427,19 @@
 .dim-content input::placeholder,
 .dim-content textarea::placeholder { color: var(--dim-slate); }
 .dim-content label { color: var(--dim-on-surface-variant); font-size: 13px; }
+
+/* Açılan listenin İÇİ. color-scheme koyu popup'ı getirir; bu blok da
+   seçenek satırlarının rengini uygulamaya bağlar, böylece açık gri bir
+   sistem varsayılanı kalmaz. */
+.dim-content select option,
+.dim-content select optgroup {
+  background-color: var(--dim-container);
+  color: var(--dim-bone);
+}
+.dim-content select option:checked {
+  background-color: var(--dim-container-high);
+  color: var(--dim-primary);
+}
 
 /* Butonlar — hap silueti sistemin imzası. Birincil eylem TEK dolu
    yüzey (beyaz); type=submit onu alır, diğerleri hayalet kalır. */
