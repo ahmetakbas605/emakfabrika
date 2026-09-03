@@ -9,6 +9,7 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:add-procurement-dept": "tsx scripts/add-procurement-department.ts",
     "test:accounting": "tsx tests/accounting.test.ts",
     "test:holding": "tsx tests/holding.test.ts",
     "test:sales": "tsx tests/sales.test.ts",

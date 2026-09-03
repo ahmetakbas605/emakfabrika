@@ -132,6 +132,38 @@ export function departmentNav(departmentId: string, departmentTypeCode: string):
         }
       ];
 
+    case 'PROCUREMENT':
+      // Kullanıcının isteğiyle Satınalma bir DEPARTMAN oldu. Ekranlar
+      // taşınmadı — /dashboard/procurement/* rotalarında duruyorlar ve
+      // buradan bağlanıyorlar. İSG'de kurulan AYNI desen: rotayı taşımak
+      // 9 klasörü ve içlerindeki tüm bağlantıları kırardı, kazancı ise
+      // yalnızca adres çubuğundaki metin olurdu.
+      return [
+        {
+          label: 'Talep & Teklif',
+          items: [
+            { href: '/dashboard/procurement', label: 'Satınalma Talepleri', icon: 'cart' },
+            { href: '/dashboard/procurement/rfqs', label: 'Teklif Toplama (RFQ)', icon: 'clipboardCheck' },
+            { href: '/dashboard/procurement/tenders', label: 'İhaleler', icon: 'scale' }
+          ]
+        },
+        {
+          label: 'Satınalma Yönetim',
+          items: [
+            { href: '/dashboard/procurement/dashboard', label: 'Satınalma Panosu', icon: 'chart' },
+            { href: '/dashboard/procurement/scoring-weights', label: 'Değerlendirme Ağırlıkları', icon: 'gauge' }
+          ]
+        }
+        // Kazanan Kararları / Satınalma Siparişleri / Tedarikçi Faturaları
+        // BİLİNÇLİ OLARAK YOK: awards/, purchase-orders/ ve
+        // vendor-invoices/ klasörlerinde LİSTE sayfası yok, yalnızca
+        // detay rotaları ([awardId] vb.). Liste adresine gidildiğinde
+        // istek kardeş dinamik rotaya ([requestId]) düşüyor ve
+        // "Talep bulunamadı" ile 500 veriyor — canlı sunucuda görüldü.
+        // Bu ekranlara RFQ/İhale akışının içinden geçiliyor. Liste
+        // sayfaları yazılırsa buraya eklenmeli.
+      ];
+
     default:
       return [];
   }
@@ -143,7 +175,8 @@ const TYPE_LABELS: Record<string, string> = {
   ACCOUNTING: 'Muhasebe & Finans',
   WAREHOUSE: 'Stok Muhasebe',
   IT: 'Bilgi Sistemleri',
-  HR: 'İnsan Kaynakları'
+  HR: 'İnsan Kaynakları',
+  PROCUREMENT: 'Satınalma'
 };
 
 export function departmentTypeLabel(code: string): string {

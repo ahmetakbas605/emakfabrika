@@ -61,10 +61,14 @@ const NAV: NavGroup[] = [
     ]
   },
   {
-    label: 'Satınalma & Planlama',
+    // Satınalma ve Talep/Teklif Yönetimi buradan ÇIKARILDI: kullanıcının
+    // isteğiyle Satınalma artık bir DEPARTMAN (departman türü
+    // PROCUREMENT, bkz. lib/department-nav.ts). Ekranları
+    // Departmanlar > Satınalma altında, kendi alt başlıklarıyla.
+    // Burada yalnızca planlama kaldı — MRP bir üretim planlama aracı,
+    // satınalma birimine ait değil.
+    label: 'Planlama',
     items: [
-      { href: '/dashboard/procurement', label: 'Satınalma', icon: 'cart' },
-      { href: '/dashboard/procurement/rfqs', label: 'Talep ve Teklif Yönetimi', icon: 'clipboardCheck' },
       { href: '/dashboard/mrp', label: 'Üretim & Operasyon Planlama', icon: 'boxes' }
     ]
   },

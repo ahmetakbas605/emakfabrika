@@ -82,7 +82,12 @@ async function main() {
     { code: 'ACCOUNTING', name: 'Muhasebe' },
     { code: 'WAREHOUSE', name: 'Depo' },
     { code: 'IT', name: 'Bilgi Teknolojileri' },
-    { code: 'HR', name: 'İnsan Kaynakları' }
+    { code: 'HR', name: 'İnsan Kaynakları' },
+    // Kullanıcının açık isteği (2026-09-03): "satınalma bir departman,
+    // bunu departman haline getirir misin". Ekranlar zaten vardı
+    // (/dashboard/procurement/*) ama üst-seviye bir modül olarak
+    // duruyordu; artık birim ağacında kendi departmanı var.
+    { code: 'PROCUREMENT', name: 'Satınalma' }
   ];
 
   // PDF (IT) madde 3 — kod içine sabit gömülmeyen varlık tipi listesi.
@@ -211,6 +216,15 @@ async function main() {
     AUDITOR: ['view', 'export', 'print']
   };
 
+  // Satınalma yetki matrisi. Roller ROLE_SEED'de ZATEN vardı
+  // (PURCHASING_MANAGER); yeni rol UYDURULMADI, yalnızca bu modül için
+  // izinleri bağlandı. Talep→Teklif→Değerlendirme→Sipariş zincirinde
+  // 'approve'/'cancel' müdürde, personel yalnızca hazırlar.
+  const PROCUREMENT_ROLE_PERMISSIONS: Record<string, string[]> = {
+    PURCHASING_MANAGER: ['view', 'create', 'update', 'delete', 'approve', 'cancel', 'export', 'print'],
+    AUDITOR: ['view', 'export', 'print']
+  };
+
   async function seedRolePermissions(moduleKey: string, matrix: Record<string, string[]>) {
     for (const [roleCode, permCodes] of Object.entries(matrix)) {
       const [role] = await db.select({ id: roles.id }).from(roles).where(eq(roles.code, roleCode)).limit(1);
@@ -241,6 +255,7 @@ async function main() {
   await seedRolePermissions('WAREHOUSE', WAREHOUSE_ROLE_PERMISSIONS);
   await seedRolePermissions('IT', IT_ROLE_PERMISSIONS);
   await seedRolePermissions('HR', HR_ROLE_PERMISSIONS);
+  await seedRolePermissions('PROCUREMENT', PROCUREMENT_ROLE_PERMISSIONS);
 
   // Holding ERP Faz 0 (ASSUMPTIONS.md §1, §3) — idempotent backfill:
   // holdingId'si NULL olan (henüz migrate edilmemiş) her şirket, tek bir

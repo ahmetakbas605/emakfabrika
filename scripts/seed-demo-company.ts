@@ -123,9 +123,11 @@ async function main() {
   // --- Departmanlar (yalnızca modellenen 4 tür: ACCOUNTING/WAREHOUSE/IT/HR) ---
   const deptTypeRows = await db.select().from(departmentTypes);
   const deptTypeSet = new Set(deptTypeRows.map((r) => r.code));
-  const REQUIRED_DEPT_TYPES: { code: 'IT' | 'HR' | 'ACCOUNTING' | 'WAREHOUSE'; name: string }[] = [
+  const REQUIRED_DEPT_TYPES: { code: 'IT' | 'HR' | 'ACCOUNTING' | 'WAREHOUSE' | 'PROCUREMENT'; name: string }[] = [
     { code: 'IT', name: 'Bilgi Teknolojileri' }, { code: 'HR', name: 'İnsan Kaynakları' },
-    { code: 'ACCOUNTING', name: 'Muhasebe' }, { code: 'WAREHOUSE', name: 'Depo' }
+    { code: 'ACCOUNTING', name: 'Muhasebe' }, { code: 'WAREHOUSE', name: 'Depo' },
+    // 2026-09-03: Satınalma artık bir departman (kullanıcının isteği).
+    { code: 'PROCUREMENT', name: 'Satınalma' }
   ];
   for (const t of REQUIRED_DEPT_TYPES) {
     if (!deptTypeSet.has(t.code)) throw new Error(`departmentTypes tablosunda "${t.code}" yok — önce migrate:run çalıştırılmalı.`);
