@@ -55,12 +55,6 @@ const NAV: NavGroup[] = [
   // ve üç seviye iç içe menü, günde yüzlerce kez gezilen bir ERP'de
   // tıklama maliyetini artırırdı.
   {
-    label: 'Pazarlama & Lojistik',
-    items: [
-      { href: '/dashboard/sales', label: 'Pazarlama & CRM', icon: 'landmark' }
-    ]
-  },
-  {
     // Satınalma ve Talep/Teklif Yönetimi buradan ÇIKARILDI: kullanıcının
     // isteğiyle Satınalma artık bir DEPARTMAN (departman türü
     // PROCUREMENT, bkz. lib/department-nav.ts). Ekranları

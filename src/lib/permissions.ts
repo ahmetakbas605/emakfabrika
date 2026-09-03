@@ -12,7 +12,11 @@ export const PERMISSION_KEYS = [
   // TC kimlik gibi FINANCIAL/SPECIAL_CATEGORY alanları görebilmek için
   // 'view'in ÜSTÜNDE ayrı bir izin. Yalnızca HR_MANAGER + factory admin'e
   // seed edildi (scripts/migrate.ts) — HR_SPECIALIST bu alanları maskelenmiş görür.
-  'view_sensitive'
+  'view_sensitive',
+  // Pazarlama/Kantar — tartım fişi düzeltme ve ters kayıt yetkisi.
+  // İptal için mevcut 'cancel' kullanılır; bu ondan AYRI, çünkü düzeltme
+  // faturaya giden miktarı değiştirir.
+  'correct_weighing'
 ] as const;
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
 

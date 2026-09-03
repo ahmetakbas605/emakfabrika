@@ -37,6 +37,11 @@ async function main() {
     { code: 'SALES_MANAGER', name: 'Satış Müdürü' },
     { code: 'SALES_USER', name: 'Satış Personeli' },
     { code: 'PURCHASING_MANAGER', name: 'Satın Alma Müdürü' },
+    // Pazarlama'nın iki saha rolü — SALES_MANAGER/SALES_USER zaten vardı,
+    // bunlar onların yerine DEĞİL, yanına: kantar başındaki operatör ile
+    // ofis mağazasındaki kasiyer farklı işler yapar.
+    { code: 'WEIGHBRIDGE_OPERATOR', name: 'Kantar Operatörü' },
+    { code: 'STORE_CASHIER', name: 'Mağaza Kasiyeri' },
     { code: 'WAREHOUSE_MANAGER', name: 'Depo Müdürü' },
     { code: 'WAREHOUSE_USER', name: 'Depo Personeli' },
     { code: 'HR_MANAGER', name: 'İK Müdürü' },
@@ -76,7 +81,12 @@ async function main() {
     { code: 'manage_assets', name: 'Varlık Yönet' },
     { code: 'manage_network', name: 'Ağ Yönet' },
     // Core Security Faz 3 — alan-seviyesi güvenlik (maaş/TC kimlik).
-    { code: 'view_sensitive', name: 'Hassas Alanları Görüntüle' }
+    { code: 'view_sensitive', name: 'Hassas Alanları Görüntüle' },
+    // Pazarlama/Kantar: tartım fişi faturaya dayanak olduğu için SİLİNMEZ.
+    // Düzeltme ve ters kayıt ayrı bir yetkidir — 'update' ile karıştırılmaz
+    // (kullanıcının açık isteği: "fiş iptalinde, düzeltmede, tersine
+    // ilişkide de yetki tanımı olmalı"). İptal için mevcut 'cancel' kullanılır.
+    { code: 'correct_weighing', name: 'Tartım Fişi Düzelt / Ters Kayıt' }
   ];
   const DEPARTMENT_TYPE_SEED: { code: string; name: string }[] = [
     { code: 'ACCOUNTING', name: 'Muhasebe' },
@@ -87,7 +97,11 @@ async function main() {
     // bunu departman haline getirir misin". Ekranlar zaten vardı
     // (/dashboard/procurement/*) ama üst-seviye bir modül olarak
     // duruyordu; artık birim ağacında kendi departmanı var.
-    { code: 'PROCUREMENT', name: 'Satınalma' }
+    { code: 'PROCUREMENT', name: 'Satınalma' },
+    // Pazarlama (2026-09-03): üretilen mamulün satışını organize eder,
+    // anlaşmayı imza altına alır, müteahhide alt ürün gerekirse Satınalma'ya
+    // talep açar. Kendine bağlı kantar(lar) ve ofis mağazası olabilir.
+    { code: 'MARKETING', name: 'Pazarlama' }
   ];
 
   // PDF (IT) madde 3 — kod içine sabit gömülmeyen varlık tipi listesi.
@@ -225,6 +239,19 @@ async function main() {
     AUDITOR: ['view', 'export', 'print']
   };
 
+  // Pazarlama yetki matrisi.
+  // - Kantar operatörü tartım GİRER ama düzeltemez/ters kayıt açamaz
+  //   (correct_weighing yok) — fiş mali belgeye dayanak, düzeltme müdürde.
+  // - Kasiyer yalnızca kendi tezgâhında satış + tahsilat yapar, sözleşme
+  //   veya sipariş onaylayamaz.
+  const MARKETING_ROLE_PERMISSIONS: Record<string, string[]> = {
+    SALES_MANAGER: ['view', 'create', 'update', 'delete', 'approve', 'cancel', 'export', 'print', 'post', 'correct_weighing'],
+    SALES_USER: ['view', 'create', 'update', 'export', 'print'],
+    WEIGHBRIDGE_OPERATOR: ['view', 'create', 'print'],
+    STORE_CASHIER: ['view', 'create', 'print', 'post'],
+    AUDITOR: ['view', 'export', 'print']
+  };
+
   async function seedRolePermissions(moduleKey: string, matrix: Record<string, string[]>) {
     for (const [roleCode, permCodes] of Object.entries(matrix)) {
       const [role] = await db.select({ id: roles.id }).from(roles).where(eq(roles.code, roleCode)).limit(1);
@@ -256,6 +283,7 @@ async function main() {
   await seedRolePermissions('IT', IT_ROLE_PERMISSIONS);
   await seedRolePermissions('HR', HR_ROLE_PERMISSIONS);
   await seedRolePermissions('PROCUREMENT', PROCUREMENT_ROLE_PERMISSIONS);
+  await seedRolePermissions('MARKETING', MARKETING_ROLE_PERMISSIONS);
 
   // Holding ERP Faz 0 (ASSUMPTIONS.md §1, §3) — idempotent backfill:
   // holdingId'si NULL olan (henüz migrate edilmemiş) her şirket, tek bir

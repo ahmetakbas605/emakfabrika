@@ -171,6 +171,34 @@ export function departmentNav(departmentId: string, departmentTypeCode: string):
         // sayfaları yazılırsa buraya eklenmeli.
       ];
 
+    case 'MARKETING':
+      // Pazarlama — Faz 0: mevcut satış hattı buraya bağlandı, ekranlar
+      // TAŞINMADI (/dashboard/sales/* rotalarında duruyor). Satınalma ve
+      // İSG'de kurulan AYNI desen.
+      //
+      // Anlaşmalar / Kantar / Ofis-Mağaza grupları sonraki fazlarda
+      // eklenecek — ekranları henüz YAZILMADI, o yüzden menüye de
+      // konmadı (404 veren menü, eksik menüden kötüdür).
+      return [
+        {
+          label: 'Satış Süreci',
+          items: [
+            { href: '/dashboard/sales', label: 'Pazarlama Panosu', icon: 'landmark' },
+            { href: '/dashboard/sales/leads', label: 'Aday Müşteriler', icon: 'users' },
+            { href: '/dashboard/sales/opportunities', label: 'Fırsatlar', icon: 'chart' },
+            { href: '/dashboard/sales/quotes', label: 'Teklifler', icon: 'clipboard' },
+            { href: '/dashboard/sales/orders', label: 'Siparişler', icon: 'cart' }
+          ]
+        },
+        {
+          label: 'Faturalama & Takip',
+          items: [
+            { href: '/dashboard/sales/invoices', label: 'Faturalar', icon: 'scroll' },
+            { href: '/dashboard/sales/complaints', label: 'Şikâyetler', icon: 'alert' }
+          ]
+        }
+      ];
+
     default:
       return [];
   }
@@ -183,7 +211,8 @@ const TYPE_LABELS: Record<string, string> = {
   WAREHOUSE: 'Stok Muhasebe',
   IT: 'Bilgi Sistemleri',
   HR: 'İnsan Kaynakları',
-  PROCUREMENT: 'Satınalma'
+  PROCUREMENT: 'Satınalma',
+  MARKETING: 'Pazarlama'
 };
 
 export function departmentTypeLabel(code: string): string {
