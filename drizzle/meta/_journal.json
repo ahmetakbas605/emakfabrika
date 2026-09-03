@@ -379,6 +379,13 @@
       "when": 1788425505292,
       "tag": "0053_glorious_ultron",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "5",
+      "when": 1788430706231,
+      "tag": "0054_giant_leopardon",
+      "breakpoints": true
     }
   ]
 }

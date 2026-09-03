@@ -198,6 +198,12 @@ export function departmentNav(departmentId: string, departmentTypeCode: string):
           ]
         },
         {
+          // Faz 1 — sözleşme departmana bağlı (kantar/mağaza ile AYNI
+          // sebep), rota departman altında.
+          label: 'Anlaşmalar',
+          items: [{ href: `${base}/marketing/contracts`, label: 'Sözleşmeler', icon: 'scroll' }]
+        },
+        {
           // Faz 2 — kantar departmana bağlı, o yüzden rota departman
           // altında (satış ekranlarının aksine, onlar üst seviyede).
           label: 'Kantar',

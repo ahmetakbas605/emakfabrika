@@ -3336,6 +3336,63 @@ export const salesOrderLines = mysqlTable('sales_order_lines', {
 export const SALES_SHIPMENT_STATUSES = ['DRAFT', 'SHIPPED', 'DELIVERED', 'CANCELLED'] as const;
 
 // ==================================================================
+// SATIŞ SÖZLEŞMESİ — Pazarlama Faz 1.
+//
+// Kullanıcı bilinçli olarak MEVCUT legal_contracts'ı DEĞİL, Pazarlamaya
+// ÖZEL ayrı bir tablo istedi (soruldu, cevaplandı): "siparişe/ürüne
+// bağlı, fiyat ve teslim şartları satır satır". legal_contracts genel
+// bir sözleşme defteri (NDA, kira, hizmet); orada ürün/fiyat satırı YOK.
+//
+// İmza akışı kullanıcının tarifi: "anlaşmasını yapar ve İMZA ALTINA
+// ALIR". Durum zinciri:
+//   DRAFT -> SUBMITTED -> SIGNED -> ACTIVE -> EXPIRED | TERMINATED
+// SIGNED ile ACTIVE ayrı: sözleşme bugün imzalanıp gelecek bir tarihte
+// yürürlüğe girebilir.
+// ==================================================================
+export const MARKETING_CONTRACT_STATUSES = ['DRAFT', 'SUBMITTED', 'SIGNED', 'ACTIVE', 'EXPIRED', 'TERMINATED'] as const;
+// Teslim şartı — kimin nereye kadar taşıdığı. Kantar/sevkiyat tarafında
+// kimin masrafı olduğunu belirler.
+export const MARKETING_DELIVERY_TERMS = ['EX_WORKS', 'DELIVERED', 'FOB', 'CIF', 'OTHER'] as const;
+
+export const marketingContracts = mysqlTable('marketing_contracts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  departmentId: char('department_id', { length: 36 }).notNull().references(() => departments.id, { onDelete: 'cascade' }),
+  contractNo: varchar('contract_no', { length: 32 }).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  partyId: char('party_id', { length: 36 }).notNull().references(() => parties.id),
+  status: mysqlEnum('status', MARKETING_CONTRACT_STATUSES).notNull().default('DRAFT'),
+  currencyCode: char('currency_code', { length: 3 }).notNull().references(() => currencies.code),
+  startDate: date('start_date', { mode: 'string' }),
+  endDate: date('end_date', { mode: 'string' }),
+
+  // "müteahhit firma ihtiyacı olursa alt ürünlerde onları ayarlar" —
+  // karşı tarafın müteahhit olduğunu işaretler; Faz 4'te Satınalma
+  // talebi açma akışı bu bayrağa bakacak.
+  counterpartyIsContractor: boolean('counterparty_is_contractor').notNull().default(false),
+
+  // İmza bilgisi — "imza altına alır".
+  signedAt: timestamp('signed_at'),
+  signedByUserId: char('signed_by_user_id', { length: 36 }).references(() => users.id),
+  counterpartySignatory: varchar('counterparty_signatory', { length: 255 }).notNull().default(''),
+
+  terminationReason: varchar('termination_reason', { length: 500 }).notNull().default(''),
+  notes: varchar('notes', { length: 1000 }).notNull().default(''),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_marketing_contract_company_no').on(table.companyId, table.contractNo)]);
+
+export const marketingContractLines = mysqlTable('marketing_contract_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  contractId: char('contract_id', { length: 36 }).notNull().references(() => marketingContracts.id, { onDelete: 'cascade' }),
+  productId: char('product_id', { length: 36 }).notNull().references(() => products.id),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitPrice: decimal('unit_price', { precision: 20, scale: 6 }).notNull(),
+  deliveryTerm: mysqlEnum('delivery_term', MARKETING_DELIVERY_TERMS).notNull().default('EX_WORKS'),
+  deliveryNote: varchar('delivery_note', { length: 500 }).notNull().default('')
+});
+
+// ==================================================================
 // KANTAR — Pazarlama Faz 2.
 //
 // Kullanıcının tarifi (2026-09-03), BİREBİR:
