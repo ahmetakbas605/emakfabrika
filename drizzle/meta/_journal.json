@@ -386,6 +386,13 @@
       "when": 1788430706231,
       "tag": "0054_giant_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "5",
+      "when": 1788431907209,
+      "tag": "0055_dusty_wild_pack",
+      "breakpoints": true
     }
   ]
 }

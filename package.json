@@ -29,7 +29,8 @@
     "test:external-auth": "tsx tests/external-auth.test.ts",
     "test:motion": "tsx tests/motion.test.ts",
     "test:weighbridge": "tsx tests/weighbridge.test.ts",
-    "test:marketing-contract-flow": "tsx tests/marketing-contract-flow.test.ts"
+    "test:marketing-contract-flow": "tsx tests/marketing-contract-flow.test.ts",
+    "test:marketing-store-flow": "tsx tests/marketing-store-flow.test.ts"
   },
   "dependencies": {
     "@xyflow/react": "^12.11.5",

@@ -208,6 +208,11 @@ export function departmentNav(departmentId: string, departmentTypeCode: string):
           // altında (satış ekranlarının aksine, onlar üst seviyede).
           label: 'Kantar',
           items: [{ href: `${base}/marketing/weighbridge`, label: 'Tartım & Gerçekleşme', icon: 'gauge' }]
+        },
+        {
+          // Faz 3 — mağaza da departmana bağlı, AYNI sebep.
+          label: 'Ofis / Mağaza',
+          items: [{ href: `${base}/marketing/stores`, label: 'Mağazalar', icon: 'building' }]
         }
       ];
 

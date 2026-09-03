@@ -1,4 +1,4 @@
-import { mysqlTable, char, varchar, int, decimal, json, timestamp, date, time, boolean, mysqlEnum, text, index, uniqueIndex, type AnyMySqlColumn } from 'drizzle-orm/mysql-core';
+import { mysqlTable, char, varchar, int, decimal, json, timestamp, date, time, boolean, mysqlEnum, text, index, uniqueIndex, foreignKey, type AnyMySqlColumn } from 'drizzle-orm/mysql-core';
 
 // Faz 2 (Database) + Faz 3 (Tenant/Auth) + Faz 4 (Accounting Core) — bkz.
 // DATABASE-ARCHITECTURE.md §5. CHAR(36) UUID stratejisi: §2. Bu fabrikanın
@@ -3390,6 +3390,102 @@ export const marketingContractLines = mysqlTable('marketing_contract_lines', {
   unitPrice: decimal('unit_price', { precision: 20, scale: 6 }).notNull(),
   deliveryTerm: mysqlEnum('delivery_term', MARKETING_DELIVERY_TERMS).notNull().default('EX_WORKS'),
   deliveryNote: varchar('delivery_note', { length: 500 }).notNull().default('')
+});
+
+// ==================================================================
+// OFİS / MAĞAZA — Pazarlama Faz 3.
+//
+// Kullanıcının tarifi: "ikisi de olacak, tür mağaza bazında seçilir" —
+// bazı noktalar tezgâh satışı yapar (kendi kasası), bazıları yalnızca
+// sipariş alır.
+//   - ORDER_INTAKE: sipariş alma noktası. Kendi stok/kasa YOK; sipariş
+//     mevcut lib/sales/orders.ts:createOrder ile açılır, kopya bir
+//     sipariş mantığı YAZILMAZ (Faz 1'deki sözleşme->sipariş ile AYNI
+//     disiplin).
+//   - POS: tezgâh satışı. "Kendi stoğunu ve kasasını tutar" — stok
+//     tarafı MEVCUT depo altyapısını (warehouses/stockMovements/
+//     invBalances) yeniden kullanır: her mağaza kendi warehouseId'sine
+//     sahiptir, satış bu depodan OUT hareketi olarak düşer. Kasa
+//     tarafı da MEVCUT cashAccounts/recordCashTransaction'ı kullanır.
+//
+// "gün sonu 'muhasebeye aktarma' butonuyla" — kullanıcının kelimeleri.
+// Bu yüzden gün içindeki satışlar HEMEN muhasebeye işlenmez (stok hemen
+// düşer, çünkü uygulama zaten canlı bir DB'ye yazıyor — offline mod
+// yok), ama KASA tek bir toplu kayıt olarak yalnızca vardiya
+// kapatıldığında muhasebeleşir. Bu, günde onlarca küçük satış için
+// onlarca ayrı muhasebe fişi yerine TEK bir gün sonu fişi demek.
+// ==================================================================
+export const MARKETING_STORE_TYPES = ['POS', 'ORDER_INTAKE'] as const;
+export const MARKETING_STORE_SHIFT_STATUSES = ['OPEN', 'CLOSED'] as const;
+
+export const marketingStores = mysqlTable('marketing_stores', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  departmentId: char('department_id', { length: 36 }).notNull().references(() => departments.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 32 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  storeType: mysqlEnum('store_type', MARKETING_STORE_TYPES).notNull().default('ORDER_INTAKE'),
+  location: varchar('location', { length: 255 }).notNull().default(''),
+
+  // Yalnızca POS türünde dolu — lib katmanında zorlanır, DB seviyesinde
+  // NOT NULL yapılmadı çünkü ORDER_INTAKE mağazada bunlara hiç ihtiyaç
+  // yok (stok_items/units'teki OPSİYONEL bağlantı deseniyle AYNI ruh).
+  warehouseId: char('warehouse_id', { length: 36 }).references(() => warehouses.id),
+  cashAccountId: char('cash_account_id', { length: 36 }).references(() => cashAccounts.id),
+  // Gün sonu kapanışında kasaya giren tutarın KARŞI hesabı (ör. "600 Yurt
+  // İçi Satışlar"). Her kapanışta kullanıcıya sorulmasın diye mağaza
+  // tanımında BİR KERE belirlenir.
+  salesRevenueAccountCode: varchar('sales_revenue_account_code', { length: 32 }),
+
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_marketing_store_company_code').on(table.companyId, table.code)]);
+
+export const marketingStoreShifts = mysqlTable('marketing_store_shifts', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  storeId: char('store_id', { length: 36 }).notNull().references(() => marketingStores.id, { onDelete: 'cascade' }),
+  status: mysqlEnum('status', MARKETING_STORE_SHIFT_STATUSES).notNull().default('OPEN'),
+  openedAt: timestamp('opened_at').notNull().defaultNow(),
+  openedByUserId: char('opened_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  closedAt: timestamp('closed_at'),
+  closedByUserId: char('closed_by_user_id', { length: 36 }).references(() => users.id),
+  // Kapanışta HESAPLANIR (satışların toplamı) — kullanıcı elle girmez,
+  // uyuşmazlık riski taşımasın.
+  totalAmount: decimal('total_amount', { precision: 20, scale: 6 }),
+  // Gün sonunda açılan TEK muhasebe kaydına işaret eder — hangi kapanışın
+  // hangi kasa fişine karşılık geldiğini izlemek için.
+  //
+  // .references() İLE DEĞİL: otomatik üretilen kısıtlama adı
+  // ("marketing_store_shifts_cash_transaction_id_cash_transactions_id_fk",
+  // 66 karakter) MySQL'in 64 karakter kısıtlama-adı sınırını AŞIYOR —
+  // migration'da gerçekten patladı. product_cats yorumundaki AYNI sınır,
+  // burada tabloyu kısaltmak yerine foreignKey() ile kısa bir ad verildi.
+  cashTransactionId: char('cash_transaction_id', { length: 36 })
+}, (table) => [
+  foreignKey({ name: 'fk_mkt_shift_cash_txn', columns: [table.cashTransactionId], foreignColumns: [cashTransactions.id] })
+]);
+
+export const marketingStoreSales = mysqlTable('marketing_store_sales', {
+  id: char('id', { length: 36 }).primaryKey(),
+  companyId: char('company_id', { length: 36 }).notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  storeId: char('store_id', { length: 36 }).notNull().references(() => marketingStores.id),
+  shiftId: char('shift_id', { length: 36 }).notNull().references(() => marketingStoreShifts.id),
+  saleNo: varchar('sale_no', { length: 32 }).notNull(),
+  // Opsiyonel — tezgâh satışının çoğu, cari kartı hiç açılmamış bir
+  // gelip-geçen müşteriyedir.
+  partyId: char('party_id', { length: 36 }).references(() => parties.id),
+  totalAmount: decimal('total_amount', { precision: 20, scale: 6 }).notNull(),
+  createdByUserId: char('created_by_user_id', { length: 36 }).notNull().references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => [uniqueIndex('udx_marketing_store_sale_company_no').on(table.companyId, table.saleNo)]);
+
+export const marketingStoreSaleLines = mysqlTable('marketing_store_sale_lines', {
+  id: char('id', { length: 36 }).primaryKey(),
+  saleId: char('sale_id', { length: 36 }).notNull().references(() => marketingStoreSales.id, { onDelete: 'cascade' }),
+  productId: char('product_id', { length: 36 }).notNull().references(() => products.id),
+  quantity: decimal('quantity', { precision: 20, scale: 6 }).notNull(),
+  unitPrice: decimal('unit_price', { precision: 20, scale: 6 }).notNull()
 });
 
 // ==================================================================
